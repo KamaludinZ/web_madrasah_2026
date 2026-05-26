@@ -79,7 +79,7 @@
                     </div>
                     @endif
 
-                    <form method="POST" action="{{ route('login') }}" @submit="loading = true">
+                    <form method="POST" action="{{ route('login.post') }}" @submit="loading = true">
                         @csrf
                         <div class="space-y-4">
                             <div>

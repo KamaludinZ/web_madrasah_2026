@@ -104,7 +104,7 @@ Route::middleware('guest')->group(function () {
     Route::get('/login', fn() => view('auth.login'))->name('login');
     Route::post('/login', [App\Http\Controllers\Auth\LoginController::class, 'login'])->name('login.post');
     Route::post('/otp/verify', [App\Http\Controllers\Auth\LoginController::class, 'verifyOtp'])->name('otp.verify');
-    Route::get('/forgot-password', fn() => view('auth.forgot-password'))->name('password.request');
+    Route::get('/forgot-password', fn() => redirect()->route('login')->with('error', 'Silakan hubungi administrator untuk reset password.'))->name('password.request');
 });
 
 Route::middleware('auth')->group(function () {
