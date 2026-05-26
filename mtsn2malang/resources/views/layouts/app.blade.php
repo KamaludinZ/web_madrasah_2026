@@ -59,13 +59,13 @@
     {{-- Schema.org --}}
     <script type="application/ld+json">
     {
-        "@context": "https://schema.org",
-        "@type": "EducationalOrganization",
+        "@@context": "https://schema.org",
+        "@@type": "EducationalOrganization",
         "name": "MTsN 2 Kota Malang",
         "url": "{{ config('app.url') }}",
         "logo": "{{ asset('images/logo.png') }}",
         "address": {
-            "@type": "PostalAddress",
+            "@@type": "PostalAddress",
             "streetAddress": "Jl. Raya Cemorokandang No. 77",
             "addressLocality": "Kota Malang",
             "postalCode": "65138",
