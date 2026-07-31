@@ -25,15 +25,9 @@ yarn-error.log
 .blackbox/
 .blackboxcli/
 
-# Runtime artifacts
-/storage/app/public/*
-!/storage/app/public/.gitignore
-/storage/framework/cache/data/*
-/storage/framework/sessions/*
-/storage/framework/testing/*
-/storage/framework/views/*
-/storage/logs/*
-/bootstrap/cache/*.php
+# Runtime artifacts — isi diabaikan oleh .gitignore di tiap direktori,
+# yang sengaja dilacak agar direktorinya ikut terbuat saat clone.
+/storage/framework/livewire-tmp/
 
 # Archives — never commit
 *.zip
