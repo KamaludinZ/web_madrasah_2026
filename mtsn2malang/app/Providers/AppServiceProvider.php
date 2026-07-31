@@ -17,7 +17,7 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        Paginator::useBootstrapFive();
+        Paginator::useTailwind();
 
         // Check maintenance mode from settings
         if (!$this->app->runningInConsole()) {

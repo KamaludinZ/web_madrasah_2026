@@ -18,14 +18,17 @@ class SearchController extends Controller
 
         $results = collect();
 
+        // Sanitasi: escape karakter wildcard LIKE agar tidak bisa dieksploitasi
+        $safeQuery = $query ? str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $query) : '';
+
         if ($query || $kategori || $tag) {
             $newsQuery = News::published()->with(['category', 'author']);
 
-            if ($query) {
-                $newsQuery->where(function ($q) use ($query) {
-                    $q->where('title', 'ilike', "%{$query}%")
-                      ->orWhere('excerpt', 'ilike', "%{$query}%")
-                      ->orWhere('content', 'ilike', "%{$query}%");
+            if ($safeQuery) {
+                $newsQuery->where(function ($q) use ($safeQuery) {
+                    $q->where('title', 'ilike', "%{$safeQuery}%")
+                      ->orWhere('excerpt', 'ilike', "%{$safeQuery}%")
+                      ->orWhere('content', 'ilike', "%{$safeQuery}%");
                 });
             }
 
@@ -61,10 +64,13 @@ class SearchController extends Controller
             return response()->json(['results' => []]);
         }
 
+        // Sanitasi wildcard LIKE
+        $safeQuery = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $query);
+
         $results = News::published()
-            ->where(function ($q) use ($query) {
-                $q->where('title', 'ilike', "%{$query}%")
-                  ->orWhere('excerpt', 'ilike', "%{$query}%");
+            ->where(function ($q) use ($safeQuery) {
+                $q->where('title', 'ilike', "%{$safeQuery}%")
+                  ->orWhere('excerpt', 'ilike', "%{$safeQuery}%");
             })
             ->with('category')
             ->latest('published_at')

@@ -3,10 +3,16 @@
 namespace App\Filament\Pages;
 
 use App\Models\Setting;
+use App\Support\UploadImageHelper;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
+use Spatie\Activitylog\Models\Activity;
 
 class ManageSettings extends Page
 {
@@ -16,22 +22,114 @@ class ManageSettings extends Page
     protected static ?int $navigationSort = 3;
     protected static string $view = 'filament.pages.manage-settings';
 
+    public static function canAccess(): bool
+    {
+        return auth()->user()?->hasRole('super_admin') ?? false;
+    }
+
     public ?array $data = [];
+
+    /** Tab utama aktif: settings | log | audit */
+    public string $activeMainTab = 'settings';
+
+    // ─── State untuk tab Log & Audit ─────────────────────────────────────────
+
+    /** Filter level log: all | error | warning | info */
+    public string $logFilter = 'all';
+
+    /** Jumlah baris log yang ditampilkan */
+    public int $logLines = 100;
+
+    /** Filter audit: nama causer */
+    public string $auditSearch = '';
+
+    /** Filter audit: log name */
+    public string $auditLogName = '';
+
+    /** Halaman audit */
+    public int $auditPage = 1;
+
+    // ─── Mount ───────────────────────────────────────────────────────────────
 
     public function mount(): void
     {
         $this->form->fill([
-            'site_name' => Setting::get('site_name', 'MTsN 2 Kota Malang'),
-            'site_tagline' => Setting::get('site_tagline', 'Unggul, Berkarakter, dan Berwawasan Global'),
-            'announcement_text' => Setting::get('announcement_text', ''),
-            'academic_year' => Setting::get('academic_year', '2024/2025'),
-            'google_analytics_id' => Setting::get('google_analytics_id', ''),
-            'recaptcha_site_key' => Setting::get('recaptcha_site_key', ''),
-            'gemini_api_key' => Setting::get('gemini_api_key', ''),
-            'openai_api_key' => Setting::get('openai_api_key', ''),
-            'ai_provider' => Setting::get('ai_provider', 'gemini'),
-            'whatsapp_number' => Setting::get('whatsapp_number', ''),
-            'footer_text' => Setting::get('footer_text', ''),
+            'site_name'              => Setting::get('site_name', 'MTsN 2 Kota Malang'),
+            'site_tagline'           => Setting::get('site_tagline', 'Unggul, Berkarakter, dan Berwawasan Global'),
+            'logo'                   => Setting::get('logo', ''),
+            'favicon'                => Setting::get('favicon', ''),
+            'announcement_text'      => Setting::get('announcement_text', ''),
+            'announcement_speed'     => Setting::get('announcement_speed', 30),
+            'academic_year'          => Setting::get('academic_year', '2024/2025'),
+            'google_analytics_id'    => Setting::get('google_analytics_id', ''),
+            'recaptcha_site_key'     => Setting::get('recaptcha_site_key', ''),
+            'gemini_api_key'         => Setting::get('gemini_api_key', ''),
+            'openai_api_key'         => Setting::get('openai_api_key', ''),
+            'ai_provider'            => Setting::get('ai_provider', 'gemini'),
+            'link_sippn'             => Setting::get('link_sippn', 'https://sippn.menpan.go.id/'),
+            'link_ptsp'              => Setting::get('link_ptsp', 'https://ptsp.kemenag.go.id/'),
+            'link_span_lapor'        => Setting::get('link_span_lapor', 'https://www.lapor.go.id/'),
+            'top_header_address'     => Setting::get('top_header_address', 'Jl. Raya Cemorokandang No. 77 Kota Malang'),
+            'top_header_maps_url'    => Setting::get('top_header_maps_url', 'https://maps.app.goo.gl/RHV4nKSg1eKe3qgo8'),
+            'top_header_phone'       => Setting::get('top_header_phone', '(0341) 711500'),
+            'top_header_phone_link'  => Setting::get('top_header_phone_link', '0341711500'),
+            'top_header_wa_label'    => Setting::get('top_header_wa_label', '0851'),
+            'top_header_wa_url'      => Setting::get('top_header_wa_url', 'https://wa.me/6285163350000'),
+            'top_header_email'       => Setting::get('top_header_email', 'mtsnmalang2adm@gmail.com'),
+            'social_youtube'          => Setting::get('social_youtube', 'https://www.youtube.com/channel/UCsqzV9zkTBlYZfmOA-_Y63A'),
+            'social_instagram'        => Setting::get('social_instagram', 'https://www.instagram.com/mtsn2kota_malang'),
+            'social_facebook'         => Setting::get('social_facebook', 'https://web.facebook.com/mtsn2kotamalang'),
+            'social_tiktok'           => Setting::get('social_tiktok', 'https://www.tiktok.com/@mtsn2kotamalang'),
+            'social_whatsapp_channel' => Setting::get('social_whatsapp_channel', ''),
+            'whatsapp_number'         => Setting::get('whatsapp_number', ''),
+            'footer_text'            => Setting::get('footer_text', ''),
+            'headmaster_photo'       => Setting::get('headmaster_photo', ''),
+            'headmaster_name'        => Setting::get('headmaster_name', ''),
+            'headmaster_nip'         => Setting::get('headmaster_nip', ''),
+            'headmaster_period'      => Setting::get('headmaster_period', ''),
+            'login_otp_enabled'      => (bool) Setting::get('login_otp_enabled', false),
+
+            // Email / SMTP
+            'mail_driver'            => Setting::get('mail_driver', 'smtp'),
+            'mail_host'              => Setting::get('mail_host', 'smtp.gmail.com'),
+            'mail_port'              => Setting::get('mail_port', '587'),
+            'mail_username'          => Setting::get('mail_username', ''),
+            'mail_password'          => Setting::get('mail_password', ''),
+            'mail_encryption'        => Setting::get('mail_encryption', 'tls'),
+            'mail_from_address'      => Setting::get('mail_from_address', ''),
+            'mail_from_name'         => Setting::get('mail_from_name', 'MTsN 2 Kota Malang'),
+
+            // Kontak Madrasah
+            'contact_address'        => Setting::get('contact_address', 'Jl. Raya Cemorokandang No. 77, Kota Malang, Jawa Timur 65138'),
+            'contact_maps_url'       => Setting::get('contact_maps_url', 'https://maps.app.goo.gl/RHV4nKSg1eKe3qgo8'),
+            'contact_maps_embed'     => Setting::get('contact_maps_embed', ''),
+            'contact_phone'          => Setting::get('contact_phone', '(0341) 711500'),
+            'contact_phone_link'     => Setting::get('contact_phone_link', '0341711500'),
+            'contact_email'          => Setting::get('contact_email', 'mtsnmalang2adm@gmail.com'),
+            'contact_wa_ptsp'        => Setting::get('contact_wa_ptsp', ''),
+            'contact_wa_pengaduan'   => Setting::get('contact_wa_pengaduan', ''),
+            'contact_wa_komite'      => Setting::get('contact_wa_komite', ''),
+            'contact_hours'          => Setting::get('contact_hours', "Senin – Kamis : 07.00 – 15.00 WIB\nJumat : 07.00 – 11.30 WIB\nSabtu – Minggu : Tutup"),
+
+            // Kontak Ma'had
+            'mahad_name'             => Setting::get('mahad_name', "Ma'had Al-Ittihad MTsN 2 Kota Malang"),
+            'mahad_address'          => Setting::get('mahad_address', ''),
+            'mahad_maps_url'         => Setting::get('mahad_maps_url', ''),
+            'mahad_maps_embed'       => Setting::get('mahad_maps_embed', ''),
+            'mahad_phone'            => Setting::get('mahad_phone', ''),
+            'mahad_phone_link'       => Setting::get('mahad_phone_link', ''),
+            'mahad_email'            => Setting::get('mahad_email', ''),
+            'mahad_wa'               => Setting::get('mahad_wa', ''),
+            'mahad_wa_pengaduan'     => Setting::get('mahad_wa_pengaduan', ''),
+            'mahad_wa_komite'        => Setting::get('mahad_wa_komite', ''),
+            'mahad_hours'            => Setting::get('mahad_hours', "Senin – Jumat : 07.00 – 16.00 WIB\nSabtu : 07.00 – 12.00 WIB"),
+
+            // Sosial Media Ma'had
+            'mahad_social_youtube'   => Setting::get('mahad_social_youtube', ''),
+            'mahad_social_instagram'    => Setting::get('mahad_social_instagram', ''),
+            'mahad_social_facebook'     => Setting::get('mahad_social_facebook', ''),
+            'mahad_social_tiktok'       => Setting::get('mahad_social_tiktok', ''),
+            'mahad_wa_channel'          => Setting::get('mahad_wa_channel', ''),
         ]);
     }
 
@@ -39,32 +137,893 @@ class ManageSettings extends Page
     {
         return $form->schema([
             Forms\Components\Tabs::make('Pengaturan')->tabs([
+
+                // ── Tab 1: Umum ──────────────────────────────────────────────
                 Forms\Components\Tabs\Tab::make('Umum')->schema([
-                    Forms\Components\TextInput::make('site_name')->label('Nama Website')->required(),
-                    Forms\Components\TextInput::make('site_tagline')->label('Tagline'),
-                    Forms\Components\Textarea::make('announcement_text')->label('Teks Pengumuman Berjalan')->rows(2)->helperText('Teks yang berjalan di bawah header'),
-                    Forms\Components\TextInput::make('academic_year')->label('Tahun Pelajaran Aktif')->placeholder('2024/2025'),
-                    Forms\Components\TextInput::make('whatsapp_number')->label('Nomor WhatsApp PTSP'),
-                    Forms\Components\Textarea::make('footer_text')->label('Teks Footer')->rows(2),
+                    Forms\Components\TextInput::make('site_name')
+                        ->label('Nama Website')
+                        ->required(),
+                    Forms\Components\TextInput::make('site_tagline')
+                        ->label('Tagline'),
+                    UploadImageHelper::webpFileUpload('logo', 'Logo Website', 'settings/branding')
+                        ->imageEditor()
+                        ->helperText('Logo utama untuk header/footer. Otomatis dikonversi ke WebP (maks 5MB).'),
+                    UploadImageHelper::webpFileUpload('favicon', 'Favicon Website', 'settings/branding')
+                        ->helperText('Ikon tab browser. Otomatis dikonversi ke WebP (maks 5MB).'),
+                    Forms\Components\Textarea::make('announcement_text')
+                        ->label('Teks Pengumuman Berjalan')
+                        ->rows(2)
+                        ->helperText('Teks yang berjalan di bawah header'),
+                    Forms\Components\TextInput::make('announcement_speed')
+                        ->label('Kecepatan Running Text (detik)')
+                        ->numeric()
+                        ->minValue(5)
+                        ->maxValue(120)
+                        ->default(30)
+                        ->helperText('Semakin kecil angka, semakin cepat teks berjalan. Rekomendasi: 20-40 detik.'),
+                    Forms\Components\TextInput::make('academic_year')
+                        ->label('Tahun Pelajaran Aktif')
+                        ->placeholder('2024/2025'),
+                    Forms\Components\TextInput::make('whatsapp_number')
+                        ->label('Nomor WhatsApp PTSP'),
+                    Forms\Components\Textarea::make('footer_text')
+                        ->label('Teks Footer')
+                        ->rows(2),
                 ]),
+
+                // ── Tab 2: Header & Footer ────────────────────────────────────
+                Forms\Components\Tabs\Tab::make('Header & Footer')->schema([
+                    Forms\Components\Section::make('Top Header')
+                        ->schema([
+                            Forms\Components\TextInput::make('top_header_address')
+                                ->label('Alamat Top Header'),
+                            Forms\Components\TextInput::make('top_header_maps_url')
+                                ->label('Link Google Maps')
+                                ->url(),
+                            Forms\Components\TextInput::make('top_header_phone')
+                                ->label('Nomor Telepon (Teks)')
+                                ->placeholder('(0341) 711500'),
+                            Forms\Components\TextInput::make('top_header_phone_link')
+                                ->label('Nomor Telepon (Link tel:)')
+                                ->placeholder('0341711500'),
+                            Forms\Components\TextInput::make('top_header_wa_label')
+                                ->label('Label WhatsApp')
+                                ->placeholder('0851'),
+                            Forms\Components\TextInput::make('top_header_wa_url')
+                                ->label('Link WhatsApp')
+                                ->url(),
+                            Forms\Components\TextInput::make('top_header_email')
+                                ->label('Email Top Header')
+                                ->email(),
+                        ])->columns(2),
+                    Forms\Components\Section::make('Sosial Media (Header & Footer)')
+                        ->schema([
+                            Forms\Components\TextInput::make('social_youtube')
+                                ->label('YouTube URL')
+                                ->url(),
+                            Forms\Components\TextInput::make('social_instagram')
+                                ->label('Instagram URL')
+                                ->url(),
+                            Forms\Components\TextInput::make('social_facebook')
+                                ->label('Facebook URL')
+                                ->url(),
+                            Forms\Components\TextInput::make('social_tiktok')
+                                ->label('TikTok URL')
+                                ->url(),
+                            Forms\Components\TextInput::make('social_whatsapp_channel')
+                                ->label('WhatsApp Channel URL')
+                                ->url()
+                                ->placeholder('https://whatsapp.com/channel/...')
+                                ->helperText('Link channel WhatsApp resmi madrasah. Akan ditampilkan dengan ikon WhatsApp di header dan footer.'),
+                        ])->columns(2),
+                    Forms\Components\Section::make('Link Menu Eksternal')
+                        ->description('URL untuk menu eksternal yang tampil di navigasi publik dan footer.')
+                        ->schema([
+                            Forms\Components\TextInput::make('link_sippn')
+                                ->label('Link SIPPN')
+                                ->url()
+                                ->placeholder('https://sippn.menpan.go.id/')
+                                ->helperText('Tampil di menu Layanan (desktop & mobile) dan footer.'),
+                            Forms\Components\TextInput::make('link_ptsp')
+                                ->label('Link PTSP Online')
+                                ->url()
+                                ->placeholder('https://ptsp.kemenag.go.id/')
+                                ->helperText('Tampil di menu Layanan (desktop & mobile) dan footer.'),
+                            Forms\Components\TextInput::make('link_span_lapor')
+                                ->label('Link SPAN Lapor')
+                                ->url()
+                                ->placeholder('https://www.lapor.go.id/')
+                                ->helperText('Tampil di menu Pengaduan (desktop & mobile) dan footer.'),
+                        ])->columns(3),
+                    Forms\Components\Section::make('Footer')
+                        ->schema([
+                            Forms\Components\Textarea::make('footer_text')
+                                ->label('Teks Footer')
+                                ->rows(2),
+                        ]),
+                ]),
+
+                // ── Tab 3: Kepala Madrasah ────────────────────────────────────
+                Forms\Components\Tabs\Tab::make('Kepala Madrasah')->schema([
+                    Forms\Components\Section::make('Profil Kepala Madrasah')
+                        ->schema([
+                            UploadImageHelper::webpFileUpload('headmaster_photo', 'Foto Kepala Madrasah', 'settings/headmaster')
+                                ->imageEditor()
+                                ->helperText('Upload foto resmi kepala madrasah. Otomatis dikonversi ke WebP (maks 5MB).'),
+                            Forms\Components\TextInput::make('headmaster_name')
+                                ->label('Nama Kepala Madrasah')
+                                ->placeholder('Nama lengkap kepala madrasah'),
+                            Forms\Components\TextInput::make('headmaster_nip')
+                                ->label('NIP Kepala Madrasah')
+                                ->placeholder('Contoh: 197001011995031001'),
+                            Forms\Components\TextInput::make('headmaster_period')
+                                ->label('Periode Jabatan')
+                                ->placeholder('Contoh: 2023 - Sekarang'),
+                        ])->columns(2),
+                ]),
+
+                // ── Tab 4: AI & SEO ───────────────────────────────────────────
                 Forms\Components\Tabs\Tab::make('AI & SEO')->schema([
-                    Forms\Components\Select::make('ai_provider')->label('Provider AI')->options(['gemini' => 'Google Gemini', 'openai' => 'OpenAI'])->default('gemini'),
-                    Forms\Components\TextInput::make('gemini_api_key')->label('Gemini API Key')->password()->revealable(),
-                    Forms\Components\TextInput::make('openai_api_key')->label('OpenAI API Key')->password()->revealable(),
-                    Forms\Components\TextInput::make('google_analytics_id')->label('Google Analytics ID')->placeholder('G-XXXXXXXXXX'),
-                    Forms\Components\TextInput::make('recaptcha_site_key')->label('reCAPTCHA Site Key'),
+
+                    // Panduan AI
+                    Forms\Components\Placeholder::make('ai_guide')
+                        ->label('')
+                        ->content(new \Illuminate\Support\HtmlString('
+                            <div class="rounded-xl border border-violet-200 bg-violet-50 dark:bg-violet-900/20 dark:border-violet-800 p-4 text-sm space-y-3">
+                                <p class="font-semibold text-violet-800 dark:text-violet-300 flex items-center gap-2">
+                                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+                                    Panduan Konfigurasi AI
+                                </p>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <div class="space-y-1">
+                                        <p class="font-medium text-violet-700 dark:text-violet-300">🤖 Google Gemini (Rekomendasi — Gratis)</p>
+                                        <ul class="text-xs space-y-0.5 text-violet-600 dark:text-violet-400 list-disc list-inside">
+                                            <li>Buka <strong>aistudio.google.com</strong></li>
+                                            <li>Login dengan akun Google</li>
+                                            <li>Klik <strong>Get API Key → Create API Key</strong></li>
+                                            <li>Salin API Key dan tempel di field Gemini API Key</li>
+                                            <li>Gratis hingga batas tertentu per bulan</li>
+                                        </ul>
+                                    </div>
+                                    <div class="space-y-1">
+                                        <p class="font-medium text-violet-700 dark:text-violet-300">🧠 OpenAI (Berbayar)</p>
+                                        <ul class="text-xs space-y-0.5 text-violet-600 dark:text-violet-400 list-disc list-inside">
+                                            <li>Buka <strong>platform.openai.com</strong></li>
+                                            <li>Login → API Keys → Create new secret key</li>
+                                            <li>Salin API Key (hanya tampil sekali)</li>
+                                            <li>Pastikan saldo kredit mencukupi</li>
+                                            <li>Model yang digunakan: gpt-4o-mini</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-violet-600 dark:text-violet-400 border-t border-violet-200 dark:border-violet-700 pt-2">
+                                    💡 Fitur AI digunakan untuk: Generate ringkasan berita, Generate SEO meta title/description, dan Buat draf konten berita otomatis.
+                                </p>
+                            </div>
+                        '))
+                        ->columnSpanFull(),
+
+                    // Form AI
+                    Forms\Components\Section::make('Konfigurasi AI')
+                        ->schema([
+                            Forms\Components\Select::make('ai_provider')
+                                ->label('Provider AI Aktif')
+                                ->options(['gemini' => 'Google Gemini', 'openai' => 'OpenAI GPT'])
+                                ->default('gemini')
+                                ->helperText('Provider yang dipilih akan digunakan untuk semua fitur AI di sistem.')
+                                ->columnSpanFull(),
+                            Forms\Components\TextInput::make('gemini_api_key')
+                                ->label('Gemini API Key')
+                                ->password()
+                                ->revealable()
+                                ->placeholder('AIza...')
+                                ->helperText('Dapatkan di: aistudio.google.com → Get API Key'),
+                            Forms\Components\TextInput::make('openai_api_key')
+                                ->label('OpenAI API Key')
+                                ->password()
+                                ->revealable()
+                                ->placeholder('sk-...')
+                                ->helperText('Dapatkan di: platform.openai.com → API Keys'),
+                        ])->columns(2),
+
+                    // Tombol tes AI
+                    Forms\Components\Section::make('Uji Koneksi AI')
+                        ->description('Simpan API Key terlebih dahulu, lalu klik tombol di bawah untuk memverifikasi koneksi ke provider AI yang dipilih.')
+                        ->schema([
+                            Forms\Components\Actions::make([
+                                Forms\Components\Actions\Action::make('test_ai_connection')
+                                    ->label('Tes Koneksi AI')
+                                    ->icon('heroicon-o-cpu-chip')
+                                    ->color('warning')
+                                    ->action('testAiConnection'),
+                            ])->columnSpanFull(),
+                        ]),
+
+                    // SEO & Analytics
+                    Forms\Components\Section::make('SEO & Analytics')
+                        ->schema([
+                            Forms\Components\TextInput::make('google_analytics_id')
+                                ->label('Google Analytics ID')
+                                ->placeholder('G-XXXXXXXXXX')
+                                ->helperText('Dapatkan di: analytics.google.com → Admin → Data Streams → Measurement ID'),
+                            Forms\Components\TextInput::make('recaptcha_site_key')
+                                ->label('reCAPTCHA Site Key')
+                                ->helperText('Dapatkan di: google.com/recaptcha → Admin Console → Site Key'),
+                        ])->columns(2),
                 ]),
+
+                // ── Tab 5: Kontak Madrasah ────────────────────────────────────
+                Forms\Components\Tabs\Tab::make('Kontak Madrasah')->schema([
+                    Forms\Components\Section::make('Informasi Kontak')
+                        ->schema([
+                            Forms\Components\Textarea::make('contact_address')
+                                ->label('Alamat Lengkap')
+                                ->rows(2)
+                                ->placeholder('Jl. Raya Cemorokandang No. 77, Kota Malang, Jawa Timur 65138')
+                                ->columnSpanFull(),
+                            Forms\Components\TextInput::make('contact_phone')
+                                ->label('Nomor Telepon (Teks)')
+                                ->placeholder('(0341) 711500'),
+                            Forms\Components\TextInput::make('contact_phone_link')
+                                ->label('Nomor Telepon (Link tel:)')
+                                ->placeholder('0341711500'),
+                            Forms\Components\TextInput::make('contact_email')
+                                ->label('Email')
+                                ->email()
+                                ->placeholder('mtsnmalang2adm@gmail.com'),
+                        ])->columns(2),
+
+                    Forms\Components\Section::make('WhatsApp')
+                        ->description('Nomor WA Pengaduan dan Komite bersifat opsional — jika dikosongkan tidak akan ditampilkan di halaman publik.')
+                        ->schema([
+                            Forms\Components\TextInput::make('contact_wa_ptsp')
+                                ->label('WA PTSP')
+                                ->placeholder('6285163350000')
+                                ->helperText('Format: 62xxx (tanpa + atau spasi)'),
+                            Forms\Components\TextInput::make('contact_wa_pengaduan')
+                                ->label('WA Pengaduan (opsional)')
+                                ->placeholder('6281234567890')
+                                ->helperText('Kosongkan jika tidak ingin ditampilkan'),
+                            Forms\Components\TextInput::make('contact_wa_komite')
+                                ->label('WA Komite (opsional)')
+                                ->placeholder('6281234567890')
+                                ->helperText('Kosongkan jika tidak ingin ditampilkan'),
+                        ])->columns(3),
+
+                    Forms\Components\Section::make('Lokasi & Jam Operasional')
+                        ->schema([
+                            Forms\Components\TextInput::make('contact_maps_url')
+                                ->label('Link Google Maps')
+                                ->url()
+                                ->placeholder('https://maps.app.goo.gl/...')
+                                ->columnSpanFull(),
+                            Forms\Components\Textarea::make('contact_maps_embed')
+                                ->label('URL Embed Google Maps (src iframe)')
+                                ->rows(2)
+                                ->placeholder('https://www.google.com/maps/embed?pb=...')
+                                ->helperText('Salin URL dari bagian src="..." pada kode embed Google Maps')
+                                ->columnSpanFull(),
+                            Forms\Components\Textarea::make('contact_hours')
+                                ->label('Jam Operasional')
+                                ->rows(4)
+                                ->placeholder("Senin – Kamis : 07.00 – 15.00 WIB\nJumat : 07.00 – 11.30 WIB\nSabtu – Minggu : Tutup")
+                                ->helperText('Satu baris per jadwal')
+                                ->columnSpanFull(),
+                        ]),
+                ]),
+
+                // ── Tab 6: Kontak Ma'had ──────────────────────────────────────
+                Forms\Components\Tabs\Tab::make("Kontak Ma'had")->schema([
+                    Forms\Components\Section::make("Identitas Ma'had")
+                        ->schema([
+                            Forms\Components\TextInput::make('mahad_name')
+                                ->label("Nama Ma'had")
+                                ->placeholder("Ma'had Al-Ittihad MTsN 2 Kota Malang")
+                                ->columnSpanFull(),
+                            Forms\Components\Textarea::make('mahad_address')
+                                ->label('Alamat Lengkap')
+                                ->rows(2)
+                                ->columnSpanFull(),
+                        ]),
+
+                    Forms\Components\Section::make('Informasi Kontak')
+                        ->schema([
+                            Forms\Components\TextInput::make('mahad_phone')
+                                ->label('Nomor Telepon (Teks)')
+                                ->placeholder('(0341) 711500'),
+                            Forms\Components\TextInput::make('mahad_phone_link')
+                                ->label('Nomor Telepon (Link tel:)')
+                                ->placeholder('0341711500'),
+                            Forms\Components\TextInput::make('mahad_email')
+                                ->label('Email')
+                                ->email(),
+                        ])->columns(3),
+
+                    Forms\Components\Section::make('WhatsApp')
+                        ->description("Nomor WA Pengaduan dan Komite bersifat opsional — jika dikosongkan tidak akan ditampilkan.")
+                        ->schema([
+                            Forms\Components\TextInput::make('mahad_wa')
+                                ->label("WA Ma'had")
+                                ->placeholder('6281234567890')
+                                ->helperText('Format: 62xxx (tanpa + atau spasi)'),
+                            Forms\Components\TextInput::make('mahad_wa_pengaduan')
+                                ->label('WA Pengaduan (opsional)')
+                                ->placeholder('6281234567890'),
+                            Forms\Components\TextInput::make('mahad_wa_komite')
+                                ->label('WA Komite (opsional)')
+                                ->placeholder('6281234567890'),
+                        ])->columns(3),
+
+                    Forms\Components\Section::make('Lokasi & Jam Operasional')
+                        ->schema([
+                            Forms\Components\TextInput::make('mahad_maps_url')
+                                ->label('Link Google Maps')
+                                ->url()
+                                ->placeholder('https://maps.app.goo.gl/...')
+                                ->columnSpanFull(),
+                            Forms\Components\Textarea::make('mahad_maps_embed')
+                                ->label('URL Embed Google Maps (src iframe)')
+                                ->rows(2)
+                                ->placeholder('https://www.google.com/maps/embed?pb=...')
+                                ->helperText('Salin URL dari bagian src="..." pada kode embed Google Maps')
+                                ->columnSpanFull(),
+                            Forms\Components\Textarea::make('mahad_hours')
+                                ->label('Jam Operasional')
+                                ->rows(4)
+                                ->placeholder("Senin – Jumat : 07.00 – 16.00 WIB\nSabtu : 07.00 – 12.00 WIB")
+                                ->helperText('Satu baris per jadwal')
+                                ->columnSpanFull(),
+                        ]),
+
+                    Forms\Components\Section::make("Sosial Media Ma'had")
+                        ->description("Link sosial media khusus Ma'had — akan ditampilkan di halaman Kontak Ma'had. Kosongkan jika tidak ada.")
+                        ->schema([
+                            Forms\Components\TextInput::make('mahad_social_youtube')
+                                ->label('YouTube')
+                                ->url()
+                                ->placeholder('https://www.youtube.com/channel/...')
+                                ->prefixIcon('heroicon-o-play-circle'),
+                            Forms\Components\TextInput::make('mahad_social_instagram')
+                                ->label('Instagram')
+                                ->url()
+                                ->placeholder('https://www.instagram.com/...')
+                                ->prefixIcon('heroicon-o-camera'),
+                            Forms\Components\TextInput::make('mahad_social_facebook')
+                                ->label('Facebook')
+                                ->url()
+                                ->placeholder('https://www.facebook.com/...')
+                                ->prefixIcon('heroicon-o-user-group'),
+                            Forms\Components\TextInput::make('mahad_social_tiktok')
+                                ->label('TikTok')
+                                ->url()
+                                ->placeholder('https://www.tiktok.com/@...')
+                                ->prefixIcon('heroicon-o-musical-note'),
+                            Forms\Components\TextInput::make('mahad_wa_channel')
+                                ->label("WhatsApp Channel")
+                                ->url()
+                                ->placeholder('https://whatsapp.com/channel/...')
+                                ->helperText("Link channel WhatsApp resmi Ma'had.")
+                                ->prefixIcon('heroicon-o-chat-bubble-left-ellipsis')
+                                ->columnSpanFull(),
+                        ])->columns(2),
+                ]),
+
+                // ── Tab 7: Email / SMTP ───────────────────────────────────────
+                Forms\Components\Tabs\Tab::make('Email')->schema([
+
+                    // Panduan
+                    Forms\Components\Placeholder::make('email_guide')
+                        ->label('')
+                        ->content(new \Illuminate\Support\HtmlString('
+                            <div class="rounded-xl border border-blue-200 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-800 p-4 text-sm space-y-3">
+                                <p class="font-semibold text-blue-800 dark:text-blue-300 flex items-center gap-2">
+                                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                    Panduan Konfigurasi Email
+                                </p>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-blue-700 dark:text-blue-300">
+                                    <div class="space-y-1">
+                                        <p class="font-medium">📧 Gmail (Rekomendasi)</p>
+                                        <ul class="text-xs space-y-0.5 text-blue-600 dark:text-blue-400 list-disc list-inside">
+                                            <li>Host: <code class="bg-blue-100 dark:bg-blue-900 px-1 rounded">smtp.gmail.com</code></li>
+                                            <li>Port: <code class="bg-blue-100 dark:bg-blue-900 px-1 rounded">587</code> (TLS)</li>
+                                            <li>Username: alamat Gmail Anda</li>
+                                            <li>Password: <strong>App Password</strong> (bukan password Gmail)</li>
+                                            <li>Aktifkan 2FA Gmail → Buat App Password</li>
+                                        </ul>
+                                    </div>
+                                    <div class="space-y-1">
+                                        <p class="font-medium">🏢 cPanel / Hosting</p>
+                                        <ul class="text-xs space-y-0.5 text-blue-600 dark:text-blue-400 list-disc list-inside">
+                                            <li>Host: <code class="bg-blue-100 dark:bg-blue-900 px-1 rounded">mail.domain.sch.id</code></li>
+                                            <li>Port: <code class="bg-blue-100 dark:bg-blue-900 px-1 rounded">465</code> (SSL) atau <code class="bg-blue-100 dark:bg-blue-900 px-1 rounded">587</code> (TLS)</li>
+                                            <li>Username: email@domain.sch.id</li>
+                                            <li>Password: password email hosting</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-blue-600 dark:text-blue-400 border-t border-blue-200 dark:border-blue-700 pt-2">
+                                    ⚠️ Simpan pengaturan terlebih dahulu sebelum melakukan tes koneksi atau tes kirim email.
+                                </p>
+                            </div>
+                        '))
+                        ->columnSpanFull(),
+
+                    // Form SMTP
+                    Forms\Components\Section::make('Konfigurasi SMTP')
+                        ->description('Pengaturan email untuk pengiriman OTP, notifikasi, dan newsletter.')
+                        ->schema([
+                            Forms\Components\Select::make('mail_driver')
+                                ->label('Mail Driver')
+                                ->options([
+                                    'smtp'     => 'SMTP',
+                                    'sendmail' => 'Sendmail',
+                                    'log'      => 'Log (Testing — tidak kirim email nyata)',
+                                    'array'    => 'Array (Testing)',
+                                ])
+                                ->default('smtp')
+                                ->required(),
+                            Forms\Components\Select::make('mail_encryption')
+                                ->label('Enkripsi')
+                                ->options([
+                                    'tls'  => 'TLS (Port 587 — Rekomendasi)',
+                                    'ssl'  => 'SSL (Port 465)',
+                                    ''     => 'Tidak Ada (Port 25)',
+                                ])
+                                ->default('tls'),
+                            Forms\Components\TextInput::make('mail_host')
+                                ->label('SMTP Host')
+                                ->placeholder('smtp.gmail.com')
+                                ->helperText('Gmail: smtp.gmail.com · cPanel: mail.domain.sch.id'),
+                            Forms\Components\TextInput::make('mail_port')
+                                ->label('SMTP Port')
+                                ->placeholder('587')
+                                ->helperText('TLS: 587 · SSL: 465 · Tanpa enkripsi: 25'),
+                            Forms\Components\TextInput::make('mail_username')
+                                ->label('Username / Email SMTP')
+                                ->placeholder('email@gmail.com')
+                                ->helperText('Biasanya sama dengan alamat email pengirim'),
+                            Forms\Components\TextInput::make('mail_password')
+                                ->label('Password / App Password')
+                                ->password()
+                                ->revealable()
+                                ->helperText('Gmail: gunakan App Password (bukan password akun biasa)'),
+                            Forms\Components\TextInput::make('mail_from_address')
+                                ->label('From Address (Alamat Pengirim)')
+                                ->email()
+                                ->placeholder('noreply@mtsn2malang.sch.id'),
+                            Forms\Components\TextInput::make('mail_from_name')
+                                ->label('From Name (Nama Pengirim)')
+                                ->placeholder('MTsN 2 Kota Malang'),
+                        ])->columns(2),
+
+                    // Tombol tes
+                    Forms\Components\Section::make('Uji Koneksi & Kirim Email')
+                        ->description('Simpan pengaturan terlebih dahulu, lalu gunakan tombol di bawah untuk menguji konfigurasi.')
+                        ->schema([
+                            Forms\Components\Actions::make([
+                                Forms\Components\Actions\Action::make('test_mail_connection')
+                                    ->label('Tes Koneksi SMTP')
+                                    ->icon('heroicon-o-signal')
+                                    ->color('info')
+                                    ->action('testMailConnection'),
+
+                                Forms\Components\Actions\Action::make('test_send_email')
+                                    ->label('Kirim Email Tes')
+                                    ->icon('heroicon-o-paper-airplane')
+                                    ->color('success')
+                                    ->requiresConfirmation()
+                                    ->modalHeading('Kirim Email Tes')
+                                    ->modalDescription(fn () => 'Email tes akan dikirim ke alamat: ' . auth()->user()->email . '. Lanjutkan?')
+                                    ->modalSubmitActionLabel('Ya, Kirim Sekarang')
+                                    ->action('testSendEmail'),
+                            ])->columnSpanFull(),
+                        ]),
+                ]),
+
+                // ── Tab 8: Keamanan ───────────────────────────────────────────
+                Forms\Components\Tabs\Tab::make('Keamanan')->schema([
+                    Forms\Components\Toggle::make('login_otp_enabled')
+                        ->label('Aktifkan Verifikasi OTP (2FA) saat Login')
+                        ->helperText('Jika diaktifkan, admin wajib memasukkan kode OTP 6 digit setelah email & password. Jika dimatikan, login hanya menggunakan email + password + kode keamanan CAPTCHA.')
+                        ->onColor('success')
+                        ->offColor('danger')
+                        ->inline(false),
+                ]),
+
             ])->columnSpanFull(),
         ])->statePath('data');
     }
 
     public function save(): void
     {
-        $data = $this->form->getState();
-        foreach ($data as $key => $value) {
-            Setting::set($key, $value);
+        try {
+            $data = $this->form->getState();
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('ManageSettings save() getState error', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            Notification::make()->title('Gagal menyimpan')->body('Error: ' . $e->getMessage())->danger()->send();
+            return;
         }
+
+        try {
+            foreach ($data as $key => $value) {
+                Setting::set($key, $value);
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('ManageSettings save() Setting::set error', ['error' => $e->getMessage()]);
+            Notification::make()->title('Gagal menyimpan setting')->body($e->getMessage())->danger()->send();
+            return;
+        }
+
+        // Sync mail settings ke runtime config agar langsung berlaku tanpa restart
+        $mailKeys = ['mail_driver','mail_host','mail_port','mail_username','mail_password','mail_encryption','mail_from_address','mail_from_name'];
+        foreach ($mailKeys as $key) {
+            if (isset($data[$key])) {
+                $configKey = match($key) {
+                    'mail_driver'       => 'mail.default',
+                    'mail_host'         => 'mail.mailers.smtp.host',
+                    'mail_port'         => 'mail.mailers.smtp.port',
+                    'mail_username'     => 'mail.mailers.smtp.username',
+                    'mail_password'     => 'mail.mailers.smtp.password',
+                    'mail_encryption'   => 'mail.mailers.smtp.encryption',
+                    'mail_from_address' => 'mail.from.address',
+                    'mail_from_name'    => 'mail.from.name',
+                    default             => null,
+                };
+                if ($configKey) config([$configKey => $data[$key]]);
+            }
+        }
+
+        $this->logActivity('Pengaturan website diperbarui', ['keys' => array_keys($data)]);
+
         Notification::make()->title('Pengaturan berhasil disimpan!')->success()->send();
+    }
+
+    // ─── Log Monitoring ──────────────────────────────────────────────────────
+
+    public function getLogContent(): array
+    {
+        $logPath = storage_path('logs/laravel.log');
+
+        if (! File::exists($logPath)) {
+            return ['lines' => [], 'size' => 0, 'exists' => false];
+        }
+
+        $size    = File::size($logPath);
+        $content = $this->tailFile($logPath, max(500, $this->logLines * 3));
+        $lines   = explode("\n", $content);
+
+        // Kelompokkan baris menjadi entri log (dimulai dengan [YYYY-MM-DD)
+        $entries = [];
+        $current = '';
+        foreach ($lines as $line) {
+            if (preg_match('/^\[\d{4}-\d{2}-\d{2}/', $line) && $current !== '') {
+                $entries[] = $current;
+                $current   = $line;
+            } else {
+                $current .= ($current ? "\n" : '') . $line;
+            }
+        }
+        if ($current) {
+            $entries[] = $current;
+        }
+
+        // Filter berdasarkan level
+        if ($this->logFilter !== 'all') {
+            $level   = strtoupper($this->logFilter);
+            $entries = array_filter($entries, fn($e) => str_contains(strtoupper($e), '.' . $level . ':') || str_contains(strtoupper($e), ' ' . $level . ' '));
+        }
+
+        // Ambil N entri terakhir
+        $entries = array_slice(array_values($entries), -$this->logLines);
+
+        return [
+            'lines'  => array_reverse($entries), // terbaru di atas
+            'size'   => $size,
+            'exists' => true,
+            'count'  => count($entries),
+        ];
+    }
+
+    // ─── Test Email ──────────────────────────────────────────────────────────
+
+    public function testMailConnection(): void
+    {
+        try {
+            $data = $this->form->getRawState()['data'] ?? $this->data;
+            $host = $data['mail_host'] ?? Setting::get('mail_host', '');
+            $port = (int) ($data['mail_port'] ?? Setting::get('mail_port', 587));
+            $enc  = $data['mail_encryption'] ?? Setting::get('mail_encryption', 'tls');
+
+            if (empty($host)) {
+                Notification::make()->title('SMTP Host belum diisi')->warning()->send();
+                return;
+            }
+
+            $ctx     = stream_context_create(['ssl' => ['verify_peer' => false, 'verify_peer_name' => false]]);
+            $timeout = 8;
+            $prefix  = ($enc === 'ssl') ? 'ssl://' : '';
+            $conn    = @stream_socket_client("{$prefix}{$host}:{$port}", $errno, $errstr, $timeout, STREAM_CLIENT_CONNECT, $ctx);
+
+            if ($conn) {
+                fclose($conn);
+                Notification::make()
+                    ->title('✅ Koneksi SMTP berhasil')
+                    ->body("Terhubung ke {$host}:{$port} ({$enc})")
+                    ->success()->send();
+            } else {
+                Notification::make()
+                    ->title('❌ Koneksi SMTP gagal')
+                    ->body("Tidak dapat terhubung ke {$host}:{$port}. Error: {$errstr}")
+                    ->danger()->send();
+            }
+        } catch (\Throwable $e) {
+            Notification::make()->title('Error')->body($e->getMessage())->danger()->send();
+        }
+    }
+
+    public function testSendEmail(): void
+    {
+        try {
+            $data     = $this->data;
+            $host     = $data['mail_host']         ?? Setting::get('mail_host', '');
+            $port     = $data['mail_port']         ?? Setting::get('mail_port', '587');
+            $user     = $data['mail_username']     ?? Setting::get('mail_username', '');
+            $pass     = $data['mail_password']     ?? Setting::get('mail_password', '');
+            $enc      = $data['mail_encryption']   ?? Setting::get('mail_encryption', 'tls');
+            $from     = $data['mail_from_address'] ?? Setting::get('mail_from_address', '');
+            $fromName = $data['mail_from_name']    ?? Setting::get('mail_from_name', 'MTsN 2 Kota Malang');
+            $to       = auth()->user()->email;
+
+            if (empty($host) || empty($user) || empty($pass) || empty($from)) {
+                Notification::make()
+                    ->title('Konfigurasi belum lengkap')
+                    ->body('Isi Host, Username, Password, dan From Address terlebih dahulu.')
+                    ->warning()->send();
+                return;
+            }
+
+            // Sync config runtime
+            config([
+                'mail.default'                    => 'smtp',
+                'mail.mailers.smtp.host'          => $host,
+                'mail.mailers.smtp.port'          => (int) $port,
+                'mail.mailers.smtp.username'      => $user,
+                'mail.mailers.smtp.password'      => $pass,
+                'mail.mailers.smtp.encryption'    => $enc ?: null,
+                'mail.from.address'               => $from,
+                'mail.from.name'                  => $fromName,
+            ]);
+
+            \Illuminate\Support\Facades\Mail::raw(
+                "Ini adalah email tes dari sistem MTsN 2 Kota Malang.\n\nJika Anda menerima email ini, konfigurasi SMTP sudah benar.\n\nWaktu: " . now()->format('d M Y H:i:s'),
+                function ($msg) use ($to, $fromName, $from) {
+                    $msg->to($to)
+                        ->subject('[Tes] Konfigurasi Email MTsN 2 Kota Malang')
+                        ->from($from, $fromName);
+                }
+            );
+
+            Notification::make()
+                ->title('✅ Email tes berhasil dikirim')
+                ->body("Email tes telah dikirim ke {$to}. Silakan cek inbox Anda.")
+                ->success()->send();
+
+        } catch (\Throwable $e) {
+            Notification::make()
+                ->title('❌ Gagal mengirim email tes')
+                ->body($e->getMessage())
+                ->danger()->send();
+        }
+    }
+
+    // ─── Test AI ─────────────────────────────────────────────────────────────
+
+    public function testAiConnection(): void
+    {
+        try {
+            $data     = $this->data;
+            $provider = $data['ai_provider']      ?? Setting::get('ai_provider', 'gemini');
+            $geminiKey = $data['gemini_api_key']  ?? Setting::get('gemini_api_key', '');
+            $openaiKey = $data['openai_api_key']  ?? Setting::get('openai_api_key', '');
+
+            if ($provider === 'gemini') {
+                if (empty($geminiKey)) {
+                    Notification::make()->title('Gemini API Key belum diisi')->warning()->send();
+                    return;
+                }
+                $url  = "https://generativelanguage.googleapis.com/v1beta/models?key={$geminiKey}";
+                $resp = \Illuminate\Support\Facades\Http::timeout(10)->get($url);
+                if ($resp->successful()) {
+                    $models = collect($resp->json('models', []))->pluck('name')->take(3)->implode(', ');
+                    Notification::make()
+                        ->title('✅ Gemini API terhubung')
+                        ->body("Koneksi berhasil. Model tersedia: {$models}")
+                        ->success()->send();
+                } else {
+                    $err = $resp->json('error.message') ?? $resp->body();
+                    Notification::make()
+                        ->title('❌ Gemini API gagal')
+                        ->body("Error {$resp->status()}: {$err}")
+                        ->danger()->send();
+                }
+            } else {
+                if (empty($openaiKey)) {
+                    Notification::make()->title('OpenAI API Key belum diisi')->warning()->send();
+                    return;
+                }
+                $resp = \Illuminate\Support\Facades\Http::timeout(10)
+                    ->withToken($openaiKey)
+                    ->get('https://api.openai.com/v1/models');
+                if ($resp->successful()) {
+                    $models = collect($resp->json('data', []))->pluck('id')->filter(fn($m) => str_contains($m, 'gpt'))->take(3)->implode(', ');
+                    Notification::make()
+                        ->title('✅ OpenAI API terhubung')
+                        ->body("Koneksi berhasil. Model GPT: {$models}")
+                        ->success()->send();
+                } else {
+                    $err = $resp->json('error.message') ?? $resp->body();
+                    Notification::make()
+                        ->title('❌ OpenAI API gagal')
+                        ->body("Error {$resp->status()}: {$err}")
+                        ->danger()->send();
+                }
+            }
+        } catch (\Throwable $e) {
+            Notification::make()->title('Error koneksi AI')->body($e->getMessage())->danger()->send();
+        }
+    }
+
+    public function clearLog(): void
+    {
+        $logPath = storage_path('logs/laravel.log');
+        if (File::exists($logPath)) {
+            File::put($logPath, '');
+            $this->logActivity('Log aplikasi dibersihkan');
+            Notification::make()->title('Log berhasil dibersihkan')->success()->send();
+        }
+    }
+
+    public function refreshLog(): void
+    {
+        // Trigger re-render Livewire
+        Notification::make()->title('Log diperbarui')->success()->send();
+    }
+
+    public function setLogFilter(string $filter): void
+    {
+        $this->logFilter = $filter;
+    }
+
+    public function setLogLines(int $lines): void
+    {
+        $this->logLines = $lines;
+    }
+
+    // ─── Audit Log ───────────────────────────────────────────────────────────
+
+    public function getAuditLogs(): array
+    {
+        $empty = [
+            'records'     => collect(),
+            'total'       => 0,
+            'perPage'     => 20,
+            'currentPage' => 1,
+            'lastPage'    => 1,
+        ];
+
+        try {
+            if (! Schema::hasTable('activity_log')) {
+                return $empty;
+            }
+
+            $perPage = 20;
+            $query   = Activity::with('causer')->latest();
+
+            if ($this->auditSearch) {
+                $search = $this->auditSearch;
+                $query->where(function ($q) use ($search) {
+                    $q->where('description', 'like', "%{$search}%")
+                      ->orWhereHas('causer', fn($u) => $u->where('name', 'like', "%{$search}%"));
+                });
+            }
+
+            if ($this->auditLogName) {
+                $query->where('log_name', $this->auditLogName);
+            }
+
+            $total   = $query->count();
+            $records = $query->skip(($this->auditPage - 1) * $perPage)->take($perPage)->get();
+
+            return [
+                'records'     => $records,
+                'total'       => $total,
+                'perPage'     => $perPage,
+                'currentPage' => $this->auditPage,
+                'lastPage'    => (int) ceil($total / $perPage) ?: 1,
+            ];
+        } catch (\Throwable $e) {
+            Log::warning('getAuditLogs error: ' . $e->getMessage());
+            return $empty;
+        }
+    }
+
+    public function auditNextPage(): void
+    {
+        $data = $this->getAuditLogs();
+        if ($this->auditPage < $data['lastPage']) {
+            $this->auditPage++;
+        }
+    }
+
+    public function auditPrevPage(): void
+    {
+        if ($this->auditPage > 1) {
+            $this->auditPage--;
+        }
+    }
+
+    public function clearAuditLog(): void
+    {
+        try {
+            Activity::truncate();
+        } catch (\Throwable $e) {
+            Notification::make()->title('Gagal membersihkan audit log')->body($e->getMessage())->danger()->send();
+            return;
+        }
+        $this->logActivity('Audit log dibersihkan');
+        Notification::make()->title('Audit log berhasil dibersihkan')->success()->send();
+    }
+
+    public function getAuditLogNames(): array
+    {
+        try {
+            if (! Schema::hasTable('activity_log')) {
+                return [];
+            }
+            return Activity::distinct()->pluck('log_name')->filter()->values()->toArray();
+        } catch (\Throwable) {
+            return [];
+        }
+    }
+
+    // ─── Helper ──────────────────────────────────────────────────────────────
+
+    /**
+     * Log aktivitas dengan aman — tidak crash jika tabel activity_log belum ada.
+     */
+    private function logActivity(string $description, array $properties = []): void
+    {
+        try {
+            if (! Schema::hasTable('activity_log')) {
+                return;
+            }
+            $logger = activity()->causedBy(auth()->user());
+            if (! empty($properties)) {
+                $logger->withProperties($properties);
+            }
+            $logger->log($description);
+        } catch (\Throwable $e) {
+            Log::warning('Activity log error: ' . $e->getMessage());
+        }
+    }
+
+    private function tailFile(string $path, int $lines): string
+    {
+        $fp   = fopen($path, 'rb');
+        $size = filesize($path);
+
+        if ($size === 0) {
+            fclose($fp);
+            return '';
+        }
+
+        // Baca maksimal 2MB dari akhir file
+        $readSize = min($size, 2 * 1024 * 1024);
+        fseek($fp, -$readSize, SEEK_END);
+        $content = fread($fp, $readSize);
+        fclose($fp);
+
+        return $content;
     }
 
     protected function getFormActions(): array

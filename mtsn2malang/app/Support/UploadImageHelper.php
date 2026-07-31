@@ -1,0 +1,163 @@
+<?php
+
+namespace App\Support;
+
+use Filament\Forms\Components\FileUpload;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
+use Intervention\Image\Drivers\Gd\Driver as GdDriver;
+use Intervention\Image\Drivers\Imagick\Driver as ImagickDriver;
+use Intervention\Image\Encoders\WebpEncoder;
+use Intervention\Image\ImageManager;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use Throwable;
+
+class UploadImageHelper
+{
+    public static function webpFileUpload(
+        string $name,
+        string $label,
+        string $directory,
+        bool $required = false
+    ): FileUpload {
+        $component = FileUpload::make($name)
+            ->label($label)
+            ->image()
+            ->disk('public')
+            ->directory($directory)
+            ->visibility('public')
+            ->maxSize(5120)
+            ->acceptedFileTypes([
+                'image/jpeg',
+                'image/png',
+                'image/webp',
+                'image/jpg',
+                'image/svg+xml',
+            ])
+            ->validationMessages([
+                'max' => 'Upload gagal: ukuran file terlalu besar. Maksimal 5MB.',
+                'mimes' => 'Upload gagal: format file tidak didukung. Gunakan JPG, PNG, atau WEBP.',
+                'image' => 'Upload gagal: file yang dipilih bukan gambar valid.',
+            ])
+            ->saveUploadedFileUsing(function (TemporaryUploadedFile $file, FileUpload $component) use ($directory) {
+                try {
+                    $baseName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+                    $safeName = str($baseName)->slug()->value() ?: 'image';
+                    $targetDirectory = trim($directory, '/');
+
+                    // SVG disimpan apa adanya (tidak diproses raster)
+                    $mimeType = strtolower((string) $file->getMimeType());
+                    $ext = strtolower((string) $file->getClientOriginalExtension());
+
+                    if ($mimeType === 'image/svg+xml' || $ext === 'svg') {
+                        $svgContent = @file_get_contents($file->getRealPath()) ?: '';
+
+                        // Sanitasi dasar SVG untuk menghindari script injection
+                        if (
+                            preg_match('/<script\b/i', $svgContent) ||
+                            preg_match('/\son\w+\s*=/i', $svgContent) ||
+                            preg_match('/javascript:/i', $svgContent)
+                        ) {
+                            throw ValidationException::withMessages([
+                                $component->getStatePath() => 'Upload gagal: SVG mengandung skrip yang tidak diizinkan.',
+                            ]);
+                        }
+
+                        $svgFileName = $safeName . '-' . now()->timestamp . '.svg';
+                        $svgRelativePath = $targetDirectory . '/' . $svgFileName;
+                        $svgFullPath = storage_path('app/public/' . $svgRelativePath);
+
+                        if (! is_dir(dirname($svgFullPath))) {
+                            mkdir(dirname($svgFullPath), 0755, true);
+                        }
+
+                        file_put_contents($svgFullPath, $svgContent);
+
+                        return $svgRelativePath;
+                    }
+
+                    // Jika file sudah WEBP, simpan apa adanya tanpa konversi lagi
+                    if ($mimeType === 'image/webp' || $ext === 'webp') {
+                        $webpFileName = $safeName . '-' . now()->timestamp . '.webp';
+                        $webpRelativePath = $targetDirectory . '/' . $webpFileName;
+                        $webpFullPath = storage_path('app/public/' . $webpRelativePath);
+
+                        if (! is_dir(dirname($webpFullPath))) {
+                            mkdir(dirname($webpFullPath), 0755, true);
+                        }
+
+                        copy($file->getRealPath(), $webpFullPath);
+
+                        return $webpRelativePath;
+                    }
+
+                    // Raster (jpg/jpeg/png): coba konversi ke webp
+                    $newFileName = $safeName . '-' . now()->timestamp . '.webp';
+                    $relativePath = $targetDirectory . '/' . $newFileName;
+                    $fullPath = storage_path('app/public/' . $relativePath);
+
+                    if (! is_dir(dirname($fullPath))) {
+                        mkdir(dirname($fullPath), 0755, true);
+                    }
+
+                    $driver = null;
+
+                    if (extension_loaded('gd')) {
+                        try {
+                            $driver = new GdDriver();
+                        } catch (Throwable) {
+                            $driver = null;
+                        }
+                    }
+
+                    if (! $driver && extension_loaded('imagick')) {
+                        try {
+                            $driver = new ImagickDriver();
+                        } catch (Throwable) {
+                            $driver = null;
+                        }
+                    }
+
+                    if ($driver) {
+                        $manager = new ImageManager($driver);
+                        $image = $manager->read($file->getRealPath());
+                        $encoded = $image->encode(new WebpEncoder(82));
+                        file_put_contents($fullPath, (string) $encoded);
+
+                        return $relativePath;
+                    }
+
+                    // Fallback tanpa driver image yang usable:
+                    // simpan file asli (ekstensi dipertahankan) agar upload tidak gagal.
+                    $originalExt = strtolower($file->getClientOriginalExtension() ?: 'jpg');
+                    $safeExt = in_array($originalExt, ['jpg', 'jpeg', 'png', 'webp'], true) ? $originalExt : 'jpg';
+                    $fallbackFileName = $safeName . '-' . now()->timestamp . '.' . $safeExt;
+                    $fallbackRelativePath = $targetDirectory . '/' . $fallbackFileName;
+                    $fallbackFullPath = storage_path('app/public/' . $fallbackRelativePath);
+
+                    if (! is_dir(dirname($fallbackFullPath))) {
+                        mkdir(dirname($fallbackFullPath), 0755, true);
+                    }
+
+                    copy($file->getRealPath(), $fallbackFullPath);
+
+                    return $fallbackRelativePath;
+                } catch (Throwable $e) {
+                    Log::error('Image upload conversion failed', [
+                        'file' => $file->getClientOriginalName(),
+                        'error' => $e->getMessage(),
+                    ]);
+
+                    throw ValidationException::withMessages([
+                        $component->getStatePath() => 'Upload gagal: sistem tidak bisa memproses gambar saat ini. Coba ulangi atau hubungi admin server.',
+                    ]);
+                }
+            });
+
+        if ($required) {
+            $component = $component->required();
+        }
+
+        return $component;
+    }
+}

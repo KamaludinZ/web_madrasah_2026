@@ -16,7 +16,7 @@ class RecentNewsWidget extends BaseWidget
     public function table(Table $table): Table
     {
         return $table
-            ->query(News::with(['category', 'author'])->latest()->limit(10))
+            ->query(fn () => News::with(['category', 'author'])->latest()->limit(10))
             ->columns([
                 Tables\Columns\TextColumn::make('title')
                     ->label('Judul')
@@ -28,14 +28,9 @@ class RecentNewsWidget extends BaseWidget
                     ->color('success'),
                 Tables\Columns\TextColumn::make('author.name')
                     ->label('Penulis'),
-                Tables\Columns\BadgeColumn::make('status')
+                Tables\Columns\TextColumn::make('status')
                     ->label('Status')
-                    ->colors([
-                        'secondary' => 'draft',
-                        'warning' => 'review',
-                        'success' => 'published',
-                        'danger' => 'archived',
-                    ]),
+                    ->badge(),
                 Tables\Columns\TextColumn::make('view_count')
                     ->label('Dibaca')
                     ->numeric(),

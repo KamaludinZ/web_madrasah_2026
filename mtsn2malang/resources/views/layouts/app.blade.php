@@ -1,7 +1,11 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" x-data="{ darkMode: localStorage.getItem('theme') || 'system' }" :class="{ 'dark': darkMode === 'dark' || (darkMode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches) }">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" x-data="{ darkMode: localStorage.getItem('theme') || 'system' }" x-init="$watch('darkMode', val => { localStorage.setItem('theme', val); document.documentElement.classList.toggle('dark', val === 'dark' || (val === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)); })">
 <head>
     <meta charset="utf-8">
+    {{-- Apply dark class before render to avoid FOUC --}}
+    <script>
+        (function(){var t=localStorage.getItem('theme');if(t==='dark'||(t!=='light'&&window.matchMedia('(prefers-color-scheme: dark)').matches)){document.documentElement.classList.add('dark');}})();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
@@ -33,9 +37,46 @@
     {{-- WhatsApp --}}
     <meta property="og:image:type" content="image/jpeg">
 
-    {{-- Favicon --}}
-    <link rel="icon" type="image/png" href="{{ asset('images/favicon.png') }}">
-    <link rel="apple-touch-icon" href="{{ asset('images/apple-touch-icon.png') }}">
+    @php
+        // Favicon: gunakan URL relatif agar tidak bergantung pada APP_URL
+        $dynamicFavicon = \App\Models\Setting::get('favicon');
+        if ($dynamicFavicon && file_exists(public_path('storage/' . $dynamicFavicon))) {
+            $faviconRelPath = 'storage/' . $dynamicFavicon;
+            $faviconExt = strtolower(pathinfo($dynamicFavicon, PATHINFO_EXTENSION));
+        } else {
+            // Fallback ke favicon.ico statis yang sudah pasti ada
+            $faviconRelPath = file_exists(public_path('images/favicon.ico'))
+                ? 'images/favicon.ico'
+                : 'images/favicon.png';
+            $faviconExt = pathinfo($faviconRelPath, PATHINFO_EXTENSION);
+        }
+        $faviconVersion = file_exists(public_path($faviconRelPath)) ? filemtime(public_path($faviconRelPath)) : time();
+        $faviconUrl = '/' . $faviconRelPath;
+
+        $faviconMime = match($faviconExt) {
+            'png'  => 'image/png',
+            'jpg', 'jpeg' => 'image/jpeg',
+            'gif'  => 'image/gif',
+            'svg'  => 'image/svg+xml',
+            'ico'  => 'image/x-icon',
+            'webp' => 'image/webp',
+            default => 'image/x-icon',
+        };
+
+        // Logo: gunakan URL relatif agar tidak bergantung pada APP_URL
+        $dynamicLogo = \App\Models\Setting::get('logo');
+        if ($dynamicLogo && file_exists(public_path('storage/' . $dynamicLogo))) {
+            $logoUrl = '/storage/' . $dynamicLogo;
+        } else {
+            $logoUrl = null;
+        }
+    @endphp
+
+    {{-- Favicon: ICO statis sebagai fallback universal, lalu format dinamis --}}
+    <link rel="icon" href="/images/favicon.ico" sizes="any">
+    <link rel="icon" type="{{ $faviconMime }}" href="{{ $faviconUrl }}?v={{ $faviconVersion }}">
+    <link rel="shortcut icon" type="{{ $faviconMime }}" href="{{ $faviconUrl }}?v={{ $faviconVersion }}">
+    <link rel="apple-touch-icon" href="{{ $faviconUrl }}?v={{ $faviconVersion }}">
 
     {{-- Fonts --}}
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -63,7 +104,7 @@
         "@@type": "EducationalOrganization",
         "name": "MTsN 2 Kota Malang",
         "url": "{{ config('app.url') }}",
-        "logo": "{{ asset('images/logo.png') }}",
+        "logo": "{{ $logoUrl }}",
         "address": {
             "@@type": "PostalAddress",
             "streetAddress": "Jl. Raya Cemorokandang No. 77",
@@ -82,15 +123,21 @@
     <div id="loading-screen" class="loading-screen">
         <div class="loading-logo">
             <div class="flex items-center gap-4">
-                <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-2xl">
-                    <svg viewBox="0 0 60 60" class="w-12 h-12" fill="none">
-                        <circle cx="30" cy="30" r="28" fill="#1a7a3c"/>
-                        <text x="30" y="38" text-anchor="middle" fill="white" font-size="20" font-weight="bold" font-family="Poppins">M2</text>
-                    </svg>
+                <div class="w-16 h-16 rounded-2xl bg-white p-1 shadow-sm border border-gray-100">
+                    <div class="w-full h-full bg-white rounded-[14px] overflow-hidden flex items-center justify-center">
+                        @if($dynamicLogo)
+                            <img src="{{ $logoUrl }}" alt="{{ \App\Models\Setting::get('site_name', 'MTsN 2 Kota Malang') }}" class="w-full h-full object-cover">
+                        @else
+                            <svg viewBox="0 0 60 60" class="w-12 h-12" fill="none">
+                                <rect x="4" y="4" width="52" height="52" rx="12" fill="#1a7a3c"/>
+                                <text x="30" y="38" text-anchor="middle" fill="white" font-size="20" font-weight="bold" font-family="Poppins">M2</text>
+                            </svg>
+                        @endif
+                    </div>
                 </div>
                 <div class="text-white">
-                    <div class="text-xl font-bold font-heading">MTsN 2</div>
-                    <div class="text-sm opacity-80">Kota Malang</div>
+                    <div class="text-xl font-bold font-heading">{{ \App\Models\Setting::get('site_name', 'MTsN 2 Kota Malang') }}</div>
+                    <div class="text-sm opacity-80">{{ \App\Models\Setting::get('site_tagline', 'Kota Malang') }}</div>
                 </div>
             </div>
             <div class="loading-bar mt-4">
@@ -123,6 +170,9 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"/>
         </svg>
     </button>
+
+    {{-- Popup & Pengumuman --}}
+    @include('components.popup')
 
     @stack('scripts')
 </body>

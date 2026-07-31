@@ -9,12 +9,29 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Carbon;
+use App\Filament\Resources\Concerns\HasRoleAccess;
+
 
 class ComplaintResource extends Resource
 {
+    use HasRoleAccess;
+
+    public static function canViewAny(): bool
+    {
+        return static::currentUserHasRole(['editor_in_chief', 'moderator']);
+    }
+
+    // Hanya tampilkan whistleblowing & masyarakat — exclude type='saran'
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->whereIn('type', ['whistleblowing', 'masyarakat']);
+    }
+
     protected static ?string $model = Complaint::class;
     protected static ?string $navigationIcon = 'heroicon-o-chat-bubble-left-right';
-    protected static ?string $navigationLabel = 'Pengaduan';
+    protected static ?string $navigationLabel = 'Whistleblowing & Pengaduan';
     protected static ?string $navigationGroup = 'Pengaduan & Survei';
     protected static ?int $navigationSort = 1;
 
@@ -35,7 +52,18 @@ class ComplaintResource extends Resource
                     ->options(['pending' => 'Pending', 'process' => 'Diproses', 'resolved' => 'Selesai', 'rejected' => 'Ditolak'])
                     ->required(),
                 Forms\Components\Textarea::make('response')->label('Tanggapan')->rows(4),
-                Forms\Components\DateTimePicker::make('responded_at')->label('Tanggal Tanggapan'),
+                Forms\Components\DateTimePicker::make('responded_at')
+                    ->label('Tanggal Tanggapan')
+                    ->native(false)
+                    ->seconds(false)
+                    ->displayFormat('d/m/Y H:i')
+                    ->format('Y-m-d H:i:s')
+                    ->suffixAction(
+                        Forms\Components\Actions\Action::make('set_now')
+                            ->label('Now')
+                            ->icon('heroicon-m-clock')
+                            ->action(fn(Forms\Set $set) => $set('responded_at', Carbon::now()))
+                    ),
             ]),
         ]);
     }
@@ -45,14 +73,41 @@ class ComplaintResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('ticket_number')->label('No. Tiket')->searchable(),
-                Tables\Columns\BadgeColumn::make('type')->label('Jenis')->colors(['warning' => 'whistleblowing', 'info' => 'masyarakat']),
+                Tables\Columns\TextColumn::make('type')->label('Jenis')->badge(),
                 Tables\Columns\TextColumn::make('name')->label('Pelapor')->default('Anonim'),
                 Tables\Columns\TextColumn::make('subject')->label('Subjek')->limit(40),
-                Tables\Columns\BadgeColumn::make('status')->label('Status')
-                    ->colors(['secondary' => 'pending', 'warning' => 'process', 'success' => 'resolved', 'danger' => 'rejected']),
+                Tables\Columns\TextColumn::make('status')->label('Status')
+                    ->badge(),
                 Tables\Columns\TextColumn::make('created_at')->label('Tanggal')->dateTime('d M Y')->sortable(),
             ])
             ->defaultSort('created_at', 'desc')
+            ->filters([
+                Tables\Filters\SelectFilter::make('status')
+                    ->label('Status')
+                    ->options([
+                        'pending' => 'Pending',
+                        'process' => 'Diproses',
+                        'resolved' => 'Selesai',
+                        'rejected' => 'Ditolak',
+                    ]),
+                Tables\Filters\Filter::make('created_at_range')
+                    ->label('Rentang Tanggal')
+                    ->form([
+                        Forms\Components\DatePicker::make('from')->label('Dari Tanggal'),
+                        Forms\Components\DatePicker::make('until')->label('Sampai Tanggal'),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        if (!empty($data['from'])) {
+                            $query->whereDate('created_at', '>=', $data['from']);
+                        }
+
+                        if (!empty($data['until'])) {
+                            $query->whereDate('created_at', '<=', $data['until']);
+                        }
+
+                        return $query;
+                    }),
+            ])
             ->actions([Tables\Actions\EditAction::make()->label('Tanggapi')])
             ->bulkActions([]);
     }

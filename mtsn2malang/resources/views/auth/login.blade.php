@@ -5,6 +5,37 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Login - MTsN 2 Kota Malang</title>
+    @php
+        $dynamicFavicon = \App\Models\Setting::get('favicon');
+        if ($dynamicFavicon && file_exists(public_path('storage/' . $dynamicFavicon))) {
+            $faviconRelPath = 'storage/' . $dynamicFavicon;
+            $faviconExt = strtolower(pathinfo($dynamicFavicon, PATHINFO_EXTENSION));
+        } else {
+            $faviconRelPath = file_exists(public_path('images/favicon.ico'))
+                ? 'images/favicon.ico'
+                : 'images/favicon.png';
+            $faviconExt = pathinfo($faviconRelPath, PATHINFO_EXTENSION);
+        }
+        $faviconVersion = file_exists(public_path($faviconRelPath)) ? filemtime(public_path($faviconRelPath)) : time();
+        $faviconUrl = '/' . $faviconRelPath;
+        $faviconMime = match($faviconExt) {
+            'png'  => 'image/png',
+            'jpg', 'jpeg' => 'image/jpeg',
+            'gif'  => 'image/gif',
+            'svg'  => 'image/svg+xml',
+            'ico'  => 'image/x-icon',
+            'webp' => 'image/webp',
+            default => 'image/x-icon',
+        };
+        $dynamicLogo = \App\Models\Setting::get('logo');
+        $logoUrl = ($dynamicLogo && file_exists(public_path('storage/' . $dynamicLogo)))
+            ? '/storage/' . $dynamicLogo
+            : null;
+    @endphp
+    <link rel="icon" href="/images/favicon.ico" sizes="any">
+    <link rel="icon" type="{{ $faviconMime }}" href="{{ $faviconUrl }}?v={{ $faviconVersion }}">
+    <link rel="shortcut icon" type="{{ $faviconMime }}" href="{{ $faviconUrl }}?v={{ $faviconVersion }}">
+    <link rel="apple-touch-icon" href="{{ $faviconUrl }}?v={{ $faviconVersion }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -16,11 +47,15 @@
     <div class="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-school-green-dark via-school-green to-school-orange relative overflow-hidden">
         <div class="absolute inset-0 bg-pattern opacity-10"></div>
         <div class="relative z-10 flex flex-col items-center justify-center p-12 text-white text-center">
-            <div class="w-24 h-24 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center mb-6 shadow-2xl">
-                <svg viewBox="0 0 60 60" class="w-16 h-16" fill="none">
-                    <circle cx="30" cy="30" r="28" fill="white" fill-opacity="0.3"/>
-                    <text x="30" y="38" text-anchor="middle" fill="white" font-size="20" font-weight="bold" font-family="Poppins">M2</text>
-                </svg>
+            <div class="w-24 h-24 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center mb-6 shadow-2xl overflow-hidden">
+                @if($logoUrl)
+                    <img src="{{ $logoUrl }}" alt="Logo MTsN 2 Kota Malang" class="w-20 h-20 object-contain drop-shadow-lg">
+                @else
+                    <svg viewBox="0 0 60 60" class="w-16 h-16" fill="none">
+                        <circle cx="30" cy="30" r="28" fill="white" fill-opacity="0.3"/>
+                        <text x="30" y="38" text-anchor="middle" fill="white" font-size="20" font-weight="bold" font-family="Poppins">M2</text>
+                    </svg>
+                @endif
             </div>
             <h1 class="text-3xl font-bold font-heading mb-3">MTsN 2 Kota Malang</h1>
             <p class="text-white/80 text-lg mb-2">Madrasah Tsanawiyah Negeri 2</p>
@@ -56,15 +91,19 @@
         <div class="w-full max-w-md">
             {{-- Mobile Logo --}}
             <div class="lg:hidden text-center mb-8">
-                <div class="w-16 h-16 bg-school-green rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg">
-                    <svg viewBox="0 0 60 60" class="w-12 h-12" fill="none">
-                        <text x="30" y="38" text-anchor="middle" fill="white" font-size="18" font-weight="bold" font-family="Poppins">M2</text>
-                    </svg>
+                <div class="w-16 h-16 bg-school-green rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg overflow-hidden">
+                    @if($logoUrl)
+                        <img src="{{ $logoUrl }}" alt="Logo MTsN 2 Kota Malang" class="w-14 h-14 object-contain">
+                    @else
+                        <svg viewBox="0 0 60 60" class="w-12 h-12" fill="none">
+                            <text x="30" y="38" text-anchor="middle" fill="white" font-size="18" font-weight="bold" font-family="Poppins">M2</text>
+                        </svg>
+                    @endif
                 </div>
                 <h1 class="text-xl font-bold text-gray-900 dark:text-white font-heading">MTsN 2 Kota Malang</h1>
             </div>
 
-            <div x-data="{ step: 'credentials', email: '', loading: false }">
+            <div x-data="{ step: '{{ session('otp_sent') ? 'otp' : 'credentials' }}', email: '{{ session('otp_email', '') }}', loading: false }">
 
                 {{-- Step 1: Credentials --}}
                 <div x-show="step === 'credentials'">
@@ -110,6 +149,38 @@
                                 @enderror
                             </div>
 
+                            {{-- CAPTCHA --}}
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                                    Kode Keamanan
+                                </label>
+                                <div class="flex items-center gap-3">
+                                    {{-- Kotak tampilan kode --}}
+                                    <div id="captcha-display"
+                                         class="flex-shrink-0 px-5 py-3 bg-gray-100 dark:bg-gray-700 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl font-mono text-xl font-bold tracking-[0.4em] text-gray-800 dark:text-gray-100 select-none text-center min-w-[9rem]"
+                                         style="letter-spacing:0.4em">
+                                        {{ $captcha ?? session('login_captcha', '') }}
+                                    </div>
+                                    {{-- Input kode --}}
+                                    <input type="text" name="captcha" id="captcha_input"
+                                           inputmode="numeric" maxlength="6" autocomplete="off"
+                                           placeholder="Ketik kode"
+                                           class="flex-1 px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:ring-2 focus:ring-green-200 focus:border-school-green dark:bg-gray-800 dark:text-white outline-none transition-all tracking-widest font-mono @error('captcha') border-red-400 @enderror">
+                                    {{-- Tombol refresh --}}
+                                    <button type="button" id="refresh-captcha"
+                                            title="Ganti kode"
+                                            class="flex-shrink-0 p-3 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-500 hover:text-school-green hover:border-school-green dark:hover:border-green-500 transition-all">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                                @error('captcha')
+                                <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
+                                @enderror
+                            </div>
+
                             <div class="flex items-center justify-between">
                                 <label class="flex items-center gap-2 cursor-pointer">
                                     <input type="checkbox" name="remember" class="w-4 h-4 rounded border-gray-300 text-school-green focus:ring-green-200">
@@ -130,7 +201,7 @@
                 </div>
 
                 {{-- Step 2: OTP Verification --}}
-                <div x-show="step === 'otp'" style="display:none">
+                <div x-show="step === 'otp'" @if(!session('otp_sent')) style="display:none" @endif>
                     <div class="mb-8 text-center">
                         <div class="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
                             <svg class="w-8 h-8 text-school-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
@@ -138,6 +209,17 @@
                         <h2 class="text-2xl font-bold text-gray-900 dark:text-white font-heading">Verifikasi OTP</h2>
                         <p class="text-gray-500 dark:text-gray-400 mt-1 text-sm">Masukkan kode 6 digit yang dikirim ke email Anda</p>
                     </div>
+
+                    @if(session('dev_otp'))
+                    <div class="mb-5 p-4 bg-yellow-50 border border-yellow-300 rounded-xl text-center">
+                        <p class="text-xs text-yellow-700 font-medium mb-1">🔧 DEV MODE — Kode OTP:</p>
+                        <p class="text-2xl font-bold tracking-[0.5em] text-yellow-800">{{ session('dev_otp') }}</p>
+                    </div>
+                    @endif
+
+                    @error('otp')
+                    <div class="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">{{ $message }}</div>
+                    @enderror
 
                     <form method="POST" action="{{ route('otp.verify') }}">
                         @csrf
@@ -170,6 +252,33 @@
         </div>
     </div>
 </div>
+
+<script>
+    (function () {
+        var refreshUrl = @json(route('captcha.refresh'));
+        var btn = document.getElementById('refresh-captcha');
+        if (!btn) return;
+
+        btn.addEventListener('click', function () {
+            btn.disabled = true;
+            btn.classList.add('opacity-50');
+
+            fetch(refreshUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    var display = document.getElementById('captcha-display');
+                    var input   = document.getElementById('captcha_input');
+                    if (display) display.textContent = data.captcha;
+                    if (input)   { input.value = ''; input.focus(); }
+                })
+                .catch(function () { /* silent — user bisa reload halaman */ })
+                .finally(function () {
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-50');
+                });
+        });
+    })();
+</script>
 
 </body>
 </html>

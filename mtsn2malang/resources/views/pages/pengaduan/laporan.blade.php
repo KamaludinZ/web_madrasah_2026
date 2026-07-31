@@ -1,11 +1,11 @@
 @extends('layouts.app')
-@section('title', 'Informasi Berkala - MTsN 2 Kota Malang')
+@section('title', 'Laporan Hasil Pengaduan - MTsN 2 Kota Malang')
 @section('content')
 <div class="bg-gradient-to-br from-school-green-dark to-school-green py-12 text-white">
     <div class="container mx-auto px-4">
-        <nav class="text-sm text-green-200 mb-4"><ol class="flex items-center gap-2"><li><a href="{{ route('home') }}" class="hover:text-white">Beranda</a></li><li>/</li><li>PPID</li><li>/</li><li class="text-white font-medium">Informasi Berkala</li></ol></nav>
-        <h1 class="text-3xl md:text-4xl font-bold font-heading">Informasi Berkala</h1>
-        <p class="text-green-200 mt-2">Informasi yang wajib disediakan dan diumumkan secara berkala</p>
+        <nav class="text-sm text-green-200 mb-4"><ol class="flex items-center gap-2"><li><a href="{{ route('home') }}" class="hover:text-white">Beranda</a></li><li>/</li><li>Pengaduan</li><li>/</li><li class="text-white font-medium">Laporan Hasil Pengaduan</li></ol></nav>
+        <h1 class="text-3xl md:text-4xl font-bold font-heading">Laporan Hasil Pengaduan</h1>
+        <p class="text-green-200 mt-2">Publikasi laporan hasil tindak lanjut pengaduan masyarakat</p>
     </div>
 </div>
 <div class="container mx-auto px-4 py-10">

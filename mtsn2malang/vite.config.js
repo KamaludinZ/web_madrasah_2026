@@ -8,14 +8,29 @@ export default defineConfig({
                 'resources/css/app.css',
                 'resources/js/app.js',
             ],
-            refresh: true,
+            refresh: [
+                'resources/views/**',
+                'routes/**',
+            ],
         }),
     ],
+    server: {
+        watch: {
+            ignored: [
+                '**/vendor/**',
+                '**/node_modules/**',
+                '**/storage/**',
+                '**/.git/**',
+            ],
+        },
+    },
     build: {
         rollupOptions: {
             output: {
-                manualChunks: {
-                    vendor: ['alpinejs', 'swiper', 'aos'],
+                manualChunks(id) {
+                    if (id.includes('alpinejs') || id.includes('swiper') || id.includes('aos')) {
+                        return 'vendor';
+                    }
                 },
             },
         },

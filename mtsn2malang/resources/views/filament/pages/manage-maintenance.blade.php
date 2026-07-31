@@ -1,4 +1,33 @@
 <x-filament-panels::page>
+    <style>
+        .fi-btn {
+            background-color: #2563eb !important;
+            color: #ffffff !important;
+            border-color: #2563eb !important;
+        }
+        .fi-btn:hover {
+            background-color: #1d4ed8 !important;
+            border-color: #1d4ed8 !important;
+        }
+        .fi-btn-color-success {
+            background-color: #16a34a !important;
+            border-color: #16a34a !important;
+            color: #ffffff !important;
+        }
+        .fi-btn-color-success:hover {
+            background-color: #15803d !important;
+            border-color: #15803d !important;
+        }
+        .fi-btn-color-danger {
+            background-color: #dc2626 !important;
+            border-color: #dc2626 !important;
+            color: #ffffff !important;
+        }
+        .fi-btn-color-danger:hover {
+            background-color: #b91c1c !important;
+            border-color: #b91c1c !important;
+        }
+    </style>
     <div class="space-y-6">
         {{-- Status Card --}}
         <div class="fi-section rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10 p-6">

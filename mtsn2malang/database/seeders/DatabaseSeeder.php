@@ -17,13 +17,11 @@ class DatabaseSeeder extends Seeder
     {
         // Create Roles
         $roles = [
-            'super_admin' => 'Super Administrator',
+            'super_admin'     => 'Super Administrator',
             'editor_in_chief' => 'Editor in Chief',
-            'editor' => 'Editor',
-            'journalist' => 'Jurnalis/Penulis',
-            'contributor' => 'Kontributor',
-            'moderator' => 'Moderator',
-            'staff_tu' => 'Staff Tata Usaha',
+            'editor'          => 'Editor',
+            'contributor'     => 'Kontributor',
+            'moderator'       => 'Moderator',
         ];
 
         foreach ($roles as $name => $label) {

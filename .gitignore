@@ -1,0 +1,6 @@
+.blackbox/
+.blackboxcli/
+laravel_skeleton_tmp/
+*.zip
+*.tar
+*.tar.gz

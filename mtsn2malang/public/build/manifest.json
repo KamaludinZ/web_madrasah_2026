@@ -1,0 +1,32 @@
+{
+  "_rolldown-runtime-QTnfLwEv.js": {
+    "file": "assets/rolldown-runtime-QTnfLwEv.js",
+    "name": "rolldown-runtime"
+  },
+  "_vendor-CXPMpSGi.js": {
+    "file": "assets/vendor-CXPMpSGi.js",
+    "name": "vendor",
+    "imports": [
+      "_rolldown-runtime-QTnfLwEv.js"
+    ]
+  },
+  "resources/css/app.css": {
+    "file": "assets/app-DzHhIrHy.css",
+    "name": "app",
+    "names": [
+      "app.css"
+    ],
+    "src": "resources/css/app.css",
+    "isEntry": true
+  },
+  "resources/js/app.js": {
+    "file": "assets/app-CcsFCEEh.js",
+    "name": "app",
+    "src": "resources/js/app.js",
+    "isEntry": true,
+    "imports": [
+      "_rolldown-runtime-QTnfLwEv.js",
+      "_vendor-CXPMpSGi.js"
+    ]
+  }
+}

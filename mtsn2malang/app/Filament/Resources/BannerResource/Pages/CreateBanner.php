@@ -1,5 +1,14 @@
 <?php
+
 namespace App\Filament\Resources\BannerResource\Pages;
+
+use App\Filament\Resources\Concerns\RedirectsToResourceIndex;
 use App\Filament\Resources\BannerResource;
 use Filament\Resources\Pages\CreateRecord;
-class CreateBanner extends CreateRecord { protected static string $resource = BannerResource::class; }
+
+class CreateBanner extends CreateRecord
+{
+    use RedirectsToResourceIndex;
+
+    protected static string $resource = BannerResource::class;
+}

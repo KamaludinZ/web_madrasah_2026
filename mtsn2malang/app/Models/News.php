@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Setting;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -32,6 +33,7 @@ class News extends Model
         'is_featured',
         'allow_comments',
         'source',
+        'migration_batch_id',
     ];
 
     protected $casts = [
@@ -74,11 +76,23 @@ class News extends Model
         return $this->hasMany(Comment::class)->where('status', 'approved');
     }
 
+    public function galleryPost()
+    {
+        return $this->hasOne(GalleryPost::class);
+    }
+
     public function getThumbnailUrlAttribute(): string
     {
         if ($this->thumbnail) {
             return asset('storage/' . $this->thumbnail);
         }
+
+        $defaultNewsThumbnail = Setting::get('default_news_thumbnail');
+
+        if (!empty($defaultNewsThumbnail)) {
+            return asset('storage/' . $defaultNewsThumbnail);
+        }
+
         return asset('images/news-placeholder.jpg');
     }
 

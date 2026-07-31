@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable implements FilamentUser
@@ -70,7 +71,7 @@ class User extends Authenticatable implements FilamentUser
     {
         $otp = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
         $this->update([
-            'otp_code' => $otp,
+            'otp_code'       => Hash::make($otp), // disimpan sebagai hash, bukan plaintext
             'otp_expires_at' => now()->addMinutes(config('auth.otp_expiry', 5)),
         ]);
         return $otp;
@@ -78,6 +79,10 @@ class User extends Authenticatable implements FilamentUser
 
     public function verifyOtp(string $otp): bool
     {
-        return $this->otp_code === $otp && $this->otp_expires_at?->isFuture();
+        if (! $this->otp_expires_at?->isFuture()) {
+            return false;
+        }
+        // Hash::check mencegah timing attack
+        return Hash::check($otp, $this->otp_code);
     }
 }

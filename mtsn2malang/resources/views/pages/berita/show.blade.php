@@ -32,17 +32,8 @@
             {{-- Title --}}
             <h1 class="text-2xl md:text-4xl font-bold font-heading text-gray-900 dark:text-white leading-tight mb-6">{{ $news->title }}</h1>
 
-            {{-- Author & Stats --}}
+            {{-- Meta: Stats & Tanggal (tanpa nama penulis — dipindah ke bawah) --}}
             <div class="flex flex-wrap items-center gap-4 mb-6 pb-6 border-b border-gray-100 dark:border-gray-700">
-                <div class="flex items-center gap-2">
-                    <div class="w-8 h-8 rounded-full bg-school-green flex items-center justify-center text-white text-sm font-bold">
-                        {{ substr($news->author->name ?? 'A', 0, 1) }}
-                    </div>
-                    <div>
-                        <div class="text-sm font-medium text-gray-900 dark:text-white">{{ $news->author->name ?? 'Admin' }}</div>
-                        <div class="text-xs text-gray-400">Penulis</div>
-                    </div>
-                </div>
                 <div class="flex items-center gap-1 text-sm text-gray-400">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                     <span>{{ number_format($news->view_count) }} kali dibaca</span>
@@ -68,13 +59,278 @@
                 {!! $news->content !!}
             </div>
 
-            {{-- Tags --}}
-            @if($news->tags->count() > 0)
+            {{-- ===== GALERI FOTO ===== --}}
+            @php
+                $galleryPost = null;
+                try {
+                    $galleryPost = $news->galleryPost()->with('photos')->first();
+                } catch (\Throwable $e) {
+                    $galleryPost = null;
+                }
+            @endphp
+
+            @if($galleryPost && $galleryPost->photos->count() > 0)
+            <div class="mt-10 pt-8 border-t border-gray-100 dark:border-gray-700 gallery-section" oncontextmenu="return false;">
+                <div class="flex items-center gap-3 mb-5">
+                    <div class="w-1 h-7 bg-school-green rounded-full"></div>
+                    <h2 class="text-xl font-bold font-heading text-gray-900 dark:text-white">
+                        {{ $galleryPost->title }}
+                    </h2>
+                    <span class="ml-auto text-xs text-gray-400 bg-gray-100 dark:bg-gray-700 px-2.5 py-1 rounded-full">
+                        {{ $galleryPost->photos->count() }} foto
+                    </span>
+                </div>
+
+                @if($galleryPost->description)
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-5 -mt-2">{{ $galleryPost->description }}</p>
+                @endif
+
+                {{-- Carousel Grid --}}
+                <div class="gallery-grid grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 select-none">
+                    @foreach($galleryPost->photos as $index => $photo)
+                    <div class="gallery-item relative group rounded-xl overflow-hidden aspect-square bg-gray-100 dark:bg-gray-800 cursor-pointer"
+                         data-index="{{ $index }}"
+                         onclick="openGallerySlideshow({{ $index }})"
+                         oncontextmenu="return false;">
+                        <img
+                            src="{{ $photo->photo_url }}"
+                            alt="{{ $galleryPost->title }} - Foto {{ $index + 1 }}"
+                            class="gallery-photo-protected w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            loading="lazy"
+                            draggable="false"
+                        >
+                        <div class="gallery-watermark" aria-hidden="true">MTsN 2 Kota Malang</div>
+                        {{-- Hover overlay --}}
+                        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-200 flex items-center justify-center">
+                            <div class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 w-10 h-10 bg-white/90 rounded-full flex items-center justify-center">
+                                <svg class="w-5 h-5 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                    @endforeach
+                </div>
+            </div>
+
+            {{-- ===== SLIDESHOW MODAL ===== --}}
+            <div id="gallery-slideshow" class="fixed inset-0 z-[9999] bg-black/95 hidden items-center justify-center" oncontextmenu="return false;">
+                {{-- Close button --}}
+                <button onclick="closeGallerySlideshow()" class="absolute top-4 right-4 z-10 w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white transition-colors" aria-label="Tutup">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+
+                {{-- Counter --}}
+                <div class="absolute top-4 left-1/2 -translate-x-1/2 z-10 text-white text-sm bg-black/40 px-4 py-1.5 rounded-full">
+                    <span id="gallery-counter">1 / {{ $galleryPost->photos->count() }}</span>
+                </div>
+
+                {{-- Prev button --}}
+                <button onclick="prevSlide()" class="absolute left-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white transition-colors" aria-label="Sebelumnya">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                </button>
+
+                {{-- Image container --}}
+                <div class="w-full h-full flex items-center justify-center px-20 py-16 select-none" oncontextmenu="return false;">
+                    <div class="relative max-w-5xl max-h-full">
+                        <img
+                            id="gallery-slide-img"
+                            src=""
+                            alt=""
+                            class="gallery-photo-protected max-w-full max-h-[80vh] object-contain rounded-xl shadow-2xl"
+                            draggable="false"
+                            oncontextmenu="return false;"
+                        >
+                        <div class="gallery-watermark-slide" aria-hidden="true">MTsN 2 Kota Malang</div>
+                    </div>
+                </div>
+
+                {{-- Next button --}}
+                <button onclick="nextSlide()" class="absolute right-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white transition-colors" aria-label="Berikutnya">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </button>
+
+                {{-- Thumbnail strip --}}
+                <div class="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 px-4 overflow-x-auto" oncontextmenu="return false;">
+                    @foreach($galleryPost->photos as $index => $photo)
+                    <div
+                        class="gallery-thumb flex-shrink-0 w-12 h-12 rounded-lg overflow-hidden cursor-pointer border-2 border-transparent transition-all select-none"
+                        data-index="{{ $index }}"
+                        data-src="{{ $photo->photo_url }}"
+                        onclick="goToSlide({{ $index }})"
+                        oncontextmenu="return false;"
+                    >
+                        <img
+                            src="{{ $photo->photo_url }}"
+                            alt="Thumbnail {{ $index + 1 }}"
+                            class="gallery-photo-protected w-full h-full object-cover"
+                            draggable="false"
+                            oncontextmenu="return false;"
+                        >
+                    </div>
+                    @endforeach
+                </div>
+            </div>
+
+            <style>
+                .gallery-photo-protected {
+                    -webkit-user-drag: none;
+                    user-select: none;
+                    pointer-events: none;
+                }
+                .gallery-item {
+                    pointer-events: auto !important;
+                }
+                .gallery-item img {
+                    pointer-events: none;
+                }
+                .gallery-watermark {
+                    position: absolute;
+                    inset: auto 0 0 0;
+                    padding: 0.25rem 0.5rem;
+                    font-size: 0.6rem;
+                    font-weight: 600;
+                    letter-spacing: 0.03em;
+                    text-align: center;
+                    color: rgba(255, 255, 255, 0.85);
+                    background: linear-gradient(to top, rgba(0,0,0,0.5), rgba(0,0,0,0));
+                    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+                    pointer-events: none;
+                }
+                .gallery-watermark-slide {
+                    position: absolute;
+                    bottom: 0;
+                    left: 0;
+                    right: 0;
+                    padding: 0.4rem 0.75rem;
+                    font-size: 0.7rem;
+                    font-weight: 600;
+                    letter-spacing: 0.05em;
+                    text-align: center;
+                    color: rgba(255,255,255,0.9);
+                    background: linear-gradient(to top, rgba(0,0,0,0.6), rgba(0,0,0,0));
+                    text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+                    pointer-events: none;
+                    border-radius: 0 0 0.75rem 0.75rem;
+                }
+                #gallery-slideshow {
+                    display: none;
+                }
+                #gallery-slideshow.active {
+                    display: flex;
+                }
+                .gallery-thumb.active {
+                    border-color: #1a7a3c;
+                    opacity: 1;
+                }
+                .gallery-thumb {
+                    opacity: 0.6;
+                }
+                .gallery-thumb img {
+                    pointer-events: none;
+                }
+            </style>
+
+            <script>
+                (function() {
+                    const photos = @json($galleryPost->photos->pluck('photo_url')->values());
+                    let currentIndex = 0;
+                    const total = photos.length;
+
+                    window.openGallerySlideshow = function(index) {
+                        currentIndex = index;
+                        updateSlide();
+                        document.getElementById('gallery-slideshow').classList.add('active');
+                        document.body.style.overflow = 'hidden';
+                    };
+
+                    window.closeGallerySlideshow = function() {
+                        document.getElementById('gallery-slideshow').classList.remove('active');
+                        document.body.style.overflow = '';
+                    };
+
+                    window.prevSlide = function() {
+                        currentIndex = (currentIndex - 1 + total) % total;
+                        updateSlide();
+                    };
+
+                    window.nextSlide = function() {
+                        currentIndex = (currentIndex + 1) % total;
+                        updateSlide();
+                    };
+
+                    window.goToSlide = function(index) {
+                        currentIndex = index;
+                        updateSlide();
+                    };
+
+                    function updateSlide() {
+                        const img = document.getElementById('gallery-slide-img');
+                        img.src = photos[currentIndex];
+                        img.alt = 'Foto ' + (currentIndex + 1);
+                        document.getElementById('gallery-counter').textContent = (currentIndex + 1) + ' / ' + total;
+
+                        // Update thumbnail active state
+                        document.querySelectorAll('.gallery-thumb').forEach(function(thumb, i) {
+                            thumb.classList.toggle('active', i === currentIndex);
+                        });
+                    }
+
+                    // Keyboard navigation
+                    document.addEventListener('keydown', function(e) {
+                        const slideshow = document.getElementById('gallery-slideshow');
+                        if (!slideshow.classList.contains('active')) return;
+                        if (e.key === 'ArrowLeft') prevSlide();
+                        if (e.key === 'ArrowRight') nextSlide();
+                        if (e.key === 'Escape') closeGallerySlideshow();
+                    });
+
+                    // Touch/swipe support
+                    let touchStartX = 0;
+                    const slideshow = document.getElementById('gallery-slideshow');
+                    slideshow.addEventListener('touchstart', function(e) {
+                        touchStartX = e.changedTouches[0].screenX;
+                    }, { passive: true });
+                    slideshow.addEventListener('touchend', function(e) {
+                        const diff = touchStartX - e.changedTouches[0].screenX;
+                        if (Math.abs(diff) > 50) {
+                            if (diff > 0) nextSlide();
+                            else prevSlide();
+                        }
+                    }, { passive: true });
+
+                    // Prevent right-click on slideshow
+                    slideshow.addEventListener('contextmenu', function(e) {
+                        e.preventDefault();
+                        return false;
+                    });
+                })();
+            </script>
+            @endif
+
+            {{-- ===== TAG ===== --}}
+            @php
+                $newsTags = collect();
+                try {
+                    $newsTags = $news->tags ?? collect();
+                } catch (\Throwable $e) {
+                    $newsTags = collect();
+                }
+            @endphp
+
+            @if($newsTags->count() > 0)
             <div class="mt-8 pt-6 border-t border-gray-100 dark:border-gray-700">
                 <div class="flex flex-wrap items-center gap-2">
-                    <span class="text-sm font-medium text-gray-600 dark:text-gray-400">Tag:</span>
-                    @foreach($news->tags as $tag)
-                    <a href="{{ route('search.index', ['tag' => $tag->slug]) }}" class="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-sm rounded-full hover:bg-school-green hover:text-white transition-colors">
+                    <span class="text-sm font-semibold text-gray-500 dark:text-gray-400 mr-1">Tag:</span>
+                    @foreach($newsTags as $tag)
+                    <a href="{{ route('search.index', ['tag' => $tag->slug]) }}"
+                       class="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-sm rounded-full hover:bg-school-green hover:text-white transition-colors">
                         #{{ $tag->name }}
                     </a>
                     @endforeach
@@ -82,7 +338,38 @@
             </div>
             @endif
 
-            {{-- Share Buttons --}}
+            {{-- ===== PROFIL PENULIS ===== --}}
+            @if($news->author)
+            <div class="mt-8 pt-6 border-t border-gray-100 dark:border-gray-700">
+                <a href="{{ route('penulis.show', $news->author->name) }}"
+                   class="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-800/60 rounded-2xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group">
+                    @php
+                        $authorAvatar = $news->author->avatar
+                            ? asset('storage/' . $news->author->avatar)
+                            : 'https://ui-avatars.com/api/?name=' . urlencode($news->author->name) . '&background=1a7a3c&color=fff&size=80';
+                    @endphp
+                    <img
+                        src="{{ $authorAvatar }}"
+                        alt="{{ $news->author->name }}"
+                        class="w-14 h-14 rounded-full object-cover flex-shrink-0 ring-2 ring-school-green/20"
+                    >
+                    <div class="flex-1 min-w-0">
+                        <p class="text-xs text-gray-400 mb-0.5">Ditulis oleh</p>
+                        <p class="font-semibold text-gray-900 dark:text-white group-hover:text-school-green transition-colors">
+                            {{ $news->author->name }}
+                        </p>
+                        @if($news->author->bio)
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">{{ $news->author->bio }}</p>
+                        @endif
+                    </div>
+                    <svg class="w-5 h-5 text-gray-300 dark:text-gray-600 group-hover:text-school-green transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </a>
+            </div>
+            @endif
+
+            {{-- ===== SHARE BUTTONS ===== --}}
             <div class="mt-6 p-5 bg-gray-50 dark:bg-gray-800 rounded-2xl">
                 <p class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Bagikan Berita Ini:</p>
                 <div class="flex flex-wrap gap-3">
@@ -108,6 +395,57 @@
                     </button>
                 </div>
             </div>
+
+            @if((bool) \App\Models\Setting::get('subscription_enabled', true))
+            <div class="mt-8 p-5 bg-green-50 dark:bg-gray-800/60 border border-green-100 dark:border-gray-700 rounded-2xl">
+                <h3 class="text-lg font-bold font-heading text-gray-900 dark:text-white mb-2">Dapatkan Update Berita Terbaru</h3>
+                <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">
+                    Isi email Anda untuk menerima notifikasi berita terbaru dari MTsN 2 Kota Malang.
+                </p>
+
+                @if(session('success'))
+                    <div class="mb-3 text-sm text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-700 rounded-lg px-3 py-2">
+                        {{ session('success') }}
+                    </div>
+                @endif
+
+                @if(session('error'))
+                    <div class="mb-3 text-sm text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-700 rounded-lg px-3 py-2">
+                        {{ session('error') }}
+                    </div>
+                @endif
+
+                <form action="{{ route('subscription.store') }}" method="POST" class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    @csrf
+                    <input type="hidden" name="source" value="news-detail">
+
+                    <input
+                        type="text"
+                        name="name"
+                        placeholder="Nama (opsional)"
+                        class="md:col-span-1 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm px-4 py-3 focus:ring-2 focus:ring-green-200 focus:border-school-green outline-none"
+                    >
+
+                    <div class="md:col-span-2 flex flex-col sm:flex-row gap-3">
+                        <input
+                            type="email"
+                            name="email"
+                            placeholder="Masukkan email aktif"
+                            required
+                            class="flex-1 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm px-4 py-3 focus:ring-2 focus:ring-green-200 focus:border-school-green outline-none"
+                        >
+
+                        <button type="submit" class="btn-primary whitespace-nowrap px-5">
+                            Berlangganan
+                        </button>
+                    </div>
+
+                    @error('email')
+                        <p class="md:col-span-3 text-xs text-red-500">{{ $message }}</p>
+                    @enderror
+                </form>
+            </div>
+            @endif
 
             {{-- Comments --}}
             <div class="mt-8">

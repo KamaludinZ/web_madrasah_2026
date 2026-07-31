@@ -28,24 +28,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// ===== AOS ANIMATION =====
-AOS.init({
-    duration: 700,
-    easing: 'ease-out-cubic',
-    once: true,
-    offset: 80,
-});
-
 // ===== HERO SLIDER =====
 window.initHeroSlider = function() {
+    const el = document.querySelector('.hero-swiper');
+    if (!el) return;
+    const slideCount = el.querySelectorAll('.swiper-slide').length;
     return new Swiper('.hero-swiper', {
         modules: [Navigation, Pagination, Autoplay, EffectFade],
         effect: 'fade',
-        loop: true,
-        autoplay: {
-            delay: 5000,
-            disableOnInteraction: false,
-        },
+        loop: slideCount > 1,
+        autoplay: slideCount > 1 ? { delay: 5000, disableOnInteraction: false } : false,
         pagination: {
             el: '.swiper-pagination',
             clickable: true,
@@ -59,12 +51,13 @@ window.initHeroSlider = function() {
 
 // ===== BANNER SLIDER =====
 window.initBannerSlider = function() {
+    const el = document.querySelector('.banner-swiper');
+    if (!el) return;
+    const slideCount = el.querySelectorAll('.swiper-slide').length;
     return new Swiper('.banner-swiper', {
         modules: [Navigation, Pagination, Autoplay],
-        loop: true,
-        autoplay: {
-            delay: 4000,
-        },
+        loop: slideCount > 1,
+        autoplay: slideCount > 1 ? { delay: 4000 } : false,
         pagination: {
             el: '.banner-pagination',
             clickable: true,
@@ -78,11 +71,14 @@ window.initBannerSlider = function() {
 
 // ===== SARPRAS CAROUSEL =====
 window.initSarprasSlider = function() {
+    const el = document.querySelector('.sarpras-swiper');
+    if (!el) return;
+    const slideCount = el.querySelectorAll('.swiper-slide').length;
     return new Swiper('.sarpras-swiper', {
         modules: [Navigation, Pagination, Autoplay],
         slidesPerView: 1,
         spaceBetween: 20,
-        loop: true,
+        loop: slideCount >= 4,
         autoplay: { delay: 3500 },
         breakpoints: {
             640: { slidesPerView: 2 },
@@ -97,11 +93,14 @@ window.initSarprasSlider = function() {
 
 // ===== TESTIMONI CAROUSEL =====
 window.initTestimoniSlider = function() {
+    const el = document.querySelector('.testimoni-swiper');
+    if (!el) return;
+    const slideCount = el.querySelectorAll('.swiper-slide').length;
     return new Swiper('.testimoni-swiper', {
         modules: [Navigation, Pagination, Autoplay],
         slidesPerView: 1,
         spaceBetween: 24,
-        loop: true,
+        loop: slideCount >= 4,
         autoplay: { delay: 4500 },
         breakpoints: {
             768: { slidesPerView: 2 },
@@ -239,16 +238,16 @@ window.accessibilityManager = {
 window.accessibilityManager.init();
 
 // ===== COUNTER ANIMATION =====
-window.animateCounter = function(el, target, duration = 2000) {
+window.animateCounter = function(el, target, duration = 2000, suffix = '') {
     let start = 0;
     const step = target / (duration / 16);
     const timer = setInterval(() => {
         start += step;
         if (start >= target) {
-            el.textContent = target.toLocaleString('id-ID');
+            el.textContent = target.toLocaleString('id-ID') + suffix;
             clearInterval(timer);
         } else {
-            el.textContent = Math.floor(start).toLocaleString('id-ID');
+            el.textContent = Math.floor(start).toLocaleString('id-ID') + suffix;
         }
     }, 16);
 };
@@ -314,8 +313,36 @@ if (header) {
     });
 }
 
+// ===== POPUP SWIPER (dipanggil dari komponen popup) =====
+window.initPopupSwiper = function(id, itemCount) {
+    if (itemCount < 2) return null;
+    var el = document.getElementById('popup-swiper-' + id);
+    if (!el) return null;
+    return new Swiper(el, {
+        modules: [Navigation, Pagination, Autoplay],
+        loop: true,
+        autoplay: { delay: 4000, disableOnInteraction: false },
+        pagination: {
+            el: document.getElementById('popup-pagination-' + id),
+            clickable: true,
+        },
+        navigation: {
+            prevEl: document.getElementById('popup-prev-' + id),
+            nextEl: document.getElementById('popup-next-' + id),
+        },
+    });
+};
+
 // ===== INIT ON LOAD =====
 document.addEventListener('DOMContentLoaded', () => {
+    // AOS init here to avoid forced layout before stylesheets are ready
+    AOS.init({
+        duration: 700,
+        easing: 'ease-out-cubic',
+        once: true,
+        offset: 80,
+    });
+
     // Init sliders if present
     if (document.querySelector('.hero-swiper')) window.initHeroSlider();
     if (document.querySelector('.banner-swiper')) window.initBannerSlider();
@@ -329,8 +356,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
-                const target = parseInt(entry.target.dataset.counter);
-                window.animateCounter(entry.target, target);
+                const raw    = entry.target.dataset.counter;          // e.g. "7000+" atau "1200"
+                const num    = parseInt(raw.replace(/[^0-9]/g, ''));  // ambil angka saja
+                const suffix = raw.replace(/[0-9,. ]/g, '');         // ambil suffix non-angka ("+", "~", dll)
+                window.animateCounter(entry.target, num, 2000, suffix);
                 observer.unobserve(entry.target);
             }
         });

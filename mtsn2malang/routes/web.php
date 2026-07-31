@@ -4,6 +4,7 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\NewsController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\SearchController;
+use App\Http\Controllers\SubscriptionController;
 use Illuminate\Support\Facades\Route;
 
 // ===== HOME =====
@@ -44,6 +45,7 @@ Route::prefix('layanan')->name('layanan.')->group(function () {
     Route::get('/maklumat', [PageController::class, 'maklumat'])->name('maklumat');
     Route::get('/standar-pelayanan', [PageController::class, 'standarPelayanan'])->name('standar-pelayanan');
     Route::get('/kompensasi', [PageController::class, 'kompensasi'])->name('kompensasi');
+    Route::get('/ppdb', [PageController::class, 'layananPpdb'])->name('ppdb');
 });
 
 // ===== PROGRAM =====
@@ -54,13 +56,16 @@ Route::prefix('program')->name('program.')->group(function () {
     Route::get('/bilingual', [PageController::class, 'programBilingual'])->name('bilingual');
     Route::get('/cbi', [PageController::class, 'programCbi'])->name('cbi');
     Route::get('/adiwiyata', [PageController::class, 'adiwiyata'])->name('adiwiyata');
+    Route::get('/zona-integritas', [PageController::class, 'zonaIntegritas'])->name('zona-integritas');
 });
 
 // ===== PPID =====
 Route::prefix('ppid')->name('ppid.')->group(function () {
+    Route::get('/profil', [PageController::class, 'ppidProfil'])->name('profil');
     Route::get('/berkala', [PageController::class, 'ppidBerkala'])->name('berkala');
     Route::get('/setiap-saat', [PageController::class, 'ppidSetiapSaat'])->name('setiap-saat');
     Route::get('/serta-merta', [PageController::class, 'ppidSertaMerta'])->name('serta-merta');
+    Route::get('/galeri', [PageController::class, 'ppidGaleri'])->name('galeri');
 });
 
 // ===== SAKIP =====
@@ -70,6 +75,9 @@ Route::prefix('sakip')->name('sakip.')->group(function () {
     Route::get('/lkj', [PageController::class, 'lkj'])->name('lkj');
 });
 
+Route::get('/mahad', [PageController::class, 'mahadLanding'])->name('mahad.home');
+
+
 // ===== MA'HAD =====
 Route::prefix('mahad')->name('mahad.')->group(function () {
     Route::get('/berita', [PageController::class, 'mahadBerita'])->name('berita');
@@ -77,14 +85,15 @@ Route::prefix('mahad')->name('mahad.')->group(function () {
     Route::get('/program', [PageController::class, 'mahadProgram'])->name('program');
     Route::get('/sarpras', [PageController::class, 'mahadSarpras'])->name('sarpras');
     Route::get('/struktur', [PageController::class, 'mahadStruktur'])->name('struktur');
+    Route::get('/kontak', [PageController::class, 'mahadKontak'])->name('kontak');
 });
 
 // ===== PENGADUAN =====
 Route::prefix('pengaduan')->name('pengaduan.')->group(function () {
     Route::get('/whistleblowing', [PageController::class, 'whistleblowing'])->name('whistleblowing');
-    Route::post('/whistleblowing', [PageController::class, 'storePengaduan'])->name('whistleblowing.store');
+    Route::post('/whistleblowing', [PageController::class, 'storePengaduan'])->name('whistleblowing.store')->middleware('throttle:5,10');
     Route::get('/masyarakat', [PageController::class, 'pengaduanMasyarakat'])->name('masyarakat');
-    Route::post('/masyarakat', [PageController::class, 'storePengaduan'])->name('masyarakat.store');
+    Route::post('/masyarakat', [PageController::class, 'storePengaduan'])->name('masyarakat.store')->middleware('throttle:5,10');
     Route::get('/pelacakan', [PageController::class, 'pelacakanPengaduan'])->name('pelacakan');
     Route::get('/laporan', [PageController::class, 'laporanPengaduan'])->name('laporan');
 });
@@ -92,24 +101,33 @@ Route::prefix('pengaduan')->name('pengaduan.')->group(function () {
 // ===== SURVEI =====
 Route::prefix('survei')->name('survei.')->group(function () {
     Route::get('/form', [PageController::class, 'surveiForm'])->name('form');
-    Route::post('/form', [PageController::class, 'storeSurvei'])->name('store');
+    Route::post('/form', [PageController::class, 'storeSurvei'])->name('store')->middleware('throttle:10,10');
     Route::get('/hasil', [PageController::class, 'hasilSurvei'])->name('hasil');
+    Route::get('/saran', [PageController::class, 'saranForm'])->name('saran');
+    Route::post('/saran', [PageController::class, 'storeSaran'])->name('saran.store')->middleware('throttle:5,10');
+    Route::get('/saran/lacak', [PageController::class, 'lacakSaran'])->name('saran.lacak')->middleware('throttle:20,1');
 });
 
 // ===== ARCHIVE VIEWER =====
 Route::get('/arsip/{id}/lihat', [PageController::class, 'viewArchive'])->name('archive.view');
 
 // ===== AUTH =====
+Route::get('/captcha/refresh', [App\Http\Controllers\Auth\LoginController::class, 'refreshCaptcha'])->name('captcha.refresh');
+
 Route::middleware('guest')->group(function () {
-    Route::get('/login', fn() => view('auth.login'))->name('login');
-    Route::post('/login', [App\Http\Controllers\Auth\LoginController::class, 'login'])->name('login.post');
-    Route::post('/otp/verify', [App\Http\Controllers\Auth\LoginController::class, 'verifyOtp'])->name('otp.verify');
+    Route::get('/login', [App\Http\Controllers\Auth\LoginController::class, 'showLogin'])->name('login');
+    Route::post('/login', [App\Http\Controllers\Auth\LoginController::class, 'login'])->name('login.post')->middleware('throttle:10,5');
+    Route::post('/otp/verify', [App\Http\Controllers\Auth\LoginController::class, 'verifyOtp'])->name('otp.verify')->middleware('throttle:5,5');
     Route::get('/forgot-password', fn() => redirect()->route('login')->with('error', 'Silakan hubungi administrator untuk reset password.'))->name('password.request');
 });
 
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [App\Http\Controllers\Auth\LoginController::class, 'logout'])->name('logout');
 });
+
+// ===== SUBSCRIPTION =====
+Route::post('/subscription', [SubscriptionController::class, 'store'])->name('subscription.store')->middleware('throttle:5,10');
+Route::get('/subscription/unsubscribe/{token}', [SubscriptionController::class, 'unsubscribe'])->name('subscription.unsubscribe');
 
 // ===== KOMENTAR =====
 Route::post('/komentar/{id}', [NewsController::class, 'storeComment'])->name('komentar.store')->middleware('auth');

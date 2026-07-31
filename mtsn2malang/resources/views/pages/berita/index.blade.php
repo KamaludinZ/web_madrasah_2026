@@ -108,11 +108,50 @@
                 <h3 class="sidebar-title">Kategori</h3>
                 <div class="space-y-2">
                     @foreach($categories as $cat)
-                    <a href="{{ route('berita.index', ['kategori' => $cat->slug]) }}" class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700 hover:text-school-green transition-colors">
+                    <a href="{{ route('berita.index', array_merge(request()->except(['page', 'kategori']), ['kategori' => $cat->slug])) }}" class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700 hover:text-school-green transition-colors">
                         <span class="text-sm text-gray-700 dark:text-gray-300">{{ $cat->name }}</span>
                         <span class="text-xs bg-gray-100 dark:bg-gray-700 text-gray-500 px-2 py-0.5 rounded-full">{{ $cat->news_count }}</span>
                     </a>
                     @endforeach
+                </div>
+            </div>
+
+            {{-- Arsip Berita --}}
+            <div class="sidebar-widget">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="sidebar-title mb-0">Arsip Berita</h3>
+                    @if($selectedYear || $selectedMonth)
+                        <a href="{{ route('berita.index', request()->except(['tahun', 'bulan', 'page'])) }}" class="text-xs text-school-green hover:underline">Reset</a>
+                    @endif
+                </div>
+
+                <div class="space-y-2">
+                    @forelse($archives as $yearData)
+                        <details class="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2" {{ $selectedYear === $yearData['year'] ? 'open' : '' }}>
+                            <summary class="cursor-pointer list-none flex items-center justify-between">
+                                <span class="font-semibold text-sm text-gray-800 dark:text-gray-100">{{ $yearData['year'] }}</span>
+                                <span class="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-200 px-2 py-0.5 rounded-full">{{ $yearData['total'] }}</span>
+                            </summary>
+
+                            <div class="mt-2 space-y-1">
+                                @foreach($yearData['months'] as $monthData)
+                                    @php
+                                        $isActiveArchive = $selectedYear === $yearData['year'] && $selectedMonth === $monthData['month'];
+                                        $archiveUrl = route('berita.index', array_merge(
+                                            request()->except(['page']),
+                                            ['tahun' => $yearData['year'], 'bulan' => str_pad((string) $monthData['month'], 2, '0', STR_PAD_LEFT)]
+                                        ));
+                                    @endphp
+                                    <a href="{{ $archiveUrl }}" class="flex items-center justify-between rounded-md px-2 py-1.5 text-sm transition-colors {{ $isActiveArchive ? 'bg-school-green text-white' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' }}">
+                                        <span>{{ $monthData['label'] }}</span>
+                                        <span class="text-xs px-2 py-0.5 rounded-full {{ $isActiveArchive ? 'bg-white/20 text-white' : 'bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-100' }}">{{ $monthData['total'] }}</span>
+                                    </a>
+                                @endforeach
+                            </div>
+                        </details>
+                    @empty
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Belum ada arsip berita.</p>
+                    @endforelse
                 </div>
             </div>
 

@@ -2,23 +2,38 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Pages\Auth\Login;
 use App\Filament\Pages\Dashboard;
+use App\Filament\Pages\EditProfile;
 use App\Filament\Pages\ManageMaintenance;
 use App\Filament\Pages\ManageSettings;
+use App\Filament\Pages\ManageWordpressMigration;
+use App\Filament\Pages\ManageWelcome;
 use App\Filament\Resources\AchievementResource;
+use App\Filament\Resources\BadgeAchievementResource;
+use App\Filament\Resources\AlumniCoordinatorResource;
 use App\Filament\Resources\ArchiveResource;
 use App\Filament\Resources\BannerResource;
 use App\Filament\Resources\CategoryResource;
+use App\Filament\Resources\CommentResource;
 use App\Filament\Resources\ComplaintResource;
 use App\Filament\Resources\ExtracurricularResource;
 use App\Filament\Resources\FacilityResource;
 use App\Filament\Resources\GtkResource;
+use App\Filament\Resources\HeadmasterHistoryResource;
+use App\Filament\Resources\MediaResource;
 use App\Filament\Resources\NewsResource;
 use App\Filament\Resources\PageContentResource;
+use App\Filament\Resources\PopupResource;
 use App\Filament\Resources\PortalAppResource;
 use App\Filament\Resources\ProgramResource;
 use App\Filament\Resources\RegistrationResource;
+use App\Filament\Resources\SaranResource;
+use App\Filament\Resources\SchoolLeaderResource;
 use App\Filament\Resources\ServiceStandardResource;
+use App\Filament\Resources\SocialMediaContentResource;
+use App\Filament\Resources\SubscriberResource;
+use App\Filament\Resources\SurveyLinkResource;
 use App\Filament\Resources\TestimonialResource;
 use App\Filament\Resources\UserResource;
 use App\Filament\Widgets\NewsStatsWidget;
@@ -49,7 +64,7 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
-            ->login()
+            ->login(Login::class)
             ->colors([
                 'primary' => Color::hex('#1a7a3c'),
                 'secondary' => Color::hex('#f97316'),
@@ -60,11 +75,32 @@ class AdminPanelProvider extends PanelProvider
                 'warning' => Color::Orange,
             ])
             ->brandName('MTsN 2 Kota Malang')
-            ->brandLogo(asset('images/logo.png'))
+            ->brandLogo(
+                \App\Models\Setting::get('logo')
+                    ? asset('storage/' . \App\Models\Setting::get('logo'))
+                    : asset('images/logo.png')
+            )
             ->brandLogoHeight('2.5rem')
-            ->favicon(asset('images/favicon.png'))
+            ->favicon(
+                \App\Models\Setting::get('favicon')
+                    ? asset('storage/' . \App\Models\Setting::get('favicon'))
+                    : asset('images/favicon.png')
+            )
             ->darkMode(true)
             ->sidebarCollapsibleOnDesktop()
+            ->profile(EditProfile::class, isSimple: false)
+            ->userMenuItems([
+                \Filament\Navigation\MenuItem::make()
+                    ->label(fn () => collect([
+                        'super_admin'     => '👑 Super Administrator',
+                        'editor_in_chief' => '✍️ Editor in Chief',
+                        'editor'          => '📝 Editor',
+                        'contributor'     => '🖊️ Kontributor',
+                        'moderator'       => '🛡️ Moderator',
+                    ])->get(auth()->user()?->getRoleNames()->first() ?? '', '—'))
+                    ->url('#')
+                    ->icon('heroicon-o-shield-check'),
+            ])
             ->navigationGroups([
                 NavigationGroup::make('Konten')->icon('heroicon-o-document-text'),
                 NavigationGroup::make('Profil Sekolah')->icon('heroicon-o-building-library'),
@@ -76,19 +112,30 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->resources([
                 NewsResource::class,
+                MediaResource::class,
+                CommentResource::class,
+                PopupResource::class,
                 CategoryResource::class,
                 BannerResource::class,
+                SchoolLeaderResource::class,
                 GtkResource::class,
+                HeadmasterHistoryResource::class,
                 ExtracurricularResource::class,
                 FacilityResource::class,
                 AchievementResource::class,
+                BadgeAchievementResource::class,
                 TestimonialResource::class,
                 PortalAppResource::class,
                 ServiceStandardResource::class,
                 ArchiveResource::class,
                 ProgramResource::class,
+                SocialMediaContentResource::class,
+                SubscriberResource::class,
                 RegistrationResource::class,
+                AlumniCoordinatorResource::class,
                 ComplaintResource::class,
+                SaranResource::class,
+                SurveyLinkResource::class,
                 PageContentResource::class,
                 UserResource::class,
             ])
@@ -96,6 +143,8 @@ class AdminPanelProvider extends PanelProvider
                 Dashboard::class,
                 ManageSettings::class,
                 ManageMaintenance::class,
+                ManageWordpressMigration::class,
+                ManageWelcome::class,
             ])
             ->widgets([
                 NewsStatsWidget::class,

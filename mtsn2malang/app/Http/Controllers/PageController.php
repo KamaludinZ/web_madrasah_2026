@@ -3,9 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\Achievement;
+use App\Models\AlumniCoordinator;
+use App\Models\HeadmasterHistory;
 use App\Models\Archive;
 use App\Models\Category;
 use App\Models\Complaint;
+use App\Models\GalleryPost;
+use App\Models\Saran;
+use App\Models\SchoolLeader;
 use App\Models\Extracurricular;
 use App\Models\Facility;
 use App\Models\Gtk;
@@ -16,6 +21,8 @@ use App\Models\Program;
 use App\Models\Registration;
 use App\Models\ServiceStandard;
 use App\Models\Setting;
+use App\Models\SocialMediaContent;
+use App\Models\SurveyLink;
 use Illuminate\Http\Request;
 
 class PageController extends Controller
@@ -32,7 +39,8 @@ class PageController extends Controller
     {
         PageView::record('/tentang/selayang-pandang');
         $content = PageContent::where('page_key', 'selayang_pandang')->first();
-        return view('pages.tentang.selayang-pandang', compact('content'));
+        $headmasterHistories = HeadmasterHistory::orderBy('order')->get();
+        return view('pages.tentang.selayang-pandang', compact('content', 'headmasterHistories'));
     }
 
     public function visiMisi()
@@ -46,7 +54,8 @@ class PageController extends Controller
     {
         PageView::record('/tentang/struktur-madrasah');
         $content = PageContent::where('page_key', 'struktur_madrasah')->first();
-        return view('pages.tentang.struktur-madrasah', compact('content'));
+        $leaders = SchoolLeader::where('is_active', true)->orderBy('order')->get();
+        return view('pages.tentang.struktur-madrasah', compact('content', 'leaders'));
     }
 
     public function strukturKomite()
@@ -67,11 +76,17 @@ class PageController extends Controller
     public function ikatanAlumni()
     {
         PageView::record('/tentang/ikatan-alumni');
+
         $content = PageContent::where('page_key', 'ikatan_alumni')->first();
+        $coordinators = AlumniCoordinator::where('is_active', true)
+            ->orderBy('order')
+            ->get();
+
         $alumniNews = News::published()->with(['category', 'author'])
-            ->whereHas('tags', fn($q) => $q->where('name->id', 'alumni'))
+            ->withAnyTags(['alumni', 'Alumni'])
             ->latest('published_at')->paginate(9);
-        return view('pages.tentang.ikatan-alumni', compact('content', 'alumniNews'));
+
+        return view('pages.tentang.ikatan-alumni', compact('content', 'coordinators', 'alumniNews'));
     }
 
     public function ekstrakurikuler()
@@ -79,7 +94,6 @@ class PageController extends Controller
         PageView::record('/tentang/ekstrakurikuler');
         $ekskul = Extracurricular::where('is_active', true)->orderBy('order')->get();
         $ekskulNews = News::published()->with(['category', 'author'])
-            ->whereHas('tags', fn($q) => $q->where('name->id', 'ekstrakurikuler'))
             ->latest('published_at')->take(6)->get();
         return view('pages.tentang.ekstrakurikuler', compact('ekskul', 'ekskulNews'));
     }
@@ -119,13 +133,22 @@ class PageController extends Controller
         return view('pages.layanan.kompensasi', compact('content'));
     }
 
+    public function layananPpdb()
+    {
+        PageView::record('/layanan/ppdb');
+        $registration = Registration::where('type', 'ppdb')->where('is_active', true)->first();
+
+        return view('pages.layanan.ppdb', compact('registration'));
+    }
+
     // ===== PROGRAM =====
     public function programUnggulan()
     {
         PageView::record('/program/unggulan');
+        $content = \App\Models\PageContent::query()->where('page_key', 'program_unggulan')->first();
         $programs = Program::where('type', 'unggulan')->where('is_active', true)->orderBy('order')->get();
-        $news = News::published()->whereHas('tags', fn($q) => $q->where('name->id', 'unggulan'))->latest('published_at')->take(6)->get();
-        return view('pages.program.unggulan', compact('programs', 'news'));
+        $news = News::published()->withAnyTags(['Unggulan'])->latest('published_at')->take(6)->get();
+        return view('pages.program.unggulan', compact('content', 'programs', 'news'));
     }
 
     public function programTahfidz()
@@ -160,11 +183,26 @@ class PageController extends Controller
     {
         PageView::record('/program/adiwiyata');
         $content = PageContent::where('page_key', 'adiwiyata')->first();
-        $news = News::published()->whereHas('tags', fn($q) => $q->where('name->id', 'adiwiyata'))->latest('published_at')->take(6)->get();
+        $news = News::published()->withAnyTags(['Adiwiyata'])->latest('published_at')->take(6)->get();
         return view('pages.program.adiwiyata', compact('content', 'news'));
     }
 
+    public function zonaIntegritas()
+    {
+        PageView::record('/program/zona-integritas');
+        $content = PageContent::where('page_key', 'zona_integritas')->first();
+        $news = News::published()->withAnyTags(['Zona Integritas'])->latest('published_at')->take(6)->get();
+        return view('pages.program.zona-integritas', compact('content', 'news'));
+    }
+
     // ===== PPID =====
+    public function ppidProfil()
+    {
+        PageView::record('/ppid/profil');
+        $content = PageContent::where('page_key', 'ppid_profil')->first();
+        return view('pages.ppid.profil', compact('content'));
+    }
+
     public function ppidBerkala()
     {
         PageView::record('/ppid/berkala');
@@ -184,6 +222,16 @@ class PageController extends Controller
         PageView::record('/ppid/serta-merta');
         $archives = Archive::ofType('serta_merta')->paginate(12);
         return view('pages.ppid.serta-merta', compact('archives'));
+    }
+
+    public function ppidGaleri()
+    {
+        PageView::record('/ppid/galeri');
+        $galleries = GalleryPost::with(['photos', 'news'])
+            ->whereHas('photos')
+            ->latest()
+            ->paginate(12);
+        return view('pages.ppid.galeri', compact('galleries'));
     }
 
     // ===== SAKIP =====
@@ -209,11 +257,28 @@ class PageController extends Controller
     }
 
     // ===== MA'HAD =====
+    public function mahadLanding()
+    {
+        PageView::record('/mahad');
+        $latestNews = News::published()->with(['category', 'author'])
+            ->withAnyTags(["Ma'had"])
+            ->latest('published_at')->take(6)->get();
+        $programs = Program::where('type', 'mahad')->where('is_active', true)->orderBy('order')->take(6)->get();
+        $facilities = Facility::where('category', 'mahad')->where('is_active', true)->orderBy('order')->take(8)->get();
+        $socialMediaContents = SocialMediaContent::where('is_active', true)
+            ->where('show_on_mahad', true)
+            ->orderBy('order')
+            ->take(6)
+            ->get();
+
+        return view('pages.mahad.home', compact('latestNews', 'programs', 'facilities', 'socialMediaContents'));
+    }
+
     public function mahadBerita()
     {
         PageView::record('/mahad/berita');
         $news = News::published()->with(['category', 'author'])
-            ->whereHas('tags', fn($q) => $q->where('name->id', 'mahad'))
+            ->withAnyTags(["Ma'had"])
             ->latest('published_at')->paginate(12);
         return view('pages.mahad.berita', compact('news'));
     }
@@ -222,7 +287,12 @@ class PageController extends Controller
     {
         PageView::record('/mahad/psb');
         $registration = Registration::where('type', 'psb')->where('is_active', true)->first();
-        $news = News::published()->whereHas('tags', fn($q) => $q->where('name->id', 'psb'))->latest('published_at')->take(6)->get();
+        $news = News::published()
+            ->withAnyTags(["Ma'had"])
+            ->latest('published_at')
+            ->take(6)
+            ->get();
+
         return view('pages.mahad.psb', compact('registration', 'news'));
     }
 
@@ -230,7 +300,11 @@ class PageController extends Controller
     {
         PageView::record('/mahad/program');
         $programs = Program::where('type', 'mahad')->where('is_active', true)->orderBy('order')->get();
-        $news = News::published()->whereHas('tags', fn($q) => $q->where('name->id', 'mahad'))->latest('published_at')->take(6)->get();
+        $news = News::published()
+            ->withAnyTags(["Ma'had"])
+            ->latest('published_at')
+            ->take(6)
+            ->get();
         return view('pages.mahad.program', compact('programs', 'news'));
     }
 
@@ -248,11 +322,18 @@ class PageController extends Controller
         return view('pages.mahad.struktur', compact('content'));
     }
 
+    public function mahadKontak()
+    {
+        PageView::record('/mahad/kontak');
+        return view('pages.mahad.kontak');
+    }
+
     // ===== PENGADUAN =====
     public function whistleblowing()
     {
         PageView::record('/pengaduan/whistleblowing');
-        return view('pages.pengaduan.whistleblowing');
+        $content = PageContent::where('page_key', 'whistleblowing')->first();
+        return view('pages.pengaduan.whistleblowing', compact('content'));
     }
 
     public function pengaduanMasyarakat()
@@ -302,25 +383,16 @@ class PageController extends Controller
     public function surveiForm()
     {
         PageView::record('/survei/form');
-        return view('pages.survei.form');
+        $surveyLinks = SurveyLink::active()->orderBy('order')->orderBy('id')->get();
+
+        return view('pages.survei.form', compact('surveyLinks'));
     }
 
     public function storeSurvei(Request $request)
     {
-        $request->validate([
-            'type' => 'required|in:skm,spk',
-            'answers' => 'required|array',
-        ]);
-
-        \App\Models\SurveyResponse::create([
-            'type' => $request->type,
-            'respondent_name' => $request->respondent_name,
-            'respondent_type' => $request->respondent_type,
-            'answers' => $request->answers,
-            'ip_address' => $request->ip(),
-        ]);
-
-        return back()->with('success', 'Terima kasih! Survei Anda telah berhasil dikirim.');
+        return redirect()
+            ->route('survei.form')
+            ->with('success', 'Survei saat ini menggunakan link eksternal. Silakan pilih survei pada daftar yang tersedia.');
     }
 
     public function hasilSurvei()
@@ -330,11 +402,59 @@ class PageController extends Controller
         return view('pages.survei.hasil', compact('archives'));
     }
 
+    public function saranForm()
+    {
+        PageView::record('/survei/saran');
+        return view('pages.survei.saran');
+    }
+
+    public function lacakSaran(Request $request)
+    {
+        PageView::record('/survei/saran/lacak');
+        $saran = null;
+        $notFound = false;
+
+        if ($request->filled('tiket')) {
+            $saran = Saran::where('ticket_number', trim($request->tiket))->first();
+            if (!$saran) {
+                $notFound = true;
+            }
+        }
+
+        return view('pages.survei.saran', compact('saran', 'notFound'));
+    }
+
+    public function storeSaran(Request $request)
+    {
+        $request->validate([
+            'name'    => 'nullable|string|max:255',
+            'email'   => 'nullable|email|max:255',
+            'subject' => 'required|string|max:255',
+            'content' => 'required|string|min:10',
+        ], [
+            'subject.required' => 'Subjek saran wajib diisi.',
+            'content.required' => 'Isi saran wajib diisi.',
+            'content.min'      => 'Isi saran minimal 10 karakter.',
+        ]);
+
+        $saran = Saran::create([
+            'name'    => $request->name ?: 'Anonim',
+            'email'   => $request->email,
+            'phone'   => null,
+            'subject' => $request->subject,
+            'content' => $request->content,
+            'status'  => 'pending',
+        ]);
+
+        return redirect()
+            ->route('survei.saran')
+            ->with('success', 'Terima kasih! Saran Anda telah kami terima dengan nomor tiket <strong>' . $saran->ticket_number . '</strong>. Simpan nomor tiket ini untuk melacak status saran Anda.');
+    }
+
     // ===== ARCHIVE VIEWER =====
     public function viewArchive(int $id)
     {
         $archive = Archive::findOrFail($id);
-        $archive->incrementViewCount();
 
         if ($archive->link_type === 'link') {
             return redirect()->away($archive->external_link);
