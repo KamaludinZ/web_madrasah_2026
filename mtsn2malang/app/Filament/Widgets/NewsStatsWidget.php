@@ -14,12 +14,22 @@ class NewsStatsWidget extends BaseWidget
 
     protected function getStats(): array
     {
+        $publishedCounts = News::published()
+            ->where('published_at', '>=', now()->subDays(6)->startOfDay())
+            ->selectRaw('DATE(published_at) as d, count(*) as aggregate')
+            ->groupBy('d')
+            ->pluck('aggregate', 'd');
+
+        $weeklyChart = collect(range(6, 0))
+            ->map(fn ($daysAgo) => (int) ($publishedCounts[now()->subDays($daysAgo)->toDateString()] ?? 0))
+            ->toArray();
+
         return [
             Stat::make('Total Berita', News::published()->count())
                 ->description('Berita terpublikasi')
                 ->descriptionIcon('heroicon-m-newspaper')
                 ->color('success')
-                ->chart([7, 2, 10, 3, 15, 4, 17]),
+                ->chart($weeklyChart),
 
             Stat::make('Draf Berita', News::where('status', 'draft')->count())
                 ->description('Menunggu publikasi')

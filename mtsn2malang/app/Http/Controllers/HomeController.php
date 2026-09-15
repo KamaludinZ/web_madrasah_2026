@@ -32,6 +32,9 @@ class HomeController extends Controller
         $prestasiNews = News::published()->with(['category', 'author'])
             ->withAnyTags(['Prestasi', 'Prestasi Siswa', 'Prestasi Madrasah', "Prestasi Ma'had", 'Prestasi Santri'])
             ->latest('published_at')->take(6)->get();
+        $pengumumanNews = News::published()->with(['category', 'author'])
+            ->whereHas('category', fn ($q) => $q->where('slug', 'pengumuman'))
+            ->latest('published_at')->take(6)->get();
 
         $academicYear = Setting::get('academic_year', '2024/2025');
         $prestasiStats = [
@@ -60,7 +63,7 @@ class HomeController extends Controller
         return view('pages.home', compact(
             'banners', 'defaultBannerImage',
             'defaultBannerSubtitle', 'defaultBannerTitle', 'defaultBannerDescription', 'defaultBannerLink',
-            'latestNews', 'popularNews', 'prestasiNews',
+            'latestNews', 'popularNews', 'prestasiNews', 'pengumumanNews',
             'prestasiStats', 'prestasiList', 'unggulanPrograms', 'socialMediaContents',
             'sarpras', 'testimonials', 'showTestimonialsSection', 'portalApps'
         ));

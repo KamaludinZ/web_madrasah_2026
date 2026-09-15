@@ -2,10 +2,21 @@
 @section('title', 'Galeri Foto - PPID MTsN 2 Kota Malang')
 @section('description', 'Galeri foto kegiatan MTsN 2 Kota Malang')
 
+@php
+    $bulanList = [
+        1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
+        5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
+        9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember',
+    ];
+    $tahunAktif = request('tahun');
+    $bulanAktif = request('bulan');
+    $adaFilter  = filled($tahunAktif) || filled($bulanAktif);
+@endphp
+
 @section('content')
 <div class="bg-gradient-to-br from-school-green-dark to-school-green py-12 text-white">
     <div class="container mx-auto px-4">
-        <nav class="text-sm text-green-200 mb-4">
+        <nav class="text-sm text-green-100 mb-4">
             <ol class="flex items-center gap-2 flex-wrap">
                 <li><a href="{{ route('home') }}" class="hover:text-white">Beranda</a></li>
                 <li>/</li>
@@ -15,11 +26,48 @@
             </ol>
         </nav>
         <h1 class="text-3xl md:text-4xl font-bold font-heading">Galeri Foto</h1>
-        <p class="text-green-200 mt-2">Dokumentasi foto kegiatan MTsN 2 Kota Malang</p>
+        <p class="text-green-100 mt-2">Dokumentasi foto kegiatan MTsN 2 Kota Malang</p>
     </div>
 </div>
 
 <div class="container mx-auto px-4 py-10">
+    {{-- Filter waktu --}}
+    <div class="mb-6">
+        <form method="GET" class="flex flex-wrap items-end gap-3">
+            <div>
+                <label for="tahun" class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Tahun</label>
+                <select name="tahun" id="tahun"
+                        class="rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white text-sm py-2 pl-3 pr-8">
+                    <option value="">Semua Tahun</option>
+                    @foreach($years as $y)
+                        <option value="{{ $y }}" @selected((string) $tahunAktif === (string) $y)>{{ $y }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div>
+                <label for="bulan" class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Bulan</label>
+                <select name="bulan" id="bulan"
+                        class="rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white text-sm py-2 pl-3 pr-8">
+                    <option value="">Semua Bulan</option>
+                    @foreach($bulanList as $no => $nama)
+                        <option value="{{ $no }}" @selected((string) $bulanAktif === (string) $no)>{{ $nama }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <button type="submit" class="px-4 py-2 rounded-lg bg-school-green text-white text-sm font-semibold hover:bg-school-green-dark transition">
+                Filter
+            </button>
+
+            @if($adaFilter)
+                <a href="{{ url()->current() }}" class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+                    Reset
+                </a>
+            @endif
+        </form>
+    </div>
+
     @if($galleries->count() > 0)
         <div class="space-y-4">
             @foreach($galleries as $gi => $gallery)
@@ -94,7 +142,7 @@
                                 </div>
                                 {{-- Index badge --}}
                                 @if($index === 0)
-                                <div class="absolute top-1 left-1 bg-school-green text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full leading-none">1</div>
+                                <div class="absolute top-1 left-1 bg-school-green text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none">1</div>
                                 @endif
                             </div>
                             @endforeach
@@ -136,8 +184,13 @@
     @else
         <div class="text-center py-20 text-gray-400">
             <div class="text-6xl mb-4">🖼️</div>
-            <p class="text-xl font-medium text-gray-500 dark:text-gray-400">Belum ada galeri foto</p>
-            <p class="text-sm mt-2">Galeri foto akan ditampilkan di sini setelah ditambahkan melalui berita.</p>
+            @if($adaFilter)
+                <p class="text-xl font-medium text-gray-500 dark:text-gray-400">Tidak ada galeri pada rentang waktu tersebut</p>
+                <p class="text-sm mt-2">Coba ubah atau reset filter tahun/bulan di atas.</p>
+            @else
+                <p class="text-xl font-medium text-gray-500 dark:text-gray-400">Belum ada galeri foto</p>
+                <p class="text-sm mt-2">Galeri foto akan ditampilkan di sini setelah ditambahkan melalui berita.</p>
+            @endif
         </div>
     @endif
 </div>
@@ -145,7 +198,7 @@
 {{-- ===== SLIDESHOW MODAL ===== --}}
 <div id="ppid-gallery-slideshow" class="fixed inset-0 z-[9999] bg-black/95 hidden items-center justify-center" oncontextmenu="return false;">
     {{-- Close --}}
-    <button onclick="closePpidSlideshow()" class="absolute top-4 right-4 z-10 w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white transition-colors" aria-label="Tutup">
+    <button onclick="closePpidSlideshow()" class="absolute top-4 right-4 z-10 w-11 h-11 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white transition-colors" aria-label="Tutup">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
         </svg>

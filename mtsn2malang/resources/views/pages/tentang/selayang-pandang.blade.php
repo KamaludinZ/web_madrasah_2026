@@ -5,7 +5,7 @@
 {{-- Hero --}}
 <div class="bg-gradient-to-br from-school-green-dark to-school-green py-12 text-white">
     <div class="container mx-auto px-4">
-        <nav class="text-sm text-green-200 mb-4">
+        <nav class="text-sm text-green-100 mb-4">
             <ol class="flex items-center gap-2">
                 <li><a href="{{ route('home') }}" class="hover:text-white">Beranda</a></li>
                 <li>/</li>
@@ -15,7 +15,7 @@
             </ol>
         </nav>
         <h1 class="text-3xl md:text-4xl font-bold font-heading">Selayang Pandang</h1>
-        <p class="text-green-200 mt-2">Profil dan sejarah singkat MTsN 2 Kota Malang</p>
+        <p class="text-green-100 mt-2">Profil dan sejarah singkat MTsN 2 Kota Malang</p>
     </div>
 </div>
 
@@ -24,7 +24,7 @@
     {{-- Konten Utama --}}
     <div class="max-w-4xl mx-auto">
         @if($content && $content->content)
-            <div class="prose prose-lg dark:prose-invert max-w-none
+            <div class="prose prose-lg dark:prose-invert mx-auto
                         prose-headings:text-school-green prose-headings:font-heading
                         prose-a:text-school-green prose-strong:text-gray-900
                         dark:prose-strong:text-white"

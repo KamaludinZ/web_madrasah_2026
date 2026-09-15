@@ -2,7 +2,17 @@
 
 namespace App\Filament\Pages;
 
+use App\Jobs\ApplyManualUpdateJob;
+use App\Jobs\ApplyUpdateJob;
+use App\Jobs\CreateBackupJob;
+use App\Jobs\RestoreBackupJob;
+use App\Models\AppBackup;
+use App\Models\AppRestore;
+use App\Models\AppUpdate;
 use App\Models\Setting;
+use App\Services\BackupService;
+use App\Services\UpdateService;
+use App\Support\AppVersion;
 use App\Support\UploadImageHelper;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -12,10 +22,14 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use Livewire\WithFileUploads;
 use Spatie\Activitylog\Models\Activity;
 
 class ManageSettings extends Page
 {
+    use WithFileUploads;
+
     protected static ?string $navigationIcon = 'heroicon-o-cog-6-tooth';
     protected static ?string $navigationLabel = 'Pengaturan Website';
     protected static ?string $navigationGroup = 'Pengaturan';
@@ -29,8 +43,38 @@ class ManageSettings extends Page
 
     public ?array $data = [];
 
-    /** Tab utama aktif: settings | log | audit */
+    /** Tab utama aktif: settings | log | audit | backup | update */
     public string $activeMainTab = 'settings';
+
+    // ─── State untuk tab Backup & Restore ────────────────────────────────────
+
+    /** File ZIP backup yang diunggah untuk direstore. */
+    public ?TemporaryUploadedFile $restoreFile = null;
+
+    /** Konfirmasi mengetik "RESTORE" sebelum tombol restore aktif. */
+    public string $restoreConfirmText = '';
+
+    public bool $showRestoreConfirmModal = false;
+
+    // ─── State untuk tab Update Aplikasi ─────────────────────────────────────
+
+    public string $updateGithubRepo = '';
+
+    /** Kosong = token tersimpan tidak diubah. Diisi hanya saat mengganti token. */
+    public string $updateGithubTokenInput = '';
+
+    public ?array $updateCheckResult = null;
+
+    public bool $updateConfirm = false;
+
+    /** File ZIP kode aplikasi untuk update manual (tanpa GitHub). */
+    public ?TemporaryUploadedFile $manualUpdateFile = null;
+
+    public string $manualUpdateVersion = '';
+
+    public bool $manualUpdateConfirm = false;
+
+    public bool $showManualUpdateConfirmModal = false;
 
     // ─── State untuk tab Log & Audit ─────────────────────────────────────────
 
@@ -131,6 +175,8 @@ class ManageSettings extends Page
             'mahad_social_tiktok'       => Setting::get('mahad_social_tiktok', ''),
             'mahad_wa_channel'          => Setting::get('mahad_wa_channel', ''),
         ]);
+
+        $this->updateGithubRepo = app(UpdateService::class)->repo() ?? '';
     }
 
     public function form(Form $form): Form
@@ -1024,6 +1070,377 @@ class ManageSettings extends Page
         fclose($fp);
 
         return $content;
+    }
+
+    // ─── Backup & Restore ────────────────────────────────────────────────────
+
+    public function getBackups()
+    {
+        return AppBackup::latest()->limit(30)->get();
+    }
+
+    public function hasRunningBackup(): bool
+    {
+        return AppBackup::where('status', 'running')->exists();
+    }
+
+    /**
+     * Backup/restore/update saling eksklusif — tidak boleh dua berjalan
+     * bersamaan (mis. backup manual ditekan di tengah restore sedang jalan
+     * bisa menangkap database dalam kondisi separuh dipulihkan).
+     *
+     * hasRunningX() saja tidak cukup: dua klik cepat/dua tab browser bisa
+     * lolos guard yang sama sebelum salah satunya sempat membuat record
+     * 'running'. Cache::lock() membuat urutan cek+buat-record atomik lintas
+     * request — request kedua akan gagal dapat lock dan ditolak dengan rapi,
+     * bukan ikut membuat job kedua yang bentrok.
+     */
+    private function withExclusiveMaintenanceLock(callable $callback): void
+    {
+        $lock = \Illuminate\Support\Facades\Cache::lock('manage-settings:maintenance-op', 10);
+
+        if (! $lock->get()) {
+            Notification::make()->title('Ada proses lain yang baru saja dimulai, coba lagi sebentar')->warning()->send();
+            return;
+        }
+
+        try {
+            if ($this->hasRunningBackup() || $this->hasRunningRestore() || $this->hasRunningUpdate()) {
+                Notification::make()->title('Tunggu proses backup/restore/update lain selesai')->warning()->send();
+                return;
+            }
+
+            $callback();
+        } finally {
+            $lock->release();
+        }
+    }
+
+    public function createBackup(): void
+    {
+        $this->withExclusiveMaintenanceLock(function () {
+            $backup = AppBackup::create([
+                'type' => 'manual',
+                'status' => 'running',
+                'app_version' => AppVersion::current(),
+                'triggered_by' => auth()->id(),
+                'started_at' => now(),
+            ]);
+
+            CreateBackupJob::dispatch($backup->id);
+
+            $this->logActivity('Memulai backup aplikasi manual', ['backup_id' => $backup->id]);
+            Notification::make()
+                ->title('Backup dimulai')
+                ->body('Proses berjalan di background. Halaman ini akan otomatis memperbarui status.')
+                ->success()->send();
+        });
+    }
+
+    public function downloadBackup(int $backupId)
+    {
+        $backup = AppBackup::findOrFail($backupId);
+
+        if ($backup->status !== 'completed' || blank($backup->filename)) {
+            Notification::make()->title('Backup ini belum siap diunduh')->warning()->send();
+            return null;
+        }
+
+        $service = app(BackupService::class);
+        $service->assertSafeFilename($backup->filename);
+        $path = $service->absolutePathFor($backup->filename);
+
+        if (! is_file($path)) {
+            Notification::make()->title('File backup tidak ditemukan di server')->danger()->send();
+            return null;
+        }
+
+        $this->logActivity('Mengunduh backup', ['backup_id' => $backup->id, 'filename' => $backup->filename]);
+
+        return response()->download($path, $backup->filename);
+    }
+
+    public function deleteBackup(int $backupId): void
+    {
+        $backup = AppBackup::findOrFail($backupId);
+
+        if ($backup->status === 'running') {
+            Notification::make()->title('Tidak bisa menghapus backup yang sedang berjalan')->warning()->send();
+            return;
+        }
+
+        if (filled($backup->filename)) {
+            app(BackupService::class)->delete($backup->filename);
+        }
+
+        $backup->delete();
+
+        $this->logActivity('Menghapus backup', ['filename' => $backup->filename]);
+        Notification::make()->title('Backup dihapus')->success()->send();
+    }
+
+    public function getRestores()
+    {
+        return AppRestore::latest()->limit(15)->get();
+    }
+
+    public function hasRunningRestore(): bool
+    {
+        return AppRestore::where('status', 'running')->exists();
+    }
+
+    public function openRestoreConfirm(): void
+    {
+        if (! $this->restoreFile) {
+            Notification::make()->title('Pilih file backup (.zip) terlebih dahulu')->warning()->send();
+            return;
+        }
+
+        $this->restoreConfirmText = '';
+        $this->showRestoreConfirmModal = true;
+    }
+
+    public function cancelRestoreConfirm(): void
+    {
+        $this->showRestoreConfirmModal = false;
+        $this->restoreConfirmText = '';
+    }
+
+    /**
+     * Restore SANGAT merusak jika salah — wajib ketik "RESTORE" persis, dan
+     * sistem otomatis membuat backup pengaman dari kondisi saat ini terlebih
+     * dahulu (lihat RestoreService) sebelum menimpa apa pun.
+     */
+    public function runRestore(): void
+    {
+        if ($this->restoreConfirmText !== 'RESTORE') {
+            Notification::make()->title('Ketik "RESTORE" persis untuk konfirmasi')->warning()->send();
+            return;
+        }
+
+        if (! $this->restoreFile) {
+            Notification::make()->title('File backup tidak ditemukan, unggah ulang')->danger()->send();
+            return;
+        }
+
+        $this->withExclusiveMaintenanceLock(function () {
+            try {
+                $originalName = $this->restoreFile->getClientOriginalName();
+
+                if (! str_ends_with(strtolower($originalName), '.zip')) {
+                    Notification::make()->title('File harus berformat .zip')->danger()->send();
+                    return;
+                }
+
+                $storedPath = $this->restoreFile->store('tmp-uploads');
+                $absolutePath = storage_path('app/' . $storedPath);
+
+                $restore = AppRestore::create([
+                    'source_filename' => $originalName,
+                    'status' => 'running',
+                    'triggered_by' => auth()->id(),
+                    'started_at' => now(),
+                ]);
+
+                RestoreBackupJob::dispatch($restore->id, $absolutePath);
+
+                $this->logActivity('Memulai restore aplikasi', ['source' => $originalName]);
+                $this->reset(['restoreFile', 'restoreConfirmText', 'showRestoreConfirmModal']);
+
+                Notification::make()
+                    ->title('Restore dimulai')
+                    ->body('Backup pengaman dari kondisi saat ini dibuat otomatis sebelum restore diterapkan.')
+                    ->warning()->persistent()->send();
+            } catch (\Throwable $e) {
+                Notification::make()->title('Gagal memulai restore')->body($e->getMessage())->danger()->send();
+            }
+        });
+    }
+
+    // ─── Update Aplikasi ─────────────────────────────────────────────────────
+
+    public function currentAppVersion(): string
+    {
+        return AppVersion::current();
+    }
+
+    public function hasGithubToken(): bool
+    {
+        return app(UpdateService::class)->hasToken();
+    }
+
+    public function saveGithubSettings(): void
+    {
+        $service = app(UpdateService::class);
+
+        if (blank($this->updateGithubRepo) || ! str_contains($this->updateGithubRepo, '/')) {
+            Notification::make()->title('Format repo harus "pemilik/nama-repo"')->warning()->send();
+            return;
+        }
+
+        $service->setRepo($this->updateGithubRepo);
+
+        if (filled($this->updateGithubTokenInput)) {
+            $service->setToken($this->updateGithubTokenInput);
+            $this->updateGithubTokenInput = '';
+        }
+
+        $this->logActivity('Memperbarui konfigurasi GitHub untuk update aplikasi');
+        Notification::make()->title('Konfigurasi GitHub disimpan')->success()->send();
+    }
+
+    public function checkForUpdate(): void
+    {
+        try {
+            $this->updateCheckResult = app(UpdateService::class)->checkForUpdate();
+            $this->updateConfirm = false;
+
+            if ($this->updateCheckResult['available']) {
+                Notification::make()
+                    ->title('Update tersedia: v' . $this->updateCheckResult['latest'])
+                    ->success()->send();
+            } else {
+                Notification::make()->title('Aplikasi sudah versi terbaru')->success()->send();
+            }
+        } catch (\Throwable $e) {
+            $this->updateCheckResult = null;
+            Notification::make()->title('Gagal mengecek update')->body($e->getMessage())->danger()->send();
+        }
+    }
+
+    public function hasRunningUpdate(): bool
+    {
+        return AppUpdate::where('status', 'running')->exists();
+    }
+
+    public function getUpdateHistory()
+    {
+        return AppUpdate::latest()->limit(15)->get();
+    }
+
+    public function applyUpdate(): void
+    {
+        if (! $this->updateConfirm) {
+            Notification::make()->title('Centang konfirmasi sebelum menerapkan update')->warning()->send();
+            return;
+        }
+
+        if (! $this->updateCheckResult || ! ($this->updateCheckResult['available'] ?? false)) {
+            Notification::make()->title('Tidak ada update yang siap diterapkan')->warning()->send();
+            return;
+        }
+
+        $this->withExclusiveMaintenanceLock(function () {
+            $update = AppUpdate::create([
+                'from_version' => AppVersion::current(),
+                'to_version' => $this->updateCheckResult['latest'],
+                'release_tag' => $this->updateCheckResult['tag'],
+                'status' => 'running',
+                'triggered_by' => auth()->id(),
+                'started_at' => now(),
+            ]);
+
+            ApplyUpdateJob::dispatch($update->id, $this->updateCheckResult['tag']);
+
+            $this->logActivity('Memulai update aplikasi', [
+                'from' => $update->from_version,
+                'to' => $update->to_version,
+            ]);
+
+            $this->updateConfirm = false;
+            $this->updateCheckResult = null;
+
+            Notification::make()
+                ->title('Update dimulai')
+                ->body('Backup otomatis dibuat lebih dulu. Jangan tutup atau reload halaman ini sampai selesai.')
+                ->warning()->persistent()->send();
+        });
+    }
+
+    // ─── Update Manual (Upload ZIP) ──────────────────────────────────────────
+
+    public function openManualUpdateConfirm(): void
+    {
+        if (! $this->manualUpdateFile) {
+            Notification::make()->title('Pilih file ZIP kode aplikasi terlebih dahulu')->warning()->send();
+            return;
+        }
+
+        if (blank($this->manualUpdateVersion) || ! preg_match('/^\d+\.\d+\.\d+/', $this->manualUpdateVersion)) {
+            Notification::make()->title('Isi nomor versi baru dengan format semver, mis. 1.1.0')->warning()->send();
+            return;
+        }
+
+        if (version_compare($this->manualUpdateVersion, AppVersion::current(), '<=')) {
+            Notification::make()
+                ->title('Versi baru harus lebih tinggi dari versi saat ini')
+                ->body('Versi saat ini: v' . AppVersion::current())
+                ->warning()->send();
+            return;
+        }
+
+        $this->manualUpdateConfirm = false;
+        $this->showManualUpdateConfirmModal = true;
+    }
+
+    public function cancelManualUpdateConfirm(): void
+    {
+        $this->showManualUpdateConfirmModal = false;
+        $this->manualUpdateConfirm = false;
+    }
+
+    public function runManualUpdate(): void
+    {
+        if (! $this->manualUpdateConfirm) {
+            Notification::make()->title('Centang konfirmasi sebelum menerapkan update')->warning()->send();
+            return;
+        }
+
+        if (! $this->manualUpdateFile) {
+            Notification::make()->title('File ZIP tidak ditemukan, unggah ulang')->danger()->send();
+            return;
+        }
+
+        $this->withExclusiveMaintenanceLock(function () {
+            try {
+                $originalName = $this->manualUpdateFile->getClientOriginalName();
+
+                if (! str_ends_with(strtolower($originalName), '.zip')) {
+                    Notification::make()->title('File harus berformat .zip')->danger()->send();
+                    return;
+                }
+
+                $storedPath = $this->manualUpdateFile->store('tmp-uploads');
+                $absolutePath = storage_path('app/' . $storedPath);
+                $toVersion = trim($this->manualUpdateVersion);
+
+                $update = AppUpdate::create([
+                    'from_version' => AppVersion::current(),
+                    'to_version' => $toVersion,
+                    'release_tag' => null,
+                    'status' => 'running',
+                    'triggered_by' => auth()->id(),
+                    'started_at' => now(),
+                ]);
+
+                ApplyManualUpdateJob::dispatch($update->id, $absolutePath, $toVersion);
+
+                $this->logActivity('Memulai update aplikasi manual (upload ZIP)', [
+                    'from' => $update->from_version,
+                    'to' => $update->to_version,
+                    'source_file' => $originalName,
+                ]);
+
+                $this->reset(['manualUpdateFile', 'manualUpdateVersion', 'manualUpdateConfirm', 'showManualUpdateConfirmModal']);
+
+                Notification::make()
+                    ->title('Update manual dimulai')
+                    ->body('Backup otomatis dibuat lebih dulu. Jangan tutup atau reload halaman ini sampai selesai.')
+                    ->warning()->persistent()->send();
+            } catch (\Throwable $e) {
+                Notification::make()->title('Gagal memulai update manual')->body($e->getMessage())->danger()->send();
+            }
+        });
     }
 
     protected function getFormActions(): array

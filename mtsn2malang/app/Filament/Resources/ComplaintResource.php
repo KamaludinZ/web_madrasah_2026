@@ -40,7 +40,7 @@ class ComplaintResource extends Resource
         return $form->schema([
             Forms\Components\Section::make('Informasi Pengaduan')->schema([
                 Forms\Components\TextInput::make('ticket_number')->label('No. Tiket')->disabled(),
-                Forms\Components\Select::make('type')->label('Jenis')->options(['whistleblowing' => 'Whistleblowing', 'masyarakat' => 'Pengaduan Masyarakat'])->disabled(),
+                Forms\Components\Select::make('type')->label('Jenis')->options(['whistleblowing' => 'Whistleblowing', 'masyarakat' => 'Pengaduan'])->disabled(),
                 Forms\Components\TextInput::make('name')->label('Nama Pelapor')->disabled(),
                 Forms\Components\TextInput::make('email')->label('Email')->disabled(),
                 Forms\Components\TextInput::make('phone')->label('Telepon')->disabled(),
@@ -73,7 +73,17 @@ class ComplaintResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('ticket_number')->label('No. Tiket')->searchable(),
-                Tables\Columns\TextColumn::make('type')->label('Jenis')->badge(),
+                Tables\Columns\TextColumn::make('type')->label('Jenis')->badge()
+                    ->formatStateUsing(fn (?string $state) => match ($state) {
+                        'masyarakat'     => 'Pengaduan',
+                        'whistleblowing' => 'Whistleblowing',
+                        default          => $state,
+                    })
+                    ->color(fn (?string $state) => match ($state) {
+                        'masyarakat'     => 'warning',
+                        'whistleblowing' => 'danger',
+                        default          => 'gray',
+                    }),
                 Tables\Columns\TextColumn::make('name')->label('Pelapor')->default('Anonim'),
                 Tables\Columns\TextColumn::make('subject')->label('Subjek')->limit(40),
                 Tables\Columns\TextColumn::make('status')->label('Status')
@@ -82,6 +92,12 @@ class ComplaintResource extends Resource
             ])
             ->defaultSort('created_at', 'desc')
             ->filters([
+                Tables\Filters\SelectFilter::make('type')
+                    ->label('Jenis')
+                    ->options([
+                        'masyarakat'     => 'Pengaduan',
+                        'whistleblowing' => 'Whistleblowing',
+                    ]),
                 Tables\Filters\SelectFilter::make('status')
                     ->label('Status')
                     ->options([

@@ -20,8 +20,24 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\HttpException $e, $request) {
             if ($e->getStatusCode() === 503) {
+                $rawEndTime = \App\Models\Setting::get('maintenance_end_time');
+
+                // Kirim ISO 8601 dengan offset zona waktu eksplisit: input datetime-local /
+                // Carbon toString tidak menyertakan zona waktu, sehingga `new Date(...)` di
+                // browser pengunjung akan menafsirkannya sebagai zona waktu LOKAL PENGUNJUNG,
+                // bukan zona waktu server — membuat hitung mundur meleset (atau langsung
+                // "Segera online!") untuk siapa pun yang zona waktu browsernya beda dari server.
+                $endTime = null;
+                if (filled($rawEndTime)) {
+                    try {
+                        $endTime = \Illuminate\Support\Carbon::parse($rawEndTime, config('app.timezone'))->toIso8601String();
+                    } catch (\Throwable) {
+                        $endTime = null;
+                    }
+                }
+
                 return response()->view('errors.maintenance', [
-                    'endTime' => \App\Models\Setting::get('maintenance_end_time'),
+                    'endTime' => $endTime,
                 ], 503);
             }
             return response()->view('errors.500', [], $e->getStatusCode());

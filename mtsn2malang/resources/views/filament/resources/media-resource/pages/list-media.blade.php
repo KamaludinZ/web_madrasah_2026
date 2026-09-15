@@ -258,7 +258,7 @@
                         Buka ↗
                     </a>
                     <button onclick="AIS.close()" aria-label="Tutup"
-                            style="width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.8);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
+                            style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.8);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
                         <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
                         </svg>

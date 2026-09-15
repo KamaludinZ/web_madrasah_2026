@@ -50,6 +50,7 @@
             x-bind:disabled="refreshing"
             x-on:click="refreshing = true; setTimeout(() => refreshing = false, 1000)"
             title="Ganti kode keamanan"
+            aria-label="Ganti kode keamanan"
             class="flex-shrink-0 p-2.5 rounded-lg border border-gray-300 dark:border-gray-600
                    text-gray-500 dark:text-gray-400
                    hover:text-primary-600 hover:border-primary-500

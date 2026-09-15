@@ -4,7 +4,7 @@
 <div class="bg-gradient-to-br from-school-green-dark to-school-green py-12 text-white">
     <div class="container mx-auto px-4">
         <h1 class="text-3xl font-bold font-heading">Whistleblowing System</h1>
-        <p class="text-green-200 mt-2">Sampaikan laporan dugaan pelanggaran secara aman dan bertanggung jawab.</p>
+        <p class="text-green-100 mt-2">Sampaikan laporan dugaan pelanggaran secara aman dan bertanggung jawab.</p>
     </div>
 </div>
 

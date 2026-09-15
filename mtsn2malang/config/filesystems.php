@@ -41,7 +41,10 @@ return [
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),
-            'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
+            // URL relatif: mengikuti host permintaan, sehingga pratinjau gambar di
+            // form admin tetap termuat saat diakses dari perangkat/domain lain.
+            // Diganti absolut hanya bila ASSET_URL diisi (mis. saat pakai CDN).
+            'url' => rtrim(env('ASSET_URL', ''), '/').'/storage',
             'visibility' => 'public',
             'throw' => false,
             'report' => false,

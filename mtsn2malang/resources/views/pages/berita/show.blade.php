@@ -47,7 +47,9 @@
             {{-- Featured Image --}}
             @if($news->thumbnail)
             <figure class="mb-8 rounded-2xl overflow-hidden">
-                <img src="{{ $news->thumbnail_url }}" alt="{{ $news->title }}" class="w-full max-h-96 object-cover">
+                <div class="aspect-video overflow-hidden">
+                    <img src="{{ $news->thumbnail_url }}" alt="{{ $news->title }}" class="w-full h-full object-cover">
+                </div>
                 @if($news->thumbnail_caption)
                 <figcaption class="text-xs text-gray-400 text-center mt-2 italic">{{ $news->thumbnail_caption }}</figcaption>
                 @endif
@@ -398,7 +400,7 @@
 
             @if((bool) \App\Models\Setting::get('subscription_enabled', true))
             <div class="mt-8 p-5 bg-green-50 dark:bg-gray-800/60 border border-green-100 dark:border-gray-700 rounded-2xl">
-                <h3 class="text-lg font-bold font-heading text-gray-900 dark:text-white mb-2">Dapatkan Update Berita Terbaru</h3>
+                <h2 class="text-lg font-bold font-heading text-gray-900 dark:text-white mb-2">Dapatkan Update Berita Terbaru</h2>
                 <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">
                     Isi email Anda untuk menerima notifikasi berita terbaru dari MTsN 2 Kota Malang.
                 </p>
@@ -449,7 +451,7 @@
 
             {{-- Comments --}}
             <div class="mt-8">
-                <h3 class="text-xl font-bold font-heading text-gray-900 dark:text-white mb-6">Komentar</h3>
+                <h2 class="text-xl font-bold font-heading text-gray-900 dark:text-white mb-6">Komentar</h2>
 
                 {{-- Comment Form --}}
                 @auth
@@ -497,13 +499,13 @@
         <aside class="lg:w-80 flex-shrink-0">
             {{-- Related News --}}
             <div class="sidebar-widget">
-                <h3 class="sidebar-title">Berita Lainnya</h3>
+                <h2 class="sidebar-title">Berita Lainnya</h2>
                 <div class="space-y-4">
                     @foreach($relatedNews as $related)
                     <a href="{{ route('berita.show', $related->slug) }}" class="flex gap-3 group">
                         <img src="{{ $related->thumbnail_url }}" alt="{{ $related->title }}" class="w-16 h-16 rounded-lg object-cover flex-shrink-0">
                         <div>
-                            <h4 class="text-sm font-medium text-gray-900 dark:text-white group-hover:text-school-green transition-colors line-clamp-2">{{ $related->title }}</h4>
+                            <h3 class="text-sm font-medium text-gray-900 dark:text-white group-hover:text-school-green transition-colors line-clamp-2">{{ $related->title }}</h3>
                             <span class="text-xs text-gray-400">{{ $related->published_at?->format('d M Y') }}</span>
                         </div>
                     </a>
@@ -513,7 +515,7 @@
 
             {{-- Category --}}
             <div class="sidebar-widget">
-                <h3 class="sidebar-title">Kategori Terkait</h3>
+                <h2 class="sidebar-title">Kategori Terkait</h2>
                 <div class="flex flex-wrap gap-2">
                     @foreach($categories as $cat)
                     <a href="{{ route('berita.index', ['kategori' => $cat->slug]) }}" class="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-sm rounded-full hover:bg-school-green hover:text-white transition-colors">{{ $cat->name }}</a>
@@ -524,7 +526,7 @@
             {{-- Infografis --}}
             @if($infografis->count() > 0)
             <div class="sidebar-widget">
-                <h3 class="sidebar-title">Infografis</h3>
+                <h2 class="sidebar-title">Infografis</h2>
                 <div class="space-y-3">
                     @foreach($infografis as $info)
                     <a href="{{ $info->image_url }}" class="glightbox block rounded-xl overflow-hidden group">

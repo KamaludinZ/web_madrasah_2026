@@ -18,7 +18,7 @@
                         <div class="container mx-auto px-4 md:px-8">
                             <div class="max-w-2xl" data-aos="fade-right">
                                 @if($banner->subtitle)
-                                <span class="inline-block px-3 py-1 bg-school-orange text-white text-sm font-semibold rounded-full mb-4">{{ $banner->subtitle }}</span>
+                                <span class="inline-block px-3 py-1 bg-orange-700 text-white text-sm font-semibold rounded-full mb-4">{{ $banner->subtitle }}</span>
                                 @endif
                                 <h1 class="text-3xl md:text-5xl font-bold text-white font-heading leading-tight mb-4">{{ $banner->title }}</h1>
                                 @if($banner->description)
@@ -44,7 +44,7 @@
                     <div class="absolute inset-0 flex items-center">
                         <div class="container mx-auto px-4 md:px-8 text-center">
                             @if(!empty($defaultBannerSubtitle))
-                            <span class="inline-block px-3 py-1 bg-school-orange text-white text-sm font-semibold rounded-full mb-4">{{ $defaultBannerSubtitle }}</span>
+                            <span class="inline-block px-3 py-1 bg-orange-700 text-white text-sm font-semibold rounded-full mb-4">{{ $defaultBannerSubtitle }}</span>
                             @endif
                             <h1 class="text-4xl md:text-6xl font-bold text-white font-heading mb-4 [&_*]:text-white [&_a]:underline">{!! $defaultBannerTitle !!}</h1>
                             @if(!empty($defaultBannerDescription))
@@ -97,7 +97,7 @@
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 Layanan
             </a>
-            <a href="{{ route('survei.form') }}" class="flex items-center gap-2 px-5 py-3 bg-school-orange text-white rounded-xl font-semibold text-sm hover:bg-school-orange-dark transition-all hover:-translate-y-0.5 shadow-md" data-aos="fade-up" data-aos-delay="100">
+            <a href="{{ route('survei.form') }}" class="flex items-center gap-2 px-5 py-3 bg-orange-700 text-white rounded-xl font-semibold text-sm hover:bg-orange-800 transition-all hover:-translate-y-0.5 shadow-md" data-aos="fade-up" data-aos-delay="100">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
                 Survei
             </a>
@@ -169,19 +169,19 @@
             </div>
             @endif
             @if($statTeachers)
-            <div class="text-center p-5 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-md">
+            <div class="text-center p-5 rounded-2xl bg-gradient-to-br from-blue-700 to-blue-900 text-white shadow-md">
                 <div class="text-3xl font-bold font-heading" data-counter="{{ $statTeachers }}">{{ $fmtStat($statTeachers) }}</div>
                 <div class="text-sm text-blue-100 mt-1">Guru</div>
             </div>
             @endif
             @if($statStaff)
-            <div class="text-center p-5 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-700 text-white shadow-md">
+            <div class="text-center p-5 rounded-2xl bg-gradient-to-br from-orange-700 to-orange-900 text-white shadow-md">
                 <div class="text-3xl font-bold font-heading" data-counter="{{ $statStaff }}">{{ $fmtStat($statStaff) }}</div>
                 <div class="text-sm text-orange-100 mt-1">Tenaga Kependidikan</div>
             </div>
             @endif
             @if($statAlumni)
-            <div class="text-center p-5 rounded-2xl bg-gradient-to-br from-purple-500 to-purple-700 text-white shadow-md">
+            <div class="text-center p-5 rounded-2xl bg-gradient-to-br from-purple-700 to-purple-900 text-white shadow-md">
                 <div class="text-3xl font-bold font-heading" data-counter="{{ $statAlumni }}">{{ $fmtStat($statAlumni) }}</div>
                 <div class="text-sm text-purple-100 mt-1">Alumni</div>
             </div>
@@ -389,7 +389,7 @@
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                             @foreach($identityRows as $label => $value)
                             <div class="flex flex-col p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
-                                <span class="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">{{ $label }}</span>
+                                <span class="text-xs text-gray-400 font-semibold uppercase tracking-wider">{{ $label }}</span>
                                 <span class="text-sm text-gray-800 dark:text-gray-200 font-semibold mt-0.5 leading-snug">{{ $value }}</span>
                             </div>
                             @endforeach
@@ -444,6 +444,7 @@
                 <button @click="activeTab = 'terbaru'" :class="activeTab === 'terbaru' ? 'border-school-green text-school-green' : 'border-transparent text-gray-500'" class="px-4 py-2 text-sm font-semibold border-b-2 transition-colors">Terbaru</button>
                 <button @click="activeTab = 'populer'" :class="activeTab === 'populer' ? 'border-school-green text-school-green' : 'border-transparent text-gray-500'" class="px-4 py-2 text-sm font-semibold border-b-2 transition-colors">Populer</button>
                 <button @click="activeTab = 'prestasi'" :class="activeTab === 'prestasi' ? 'border-school-green text-school-green' : 'border-transparent text-gray-500'" class="px-4 py-2 text-sm font-semibold border-b-2 transition-colors">Prestasi</button>
+                <button @click="activeTab = 'pengumuman'" :class="activeTab === 'pengumuman' ? 'border-school-green text-school-green' : 'border-transparent text-gray-500'" class="px-4 py-2 text-sm font-semibold border-b-2 transition-colors">Pengumuman</button>
             </div>
 
             {{-- Terbaru --}}
@@ -524,7 +525,7 @@
                         {{-- Gambar utama --}}
                         <div class="relative aspect-video overflow-hidden bg-gray-100 dark:bg-gray-700 flex-shrink-0">
                             @if($item->thumbnail)
-                                <img src="{{ asset('storage/' . $item->thumbnail) }}"
+                                <img src="{{ $item->thumbnail_url }}"
                                      alt="{{ $item->title }}"
                                      class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                      loading="lazy">
@@ -566,6 +567,66 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/>
                     </svg>
                     <p class="text-sm">Belum ada berita prestasi. Tambahkan tag <strong>Prestasi</strong> pada berita terkait.</p>
+                </div>
+                @endif
+            </div>
+
+            {{-- Pengumuman --}}
+            <div x-show="activeTab === 'pengumuman'" class="mt-6" x-cloak>
+                @if($pengumumanNews->count() > 0)
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                    @foreach($pengumumanNews as $item)
+                    <a href="{{ route('berita.show', $item->slug) }}"
+                       class="group flex flex-col rounded-2xl border border-gray-100 dark:border-gray-700
+                              overflow-hidden bg-white dark:bg-gray-800
+                              hover:border-school-green hover:shadow-md transition-all duration-200"
+                       data-aos="fade-up">
+
+                        {{-- Gambar utama --}}
+                        <div class="relative aspect-video overflow-hidden bg-gray-100 dark:bg-gray-700 flex-shrink-0">
+                            @if($item->thumbnail)
+                                <img src="{{ $item->thumbnail_url }}"
+                                     alt="{{ $item->title }}"
+                                     class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                     loading="lazy">
+                            @else
+                                <div class="w-full h-full flex items-center justify-center">
+                                    <svg class="w-10 h-10 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                              d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                    </svg>
+                                </div>
+                            @endif
+                        </div>
+
+                        {{-- Konten --}}
+                        <div class="flex flex-col flex-1 p-4">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="text-xs font-semibold px-2 py-0.5 rounded-full
+                                             bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400">
+                                    Pengumuman
+                                </span>
+                                <span class="text-xs text-gray-400">{{ $item->published_at?->diffForHumans() }}</span>
+                            </div>
+                            <h3 class="font-bold text-gray-900 dark:text-white text-sm leading-snug
+                                       group-hover:text-school-green transition-colors line-clamp-2 flex-1">
+                                {{ $item->title }}
+                            </h3>
+                            @if($item->excerpt)
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1.5 line-clamp-2">
+                                {{ $item->excerpt }}
+                            </p>
+                            @endif
+                        </div>
+                    </a>
+                    @endforeach
+                </div>
+                @else
+                <div class="text-center py-12 text-gray-400">
+                    <svg class="w-12 h-12 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/>
+                    </svg>
+                    <p class="text-sm">Belum ada berita dengan kategori <strong>Pengumuman</strong>.</p>
                 </div>
                 @endif
             </div>
@@ -670,30 +731,30 @@
     <div class="container mx-auto px-4">
         <div class="text-center mb-8" data-aos="fade-up">
             <h2 class="text-3xl font-bold font-heading mb-2">Ringkasan Prestasi</h2>
-            <p class="text-green-200">Periode Tahun Pelajaran {{ \App\Models\Setting::get('academic_year', '2024/2025') }}</p>
+            <p class="text-green-100">Periode Tahun Pelajaran {{ \App\Models\Setting::get('academic_year', '2024/2025') }}</p>
         </div>
 
         {{-- Stats --}}
         <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-10" data-aos="fade-up" data-aos-delay="100">
             <div class="stat-card">
                 <div class="text-3xl font-bold mb-1" data-counter="{{ $prestasiStats['total'] ?? 0 }}">0</div>
-                <div class="text-green-200 text-sm">Total Prestasi</div>
+                <div class="text-green-100 text-sm">Total Prestasi</div>
             </div>
             <div class="stat-card">
                 <div class="text-3xl font-bold mb-1" data-counter="{{ $prestasiStats['regional'] ?? 0 }}">0</div>
-                <div class="text-green-200 text-sm">Tingkat Regional</div>
+                <div class="text-green-100 text-sm">Tingkat Regional</div>
             </div>
             <div class="stat-card">
                 <div class="text-3xl font-bold mb-1" data-counter="{{ $prestasiStats['provinsi'] ?? 0 }}">0</div>
-                <div class="text-green-200 text-sm">Tingkat Provinsi</div>
+                <div class="text-green-100 text-sm">Tingkat Provinsi</div>
             </div>
             <div class="stat-card">
                 <div class="text-3xl font-bold mb-1" data-counter="{{ $prestasiStats['nasional'] ?? 0 }}">0</div>
-                <div class="text-green-200 text-sm">Tingkat Nasional</div>
+                <div class="text-green-100 text-sm">Tingkat Nasional</div>
             </div>
             <div class="stat-card">
                 <div class="text-3xl font-bold mb-1" data-counter="{{ $prestasiStats['internasional'] ?? 0 }}">0</div>
-                <div class="text-green-200 text-sm">Tingkat Internasional</div>
+                <div class="text-green-100 text-sm">Tingkat Internasional</div>
             </div>
         </div>
 
@@ -724,7 +785,7 @@
                     <tbody>
                         @forelse($prestasiList as $index => $prestasi)
                         <tr class="border-t border-white/10 hover:bg-white/5 transition-colors align-top">
-                            <td class="px-4 py-3 text-green-200">{{ $prestasiList->firstItem() + $loop->index }}</td>
+                            <td class="px-4 py-3 text-green-100">{{ $prestasiList->firstItem() + $loop->index }}</td>
                             <td class="px-4 py-3 font-medium leading-snug">{{ $prestasi->student_name }}</td>
                             <td class="px-4 py-3 text-green-100 leading-snug">{{ $prestasi->competition_name }}</td>
                             <td class="px-4 py-3">
@@ -742,16 +803,16 @@
                                 </span>
                             </td>
                             <td class="px-4 py-3">
-                                <span class="inline-block px-2 py-0.5 bg-school-orange/80 rounded-full text-xs font-semibold leading-snug">{{ $prestasi->rank }}</span>
+                                <span class="inline-block px-2 py-0.5 bg-orange-700 text-white rounded-full text-xs font-semibold leading-snug">{{ $prestasi->rank }}</span>
                             </td>
                             <td class="px-4 py-3 text-green-100 leading-snug">{{ $prestasi->organizer ?: '-' }}</td>
-                            <td class="px-4 py-3 text-green-200 whitespace-nowrap">
+                            <td class="px-4 py-3 text-green-100 whitespace-nowrap">
                                 {{ $prestasi->achievement_date ? $prestasi->achievement_date->translatedFormat('d M Y') : '-' }}
                             </td>
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="7" class="px-4 py-8 text-center text-green-200">Belum ada data prestasi</td>
+                            <td colspan="7" class="px-4 py-8 text-center text-green-100">Belum ada data prestasi</td>
                         </tr>
                         @endforelse
                     </tbody>
@@ -759,7 +820,7 @@
             </div>
             @if($prestasiList->hasPages())
             <div class="px-4 py-3 border-t border-white/10 flex items-center justify-between gap-4 flex-wrap">
-                <p class="text-xs text-green-200">
+                <p class="text-xs text-green-100">
                     Menampilkan {{ $prestasiList->firstItem() }}–{{ $prestasiList->lastItem() }} dari {{ $prestasiList->total() }} prestasi
                 </p>
                 <div class="prestasi-pagination flex items-center gap-1 text-sm">

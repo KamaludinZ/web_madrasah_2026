@@ -4,7 +4,7 @@
 <div class="bg-gradient-to-br from-school-green-dark to-school-green py-12 text-white">
     <div class="container mx-auto px-4">
         <h1 class="text-3xl font-bold font-heading">Survei</h1>
-        <p class="text-green-200 mt-2">Silakan pilih survei yang ingin Anda isi melalui platform eksternal resmi.</p>
+        <p class="text-green-100 mt-2">Silakan pilih survei yang ingin Anda isi melalui platform eksternal resmi.</p>
     </div>
 </div>
 <div class="container mx-auto px-4 py-10">

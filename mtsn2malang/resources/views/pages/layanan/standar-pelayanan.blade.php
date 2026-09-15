@@ -3,7 +3,7 @@
 @section('content')
 <div class="bg-gradient-to-br from-school-green-dark to-school-green py-12 text-white">
     <div class="container mx-auto px-4">
-        <nav class="text-sm text-green-200 mb-4"><ol class="flex items-center gap-2"><li><a href="{{ route('home') }}" class="hover:text-white">Beranda</a></li><li>/</li><li>Layanan</li><li>/</li><li class="text-white font-medium">Standar Pelayanan</li></ol></nav>
+        <nav class="text-sm text-green-100 mb-4"><ol class="flex items-center gap-2"><li><a href="{{ route('home') }}" class="hover:text-white">Beranda</a></li><li>/</li><li>Layanan</li><li>/</li><li class="text-white font-medium">Standar Pelayanan</li></ol></nav>
         <h1 class="text-3xl md:text-4xl font-bold font-heading">Standar Pelayanan</h1>
     </div>
 </div>

@@ -48,10 +48,13 @@ class PageContentResource extends Resource
         'kelas_cbi'         => 'Kelas CBI/SKS',
         'adiwiyata'         => 'Adiwiyata',
         'zona_integritas'   => 'Zona Integritas',
+        'program_unggulan'  => 'Program Unggulan',
         // PPID
         'ppid_profil'       => 'Profil PPID',
         // Ma'had
         'struktur_mahad'    => "Struktur Ma'had",
+        // Pengaduan
+        'whistleblowing'    => 'Whistleblowing',
     ];
 
     public static function form(Form $form): Form

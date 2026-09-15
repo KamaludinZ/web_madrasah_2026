@@ -17,6 +17,8 @@ use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use FilamentTiptapEditor\Enums\TiptapOutput;
+use FilamentTiptapEditor\TiptapEditor;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -59,9 +61,17 @@ class NewsResource extends Resource
                             ->live(onBlur: true)
                             ->afterStateUpdated(fn($state, Forms\Set $set) => $set('slug', Str::slug((string) $state))),
 
-                        Forms\Components\RichEditor::make('content')
+                        TiptapEditor::make('content')
                             ->label('Isi Berita')
                             ->required()
+                            ->profile('none')
+                            ->tools([
+                                'heading', 'bullet-list', 'ordered-list', 'blockquote', 'hr', '|',
+                                'bold', 'italic', 'underline', 'strike', 'color', 'highlight', '|',
+                                'align-left', 'align-center', 'align-right', 'align-justify', '|',
+                                'link', 'media', 'table', '|', 'code-block', 'source',
+                            ])
+                            ->output(TiptapOutput::Html)
                             ->columnSpanFull(),
 
                         Forms\Components\TextInput::make('slug')
@@ -250,12 +260,14 @@ class NewsResource extends Resource
                             ->label('Kategori')
                             ->options(Category::where('is_active', true)->pluck('name', 'id'))
                             ->searchable()
-                            ->preload(),
+                            ->preload()
+                            ->required(),
 
                         Forms\Components\TagsInput::make('tags')
                             ->label('Tag')
+                            ->required()
                             ->placeholder('Ketik tag lalu tekan Enter')
-                            ->helperText('Tekan Enter atau koma untuk menambah tag. Tag akan tampil di halaman berita.')
+                            ->helperText('Wajib diisi minimal 1 tag. Tekan Enter atau koma untuk menambah tag.')
                             ->afterStateHydrated(function (Forms\Components\TagsInput $component, $record) {
                                 if ($record) {
                                     try {

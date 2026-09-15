@@ -30,12 +30,14 @@ Upload/timpa semua ini ke server hosting.
 | File | Keterangan |
 |------|------------|
 | `public/.htaccess` | Force HTTPS + security headers + gzip |
+| `public/.user.ini` | Naikkan batas upload PHP (200MB) — dibutuhkan fitur Backup/Restore/Update. Hanya berlaku di PHP-FPM; kalau hosting pakai mod_php, atur manual lewat cPanel "MultiPHP INI Editor" |
 | `public/index.php` | Entry point Laravel |
 | `vite.config.js` | Konfigurasi Vite diperbarui |
 | `postcss.config.js` | File baru |
 | `composer.json` | Dependency list |
 | `composer.lock` | Lock file dependency |
 | `tailwind.config.js` | Konfigurasi warna & font |
+| `VERSION` | Nomor versi terpasang — dibaca fitur Update Aplikasi di `/admin/manage-settings` |
 
 ### ❌ JANGAN UPLOAD / JANGAN TIMPA
 
@@ -84,6 +86,26 @@ php artisan event:cache
 # LANGKAH 7 — Set permission (jika diperlukan)
 chmod -R 755 storage bootstrap/cache
 ```
+
+---
+
+## QUEUE WORKER (WAJIB untuk fitur Migrasi WordPress, Backup, Restore, dan Update Aplikasi)
+
+Fitur-fitur di atas berjalan sebagai job antrian (`QUEUE_CONNECTION=database`) supaya
+tidak timeout di request HTTP biasa. Tanpa worker berjalan, job hanya akan
+tersimpan di tabel `jobs` dan **tidak pernah diproses** — tombol "Buat Backup",
+"Restore", dan "Update" akan terlihat macet di status "Berjalan" selamanya.
+
+Cara termudah di cPanel: buat **Cron Job** yang jalan tiap menit —
+
+```bash
+* * * * * cd /path/to/project && php artisan queue:work --stop-when-empty --max-time=55 >> /dev/null 2>&1
+```
+
+`--stop-when-empty` membuat worker keluar sendiri setelah antrian kosong, jadi
+aman dijalankan berulang tiap menit tanpa numpuk proses. Kalau hosting punya
+Supervisor/Process Manager, `php artisan queue:work --tries=1` yang selalu
+hidup adalah pilihan yang lebih baik.
 
 ---
 

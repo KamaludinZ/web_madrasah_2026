@@ -5,7 +5,7 @@
 @section('content')
 <div class="bg-gradient-to-br from-school-green-dark to-school-green py-12 text-white">
     <div class="container mx-auto px-4">
-        <nav class="text-sm text-green-200 mb-4">
+        <nav class="text-sm text-green-100 mb-4">
             <ol class="flex items-center gap-2">
                 <li><a href="{{ route('home') }}" class="hover:text-white">Beranda</a></li>
                 <li>/</li>
@@ -98,7 +98,7 @@
                 </div>
             @elseif($content && $content->content)
                 <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-card p-6 md:p-8">
-                    <div class="prose prose-lg dark:prose-invert max-w-none prose-headings:text-school-green prose-headings:font-heading">
+                    <div class="prose prose-lg dark:prose-invert mx-auto prose-headings:text-school-green prose-headings:font-heading">
                         {!! $content->content !!}
                     </div>
                 </div>

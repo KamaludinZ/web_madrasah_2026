@@ -3,9 +3,9 @@
 @section('content')
 <div class="bg-gradient-to-br from-school-green-dark to-school-green py-8 text-white">
     <div class="container mx-auto px-4">
-        <nav class="text-sm text-green-200 mb-3"><ol class="flex items-center gap-2"><li><a href="{{ route('home') }}" class="hover:text-white">Beranda</a></li><li>/</li><li class="text-white font-medium">{{ $archive->title }}</li></ol></nav>
+        <nav class="text-sm text-green-100 mb-3"><ol class="flex items-center gap-2"><li><a href="{{ route('home') }}" class="hover:text-white">Beranda</a></li><li>/</li><li class="text-white font-medium">{{ $archive->title }}</li></ol></nav>
         <h1 class="text-2xl md:text-3xl font-bold font-heading">{{ $archive->title }}</h1>
-        <div class="flex items-center gap-4 mt-2 text-green-200 text-sm">
+        <div class="flex items-center gap-4 mt-2 text-green-100 text-sm">
             <span>{{ $archive->published_date->format('d F Y') }}</span>
             <span>{{ number_format($archive->view_count) }} dilihat</span>
         </div>

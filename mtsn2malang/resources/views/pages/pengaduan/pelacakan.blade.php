@@ -6,7 +6,7 @@
 {{-- Hero --}}
 <div class="bg-gradient-to-br from-school-green-dark to-school-green py-12 text-white">
     <div class="container mx-auto px-4">
-        <nav class="text-sm text-green-200 mb-4">
+        <nav class="text-sm text-green-100 mb-4">
             <ol class="flex items-center gap-2 flex-wrap">
                 <li><a href="{{ route('home') }}" class="hover:text-white">Beranda</a></li>
                 <li>/</li>
@@ -16,7 +16,7 @@
             </ol>
         </nav>
         <h1 class="text-3xl md:text-4xl font-bold font-heading">Lacak Status Pengaduan</h1>
-        <p class="text-green-200 mt-2">Masukkan nomor tiket untuk melihat status tindak lanjut pengaduan Anda</p>
+        <p class="text-green-100 mt-2">Masukkan nomor tiket untuk melihat status tindak lanjut pengaduan Anda</p>
     </div>
 </div>
 
@@ -94,7 +94,7 @@
                     <div class="flex gap-3">
                         <span class="text-gray-500 dark:text-gray-400 w-28 flex-shrink-0">Jenis</span>
                         <span class="text-gray-800 dark:text-gray-100">
-                            {{ match($complaint->type) { 'whistleblowing' => 'Whistleblowing', 'masyarakat' => 'Pengaduan Masyarakat', default => $complaint->type } }}
+                            {{ match($complaint->type) { 'whistleblowing' => 'Whistleblowing', 'masyarakat' => 'Pengaduan', default => $complaint->type } }}
                         </span>
                     </div>
                     <div class="flex gap-3">

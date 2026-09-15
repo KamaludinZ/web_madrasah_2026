@@ -45,7 +45,7 @@
                         </div>
                         <div>
                             <div class="font-bold text-lg font-heading">{{ $siteName }}</div>
-                            <div class="text-green-200 text-xs">{{ $siteTagline }}</div>
+                            <div class="text-green-100 text-xs">{{ $siteTagline }}</div>
                         </div>
                     </div>
                     <p class="text-green-100 text-sm leading-relaxed mb-4">
@@ -74,7 +74,7 @@
                     {{-- Badge Achievements --}}
                     @if($badgeAchievements->count() > 0)
                     <div class="mt-5">
-                        <p class="text-xs text-green-300 mb-2 font-medium uppercase tracking-wide">Program Madrasah</p>
+                        <p class="text-xs text-green-100 mb-2 font-medium uppercase tracking-wide">Program Madrasah</p>
                         <div class="flex flex-wrap gap-2">
                             @foreach($badgeAchievements as $badge)
                             @if($badge->logo)
@@ -92,36 +92,36 @@
 
                 {{-- Quick Links --}}
                 <div>
-                    <h3 class="font-bold text-lg mb-4 font-heading">Tautan Cepat</h3>
+                    <h2 class="font-bold text-lg mb-4 font-heading">Tautan Cepat</h2>
                     <ul class="space-y-2">
-                        <li><a href="{{ route('home') }}" class="text-green-200 hover:text-white text-sm transition-colors flex items-center gap-2"><span class="w-1 h-1 bg-school-orange rounded-full"></span>Beranda</a></li>
-                        <li><a href="{{ route('berita.index') }}" class="text-green-200 hover:text-white text-sm transition-colors flex items-center gap-2"><span class="w-1 h-1 bg-school-orange rounded-full"></span>Berita</a></li>
-                        <li><a href="{{ route('tentang.sambutan') }}" class="text-green-200 hover:text-white text-sm transition-colors flex items-center gap-2"><span class="w-1 h-1 bg-school-orange rounded-full"></span>Sambutan Kepala</a></li>
-                        <li><a href="{{ route('tentang.visi-misi') }}" class="text-green-200 hover:text-white text-sm transition-colors flex items-center gap-2"><span class="w-1 h-1 bg-school-orange rounded-full"></span>Visi & Misi</a></li>
-                        <li><a href="{{ route('tentang.daftar-gtk') }}" class="text-green-200 hover:text-white text-sm transition-colors flex items-center gap-2"><span class="w-1 h-1 bg-school-orange rounded-full"></span>Daftar GTK</a></li>
-                        <li><a href="{{ route('layanan.standar-pelayanan') }}" class="text-green-200 hover:text-white text-sm transition-colors flex items-center gap-2"><span class="w-1 h-1 bg-school-orange rounded-full"></span>Standar Pelayanan</a></li>
-                        <li><a href="{{ route('ppid.berkala') }}" class="text-green-200 hover:text-white text-sm transition-colors flex items-center gap-2"><span class="w-1 h-1 bg-school-orange rounded-full"></span>PPID</a></li>
-                        <li><a href="{{ route('tentang.kontak') }}" class="text-green-200 hover:text-white text-sm transition-colors flex items-center gap-2"><span class="w-1 h-1 bg-school-orange rounded-full"></span>Kontak Kami</a></li>
+                        <li><a href="{{ route('home') }}" class="text-green-100 hover:text-white text-sm transition-colors flex items-center gap-2"><span class="w-1 h-1 bg-school-orange rounded-full text-transparent" aria-hidden="true"></span>Beranda</a></li>
+                        <li><a href="{{ route('berita.index') }}" class="text-green-100 hover:text-white text-sm transition-colors flex items-center gap-2"><span class="w-1 h-1 bg-school-orange rounded-full text-transparent" aria-hidden="true"></span>Berita</a></li>
+                        <li><a href="{{ route('tentang.sambutan') }}" class="text-green-100 hover:text-white text-sm transition-colors flex items-center gap-2"><span class="w-1 h-1 bg-school-orange rounded-full text-transparent" aria-hidden="true"></span>Sambutan Kepala</a></li>
+                        <li><a href="{{ route('tentang.visi-misi') }}" class="text-green-100 hover:text-white text-sm transition-colors flex items-center gap-2"><span class="w-1 h-1 bg-school-orange rounded-full text-transparent" aria-hidden="true"></span>Visi & Misi</a></li>
+                        <li><a href="{{ route('tentang.daftar-gtk') }}" class="text-green-100 hover:text-white text-sm transition-colors flex items-center gap-2"><span class="w-1 h-1 bg-school-orange rounded-full text-transparent" aria-hidden="true"></span>Daftar GTK</a></li>
+                        <li><a href="{{ route('layanan.standar-pelayanan') }}" class="text-green-100 hover:text-white text-sm transition-colors flex items-center gap-2"><span class="w-1 h-1 bg-school-orange rounded-full text-transparent" aria-hidden="true"></span>Standar Pelayanan</a></li>
+                        <li><a href="{{ route('ppid.berkala') }}" class="text-green-100 hover:text-white text-sm transition-colors flex items-center gap-2"><span class="w-1 h-1 bg-school-orange rounded-full text-transparent" aria-hidden="true"></span>PPID</a></li>
+                        <li><a href="{{ route('tentang.kontak') }}" class="text-green-100 hover:text-white text-sm transition-colors flex items-center gap-2"><span class="w-1 h-1 bg-school-orange rounded-full text-transparent" aria-hidden="true"></span>Kontak Kami</a></li>
                     </ul>
                 </div>
 
                 {{-- Layanan --}}
                 <div>
-                    <h3 class="font-bold text-lg mb-4 font-heading">Layanan</h3>
+                    <h2 class="font-bold text-lg mb-4 font-heading">Layanan</h2>
                     <ul class="space-y-2">
-                        <li><a href="{{ route('survei.form') }}" class="text-green-200 hover:text-white text-sm transition-colors flex items-center gap-2"><span class="w-1 h-1 bg-school-orange rounded-full"></span>Survei Kepuasan</a></li>
-                        <li><a href="{{ route('pengaduan.masyarakat') }}" class="text-green-200 hover:text-white text-sm transition-colors flex items-center gap-2"><span class="w-1 h-1 bg-school-orange rounded-full"></span>Pengaduan Masyarakat</a></li>
-                        <li><a href="{{ route('pengaduan.whistleblowing') }}" class="text-green-200 hover:text-white text-sm transition-colors flex items-center gap-2"><span class="w-1 h-1 bg-school-orange rounded-full"></span>Whistleblowing</a></li>
-                        <li><a href="{{ $linkPtsp }}" target="_blank" rel="noopener" class="text-green-200 hover:text-white text-sm transition-colors flex items-center gap-2"><span class="w-1 h-1 bg-school-orange rounded-full"></span>PTSP Online</a></li>
-                        <li><a href="{{ $linkSippn }}" target="_blank" rel="noopener" class="text-green-200 hover:text-white text-sm transition-colors flex items-center gap-2"><span class="w-1 h-1 bg-school-orange rounded-full"></span>SIPPN</a></li>
-                        <li><a href="{{ $linkSpanLapor }}" target="_blank" rel="noopener" class="text-green-200 hover:text-white text-sm transition-colors flex items-center gap-2"><span class="w-1 h-1 bg-school-orange rounded-full"></span>SPAN Lapor</a></li>
+                        <li><a href="{{ route('survei.form') }}" class="text-green-100 hover:text-white text-sm transition-colors flex items-center gap-2"><span class="w-1 h-1 bg-school-orange rounded-full text-transparent" aria-hidden="true"></span>Survei Kepuasan</a></li>
+                        <li><a href="{{ route('pengaduan.masyarakat') }}" class="text-green-100 hover:text-white text-sm transition-colors flex items-center gap-2"><span class="w-1 h-1 bg-school-orange rounded-full text-transparent" aria-hidden="true"></span>Pengaduan Masyarakat</a></li>
+                        <li><a href="{{ route('pengaduan.whistleblowing') }}" class="text-green-100 hover:text-white text-sm transition-colors flex items-center gap-2"><span class="w-1 h-1 bg-school-orange rounded-full text-transparent" aria-hidden="true"></span>Whistleblowing</a></li>
+                        <li><a href="{{ $linkPtsp }}" target="_blank" rel="noopener" class="text-green-100 hover:text-white text-sm transition-colors flex items-center gap-2"><span class="w-1 h-1 bg-school-orange rounded-full text-transparent" aria-hidden="true"></span>PTSP Online</a></li>
+                        <li><a href="{{ $linkSippn }}" target="_blank" rel="noopener" class="text-green-100 hover:text-white text-sm transition-colors flex items-center gap-2"><span class="w-1 h-1 bg-school-orange rounded-full text-transparent" aria-hidden="true"></span>SIPPN</a></li>
+                        <li><a href="{{ $linkSpanLapor }}" target="_blank" rel="noopener" class="text-green-100 hover:text-white text-sm transition-colors flex items-center gap-2"><span class="w-1 h-1 bg-school-orange rounded-full text-transparent" aria-hidden="true"></span>SPAN Lapor</a></li>
                     </ul>
                 </div>
 
                 {{-- Contact & Traffic --}}
                 <div>
-                    <h3 class="font-bold text-lg mb-4 font-heading">Kontak</h3>
-                    <div class="space-y-3 text-sm text-green-200">
+                    <h2 class="font-bold text-lg mb-4 font-heading">Kontak</h2>
+                    <div class="space-y-3 text-sm text-green-100">
                         <div class="flex items-start gap-2">
                             <svg class="w-4 h-4 mt-0.5 flex-shrink-0 text-school-orange" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/></svg>
                             <span>{{ $topHeaderAddress }}</span>
@@ -138,18 +138,18 @@
 
                     {{-- Traffic Stats --}}
                     <div class="mt-6 p-4 bg-white/10 rounded-xl">
-                        <h4 class="text-sm font-semibold mb-3 flex items-center gap-2">
+                        <h3 class="text-sm font-semibold text-white mb-3 flex items-center gap-2">
                             <svg class="w-4 h-4 text-school-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                             Statistik Pengunjung
-                        </h4>
+                        </h3>
                         <div class="grid grid-cols-2 gap-2 text-xs">
                             <div class="text-center">
                                 <div class="text-white font-bold text-lg" data-counter="{{ \App\Models\PageView::todayCount() }}">0</div>
-                                <div class="text-green-300">Hari Ini</div>
+                                <div class="text-green-100">Hari Ini</div>
                             </div>
                             <div class="text-center">
                                 <div class="text-white font-bold text-lg" data-counter="{{ \App\Models\PageView::totalCount() }}">0</div>
-                                <div class="text-green-300">Total</div>
+                                <div class="text-green-100">Total</div>
                             </div>
                         </div>
                     </div>
@@ -160,7 +160,7 @@
 
     {{-- Bottom Bar --}}
     <div class="border-t border-green-700 py-4">
-        <div class="container mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-3 text-sm text-green-200">
+        <div class="container mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-3 text-sm text-green-100">
             <p>&copy; {{ date('Y') }} MTsN 2 Kota Malang. Hak Cipta Dilindungi.</p>
             <div class="flex items-center gap-4">
                 <a href="{{ route('home') }}" class="hover:text-white transition-colors">Beranda</a>

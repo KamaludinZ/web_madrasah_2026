@@ -22,7 +22,7 @@ class ListFacilities extends ListRecords
         return [
             'all' => Tab::make('Semua'),
             'madrasah' => Tab::make('Sarpras Madrasah')
-                ->modifyQueryUsing(fn(Builder $query) => $query->where('category', 'madrasah')),
+                ->modifyQueryUsing(fn(Builder $query) => $query->where('category', '!=', 'mahad')),
             'mahad' => Tab::make("Sarpras Ma'had")
                 ->modifyQueryUsing(fn(Builder $query) => $query->where('category', 'mahad')),
         ];

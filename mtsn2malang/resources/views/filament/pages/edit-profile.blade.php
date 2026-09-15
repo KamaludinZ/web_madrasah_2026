@@ -2,20 +2,7 @@
 @php
     $user     = $this->getUser();
     $roleName = $user->getRoleNames()->first() ?? null;
-    $roleMap  = [
-        'super_admin'     => ['label' => 'Super Administrator', 'emoji' => '👑',
-                              'class' => 'bg-red-50 text-red-700 ring-1 ring-red-200 dark:bg-red-900/30 dark:text-red-300 dark:ring-red-800'],
-        'editor_in_chief' => ['label' => 'Editor in Chief',    'emoji' => '✍️',
-                              'class' => 'bg-violet-50 text-violet-700 ring-1 ring-violet-200 dark:bg-violet-900/30 dark:text-violet-300 dark:ring-violet-800'],
-        'editor'          => ['label' => 'Editor',             'emoji' => '📝',
-                              'class' => 'bg-blue-50 text-blue-700 ring-1 ring-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:ring-blue-800'],
-        'contributor'     => ['label' => 'Kontributor',        'emoji' => '🖊️',
-                              'class' => 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:ring-emerald-800'],
-        'moderator'       => ['label' => 'Moderator',          'emoji' => '🛡️',
-                              'class' => 'bg-amber-50 text-amber-700 ring-1 ring-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:ring-amber-800'],
-    ];
-    $role    = $roleMap[$roleName] ?? ['label' => '—', 'emoji' => '👤', 'class' => 'bg-gray-100 text-gray-600 ring-1 ring-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:ring-gray-600'];
-    $backUrl = filament()->getUrl();
+    $backUrl  = filament()->getUrl();
 @endphp
 
 {{-- ── Profile Header Card ── --}}
@@ -60,8 +47,8 @@
                         </p>
                     </div>
                     <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full
-                                 text-xs font-semibold flex-shrink-0 {{ $role['class'] }}">
-                        {{ $role['emoji'] }} {{ $role['label'] }}
+                                 text-xs font-semibold flex-shrink-0 {{ \App\Support\RoleDisplay::ringBadgeClasses($roleName) }}">
+                        {{ \App\Support\RoleDisplay::labelWithEmoji($roleName) }}
                     </span>
                 </div>
                 <div class="flex flex-wrap gap-x-4 gap-y-1 mt-2.5">

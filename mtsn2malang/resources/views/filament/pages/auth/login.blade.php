@@ -18,6 +18,7 @@
                     wire:click="refreshCaptcha"
                     wire:loading.attr="disabled"
                     title="Ganti kode"
+                    aria-label="Ganti kode keamanan"
                     class="p-2 rounded-lg text-gray-400 hover:text-primary-600 dark:hover:text-primary-400
                            hover:bg-gray-100 dark:hover:bg-gray-700 transition"
                 >

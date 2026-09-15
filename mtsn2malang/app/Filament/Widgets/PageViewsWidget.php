@@ -9,16 +9,22 @@ use Illuminate\Support\Carbon;
 class PageViewsWidget extends ChartWidget
 {
     protected static ?string $heading = 'Statistik Pengunjung (30 Hari Terakhir)';
-    protected static ?int $sort = 2;
+    protected static ?int $sort = 3;
     protected int | string | array $columnSpan = 'full';
 
     protected function getData(): array
     {
-        $data = collect(range(29, 0))->map(function ($daysAgo) {
+        $counts = PageView::query()
+            ->where('viewed_date', '>=', now()->subDays(29)->toDateString())
+            ->selectRaw('viewed_date, count(*) as aggregate')
+            ->groupBy('viewed_date')
+            ->pluck('aggregate', 'viewed_date');
+
+        $data = collect(range(29, 0))->map(function ($daysAgo) use ($counts) {
             $date = now()->subDays($daysAgo)->toDateString();
             return [
                 'date' => Carbon::parse($date)->format('d M'),
-                'count' => PageView::where('viewed_date', $date)->count(),
+                'count' => (int) ($counts[$date] ?? 0),
             ];
         });
 

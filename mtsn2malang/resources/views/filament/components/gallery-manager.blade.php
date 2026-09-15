@@ -40,10 +40,13 @@
         {{-- Grid foto --}}
         <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-2">
             @foreach($galleryPost->photos as $photo)
-            <div
-                class="relative cursor-pointer rounded-xl overflow-hidden aspect-square group select-none"
+            <button
+                type="button"
+                class="relative cursor-pointer rounded-xl overflow-hidden aspect-square group select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500"
                 :class="isMarked({{ $photo->id }}) ? 'ring-2 ring-red-500 ring-offset-1' : 'ring-1 ring-gray-200 dark:ring-gray-700'"
                 @click="toggleDelete({{ $photo->id }})"
+                :aria-pressed="isMarked({{ $photo->id }}).toString()"
+                aria-label="Foto galeri {{ $loop->iteration }}, klik untuk tandai hapus"
                 title="Klik untuk tandai hapus"
             >
                 {{-- Foto --}}
@@ -91,9 +94,9 @@
                     class="absolute top-1 left-1 w-5 h-5 rounded-full bg-black/50 flex items-center justify-center transition-opacity duration-200"
                     :class="isMarked({{ $photo->id }}) ? 'opacity-0' : 'opacity-100'"
                 >
-                    <span class="text-white text-[9px] font-bold">{{ $loop->iteration }}</span>
+                    <span class="text-white text-[10px] font-bold">{{ $loop->iteration }}</span>
                 </div>
-            </div>
+            </button>
             @endforeach
         </div>
 

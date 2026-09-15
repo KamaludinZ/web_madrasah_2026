@@ -7,7 +7,7 @@
 {{-- ===== HERO PROFIL PENULIS ===== --}}
 <div class="bg-gradient-to-br from-school-green-dark to-school-green py-14 text-white">
     <div class="container mx-auto px-4">
-        <nav class="text-sm text-green-200 mb-6">
+        <nav class="text-sm text-green-100 mb-6">
             <ol class="flex items-center gap-2 flex-wrap">
                 <li><a href="{{ route('home') }}" class="hover:text-white transition-colors">Beranda</a></li>
                 <li>/</li>
@@ -36,15 +36,8 @@
             <div class="text-center sm:text-left flex-1 min-w-0">
                 <div class="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-1">
                     @php
-                        $roleLabels = [
-                            'super_admin'     => 'Super Administrator',
-                            'editor_in_chief' => 'Editor in Chief',
-                            'editor'          => 'Editor',
-                            'contributor'     => 'Kontributor',
-                            'moderator'       => 'Moderator',
-                        ];
                         $roleName = $author->getRoleNames()->first();
-                        $roleDisplay = $roleName ? ($roleLabels[$roleName] ?? ucfirst(str_replace('_', ' ', $roleName))) : null;
+                        $roleDisplay = $roleName ? \App\Support\RoleDisplay::label($roleName) : null;
                     @endphp
                     @if($roleDisplay)
                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-white/20 text-white">
@@ -55,7 +48,7 @@
 
                 <h1 class="text-3xl md:text-4xl font-bold font-heading leading-tight">{{ $author->name }}</h1>
 
-                <p class="text-green-200 text-sm mt-2 flex items-center justify-center sm:justify-start gap-1.5">
+                <p class="text-green-100 text-sm mt-2 flex items-center justify-center sm:justify-start gap-1.5">
                     <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/>
                     </svg>

@@ -119,7 +119,7 @@
     }
 
     .ticker-label {
-        @apply flex-shrink-0 bg-school-orange text-white text-xs font-bold px-3 py-1.5 uppercase tracking-wider;
+        @apply flex-shrink-0 bg-orange-700 text-white text-xs font-bold px-3 py-1.5 uppercase tracking-wider;
     }
 
     .ticker-content {
@@ -206,8 +206,9 @@
         @apply bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-card hover:shadow-card-hover transition-all duration-300 hover:-translate-y-1;
     }
 
+    /* Rasio 16:9 konsisten di semua breakpoint (HP/tablet/desktop) */
     .news-card-image {
-        @apply w-full h-48 object-cover transition-transform duration-500;
+        @apply w-full aspect-video object-cover transition-transform duration-500;
     }
 
     .news-card:hover .news-card-image {
@@ -232,7 +233,7 @@
     }
 
     .btn-secondary {
-        @apply inline-flex items-center gap-2 px-6 py-3 bg-school-orange text-white font-semibold rounded-xl hover:bg-school-orange-dark transition-all duration-200 shadow-md hover:shadow-lg hover:-translate-y-0.5;
+        @apply inline-flex items-center gap-2 px-6 py-3 bg-orange-700 text-white font-semibold rounded-xl hover:bg-orange-800 transition-all duration-200 shadow-md hover:shadow-lg hover:-translate-y-0.5;
     }
 
     .btn-outline {
@@ -465,10 +466,6 @@
 
 /* ===== UTILITIES ===== */
 @layer utilities {
-    .text-gradient {
-        @apply bg-gradient-to-r from-school-green to-school-orange bg-clip-text text-transparent;
-    }
-
     .bg-pattern {
         background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%231a7a3c' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
     }

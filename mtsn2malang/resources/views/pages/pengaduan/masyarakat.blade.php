@@ -3,9 +3,9 @@
 @section('content')
 <div class="bg-gradient-to-br from-school-green-dark to-school-green py-12 text-white">
     <div class="container mx-auto px-4">
-        <nav class="text-sm text-green-200 mb-4"><ol class="flex items-center gap-2"><li><a href="{{ route('home') }}" class="hover:text-white">Beranda</a></li><li>/</li><li>Pengaduan</li><li>/</li><li class="text-white font-medium">Pengaduan Masyarakat</li></ol></nav>
+        <nav class="text-sm text-green-100 mb-4"><ol class="flex items-center gap-2"><li><a href="{{ route('home') }}" class="hover:text-white">Beranda</a></li><li>/</li><li>Pengaduan</li><li>/</li><li class="text-white font-medium">Pengaduan Masyarakat</li></ol></nav>
         <h1 class="text-3xl md:text-4xl font-bold font-heading">Pengaduan Masyarakat</h1>
-        <p class="text-green-200 mt-2">Sampaikan pengaduan, saran, atau masukan Anda kepada kami</p>
+        <p class="text-green-100 mt-2">Sampaikan pengaduan, saran, atau masukan Anda kepada kami</p>
     </div>
 </div>
 <div class="container mx-auto px-4 py-10">

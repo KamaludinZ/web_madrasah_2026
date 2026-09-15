@@ -3,7 +3,7 @@
 @section('content')
 <div class="bg-gradient-to-br from-school-green-dark to-school-green py-12 text-white">
     <div class="container mx-auto px-4">
-        <nav class="text-sm text-green-200 mb-4">
+        <nav class="text-sm text-green-100 mb-4">
             <ol class="flex items-center gap-2">
                 <li><a href="{{ route('home') }}" class="hover:text-white">Beranda</a></li>
                 <li>/</li>
@@ -13,7 +13,7 @@
             </ol>
         </nav>
         <h1 class="text-3xl md:text-4xl font-bold font-heading">Sarana dan Prasarana</h1>
-        <p class="text-green-200 mt-2">Fasilitas pendukung pembelajaran dan pengembangan siswa</p>
+        <p class="text-green-100 mt-2">Fasilitas pendukung pembelajaran dan pengembangan siswa</p>
     </div>
 </div>
 
@@ -29,7 +29,7 @@
                 </div>
             @endif
             <div class="p-5">
-                <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2">{{ $item->name }}</h3>
+                <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-2">{{ $item->name }}</h2>
                 @if($item->description)
                     <p class="text-sm text-gray-600 dark:text-gray-300 line-clamp-3">{{ $item->description }}</p>
                 @else

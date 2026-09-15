@@ -36,6 +36,7 @@ use App\Filament\Resources\SubscriberResource;
 use App\Filament\Resources\SurveyLinkResource;
 use App\Filament\Resources\TestimonialResource;
 use App\Filament\Resources\UserResource;
+use App\Filament\Widgets\ComplaintStatsWidget;
 use App\Filament\Widgets\NewsStatsWidget;
 use App\Filament\Widgets\PageViewsWidget;
 use App\Filament\Widgets\RecentNewsWidget;
@@ -91,13 +92,7 @@ class AdminPanelProvider extends PanelProvider
             ->profile(EditProfile::class, isSimple: false)
             ->userMenuItems([
                 \Filament\Navigation\MenuItem::make()
-                    ->label(fn () => collect([
-                        'super_admin'     => '👑 Super Administrator',
-                        'editor_in_chief' => '✍️ Editor in Chief',
-                        'editor'          => '📝 Editor',
-                        'contributor'     => '🖊️ Kontributor',
-                        'moderator'       => '🛡️ Moderator',
-                    ])->get(auth()->user()?->getRoleNames()->first() ?? '', '—'))
+                    ->label(fn () => \App\Support\RoleDisplay::labelWithEmoji(auth()->user()?->getRoleNames()->first()))
                     ->url('#')
                     ->icon('heroicon-o-shield-check'),
             ])
@@ -148,6 +143,7 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->widgets([
                 NewsStatsWidget::class,
+                ComplaintStatsWidget::class,
                 PageViewsWidget::class,
                 RecentNewsWidget::class,
             ])

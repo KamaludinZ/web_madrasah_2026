@@ -6,7 +6,7 @@
         <h1 class="text-3xl font-bold font-heading mb-4">Pencarian</h1>
         <form action="{{ route('search.index') }}" method="GET" class="flex gap-3 max-w-2xl">
             <input type="text" name="q" value="{{ $query }}" placeholder="Cari berita, kategori, tag..." class="flex-1 px-4 py-3 rounded-xl text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-white/50">
-            <button type="submit" class="px-6 py-3 bg-school-orange text-white font-semibold rounded-xl hover:bg-school-orange-dark transition-colors">Cari</button>
+            <button type="submit" class="px-6 py-3 bg-orange-700 text-white font-semibold rounded-xl hover:bg-orange-800 transition-colors">Cari</button>
         </form>
     </div>
 </div>

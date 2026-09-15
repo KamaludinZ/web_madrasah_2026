@@ -118,17 +118,10 @@ class UserResource extends Resource
                             ->preload()
                             ->options(function () {
                                 try {
-                                    $labels = [
-                                        'super_admin'     => 'Super Administrator',
-                                        'editor_in_chief' => 'Editor in Chief',
-                                        'editor'          => 'Editor',
-                                        'contributor'     => 'Kontributor',
-                                        'moderator'       => 'Moderator',
-                                    ];
                                     return Role::orderBy('name')
                                         ->pluck('name', 'id')
                                         ->mapWithKeys(fn ($name, $id) => [
-                                            $id => $labels[$name] ?? ucfirst(str_replace('_', ' ', $name)),
+                                            $id => \App\Support\RoleDisplay::label($name),
                                         ]);
                                 } catch (\Throwable) {
                                     return [];
@@ -180,15 +173,8 @@ class UserResource extends Resource
                 Tables\Columns\TextColumn::make('roles.name')
                     ->label('Role')
                     ->badge()
-                    ->color('success')
-                    ->formatStateUsing(fn ($state) => match ($state) {
-                        'super_admin'     => 'Super Admin',
-                        'editor_in_chief' => 'Editor in Chief',
-                        'editor'          => 'Editor',
-                        'contributor'     => 'Kontributor',
-                        'moderator'       => 'Moderator',
-                        default           => ucfirst(str_replace('_', ' ', $state)),
-                    }),
+                    ->color(fn (?string $state) => \App\Support\RoleDisplay::color($state))
+                    ->formatStateUsing(fn (?string $state) => \App\Support\RoleDisplay::label($state)),
 
                 Tables\Columns\IconColumn::make('is_active')
                     ->label('Aktif')

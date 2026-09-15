@@ -42,6 +42,7 @@ class ListMedia extends Page
             'gtk',
             'facilities',
             'banners',
+            'banners/default',
             'achievements',
             'extracurriculars',
             'testimonials',
@@ -50,6 +51,12 @@ class ListMedia extends Page
             'portal-apps',
             'infografis',
             'gallery',
+            'alumni-coordinators',
+            'badges',
+            'headmaster-history',
+            'school-leaders',
+            'social-media',
+            'programs',
         ];
 
         $docDirs = [

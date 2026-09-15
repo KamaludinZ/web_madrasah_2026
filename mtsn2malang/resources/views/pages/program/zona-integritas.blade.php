@@ -6,7 +6,7 @@
 {{-- Hero --}}
 <div class="bg-gradient-to-br from-school-green-dark to-school-green py-12 text-white">
     <div class="container mx-auto px-4">
-        <nav class="text-sm text-green-200 mb-4">
+        <nav class="text-sm text-green-100 mb-4">
             <ol class="flex items-center gap-2 flex-wrap">
                 <li><a href="{{ route('home') }}" class="hover:text-white">Beranda</a></li>
                 <li>/</li>
@@ -16,7 +16,7 @@
             </ol>
         </nav>
         <h1 class="text-3xl md:text-4xl font-bold font-heading">Zona Integritas</h1>
-        <p class="text-green-200 mt-2">Menuju Wilayah Bebas Korupsi (WBK) dan Wilayah Birokrasi Bersih Melayani (WBBM)</p>
+        <p class="text-green-100 mt-2">Menuju Wilayah Bebas Korupsi (WBK) dan Wilayah Birokrasi Bersih Melayani (WBBM)</p>
     </div>
 </div>
 
@@ -115,7 +115,7 @@
             @endif
 
             <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-card p-6 md:p-8">
-                <div class="prose prose-lg dark:prose-invert max-w-none
+                <div class="prose prose-lg dark:prose-invert mx-auto
                             prose-headings:text-school-green prose-headings:font-heading
                             prose-a:text-school-green prose-a:no-underline hover:prose-a:underline
                             prose-strong:text-gray-900 dark:prose-strong:text-white">

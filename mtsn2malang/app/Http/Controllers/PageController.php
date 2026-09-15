@@ -203,57 +203,92 @@ class PageController extends Controller
         return view('pages.ppid.profil', compact('content'));
     }
 
+    /**
+     * Daftar arsip dengan filter tahun/bulan + paginasi 20.
+     * Dipakai bersama oleh halaman PPID, SAKIP, hasil survei, dan laporan pengaduan.
+     */
+    private function archiveIndex(string $type, string $path, string $view)
+    {
+        PageView::record($path);
+
+        $query = Archive::ofType($type);
+
+        if (filled($tahun = request('tahun'))) {
+            $query->whereYear('published_date', $tahun);
+        }
+
+        if (filled($bulan = request('bulan'))) {
+            $query->whereMonth('published_date', $bulan);
+        }
+
+        // withQueryString: filter ikut terbawa saat pindah halaman
+        $archives = $query->paginate(20)->withQueryString();
+
+        // Tahun diambil dari data nyata, bukan rentang tebakan
+        $years = Archive::where('type', $type)
+            ->where('is_active', true)
+            ->selectRaw('EXTRACT(YEAR FROM published_date)::int AS y')
+            ->distinct()
+            ->orderByDesc('y')
+            ->pluck('y');
+
+        return view($view, compact('archives', 'years'));
+    }
+
     public function ppidBerkala()
     {
-        PageView::record('/ppid/berkala');
-        $archives = Archive::ofType('berkala')->paginate(12);
-        return view('pages.ppid.berkala', compact('archives'));
+        return $this->archiveIndex('berkala', '/ppid/berkala', 'pages.ppid.berkala');
     }
 
     public function ppidSetiapSaat()
     {
-        PageView::record('/ppid/setiap-saat');
-        $archives = Archive::ofType('setiap_saat')->paginate(12);
-        return view('pages.ppid.setiap-saat', compact('archives'));
+        return $this->archiveIndex('setiap_saat', '/ppid/setiap-saat', 'pages.ppid.setiap-saat');
     }
 
     public function ppidSertaMerta()
     {
-        PageView::record('/ppid/serta-merta');
-        $archives = Archive::ofType('serta_merta')->paginate(12);
-        return view('pages.ppid.serta-merta', compact('archives'));
+        return $this->archiveIndex('serta_merta', '/ppid/serta-merta', 'pages.ppid.serta-merta');
     }
 
     public function ppidGaleri()
     {
         PageView::record('/ppid/galeri');
-        $galleries = GalleryPost::with(['photos', 'news'])
-            ->whereHas('photos')
-            ->latest()
-            ->paginate(12);
-        return view('pages.ppid.galeri', compact('galleries'));
+
+        $query = GalleryPost::with(['photos', 'news'])->whereHas('photos');
+
+        if (filled($tahun = request('tahun'))) {
+            $query->whereYear('created_at', $tahun);
+        }
+
+        if (filled($bulan = request('bulan'))) {
+            $query->whereMonth('created_at', $bulan);
+        }
+
+        $galleries = $query->latest()->paginate(20)->withQueryString();
+
+        $years = GalleryPost::whereHas('photos')
+            ->selectRaw('EXTRACT(YEAR FROM created_at)::int AS y')
+            ->distinct()
+            ->orderByDesc('y')
+            ->pluck('y');
+
+        return view('pages.ppid.galeri', compact('galleries', 'years'));
     }
 
     // ===== SAKIP =====
     public function renstra()
     {
-        PageView::record('/sakip/renstra');
-        $archives = Archive::ofType('renstra')->paginate(12);
-        return view('pages.sakip.renstra', compact('archives'));
+        return $this->archiveIndex('renstra', '/sakip/renstra', 'pages.sakip.renstra');
     }
 
     public function perkin()
     {
-        PageView::record('/sakip/perkin');
-        $archives = Archive::ofType('perkin')->paginate(12);
-        return view('pages.sakip.perkin', compact('archives'));
+        return $this->archiveIndex('perkin', '/sakip/perkin', 'pages.sakip.perkin');
     }
 
     public function lkj()
     {
-        PageView::record('/sakip/lkj');
-        $archives = Archive::ofType('lkj')->paginate(12);
-        return view('pages.sakip.lkj', compact('archives'));
+        return $this->archiveIndex('lkj', '/sakip/lkj', 'pages.sakip.lkj');
     }
 
     // ===== MA'HAD =====
@@ -356,7 +391,7 @@ class PageController extends Controller
             'email' => $request->email,
             'phone' => $request->phone,
             'subject' => $request->subject,
-            'content' => $request->content,
+            'content' => $request->input('content'),
         ]);
 
         return back()->with('success', 'Pengaduan berhasil dikirim. Nomor tiket Anda: ' . $complaint->ticket_number);
@@ -374,9 +409,7 @@ class PageController extends Controller
 
     public function laporanPengaduan()
     {
-        PageView::record('/pengaduan/laporan');
-        $archives = Archive::ofType('laporan_pengaduan')->paginate(12);
-        return view('pages.pengaduan.laporan', compact('archives'));
+        return $this->archiveIndex('laporan_pengaduan', '/pengaduan/laporan', 'pages.pengaduan.laporan');
     }
 
     // ===== SURVEI =====
@@ -397,9 +430,7 @@ class PageController extends Controller
 
     public function hasilSurvei()
     {
-        PageView::record('/survei/hasil');
-        $archives = Archive::ofType('hasil_survei')->paginate(12);
-        return view('pages.survei.hasil', compact('archives'));
+        return $this->archiveIndex('hasil_survei', '/survei/hasil', 'pages.survei.hasil');
     }
 
     public function saranForm()
@@ -442,7 +473,7 @@ class PageController extends Controller
             'email'   => $request->email,
             'phone'   => null,
             'subject' => $request->subject,
-            'content' => $request->content,
+            'content' => $request->input('content'),
             'status'  => 'pending',
         ]);
 
@@ -455,6 +486,8 @@ class PageController extends Controller
     public function viewArchive(int $id)
     {
         $archive = Archive::findOrFail($id);
+
+        $archive->incrementViewCount();
 
         if ($archive->link_type === 'link') {
             return redirect()->away($archive->external_link);

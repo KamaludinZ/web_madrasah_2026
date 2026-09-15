@@ -8,7 +8,7 @@
 <section class="py-16 bg-gradient-to-br from-school-green-dark to-school-green text-white">
     <div class="container mx-auto px-4">
         <div class="max-w-3xl">
-            <span class="inline-block px-3 py-1 bg-school-orange text-white text-sm font-semibold rounded-full mb-4">Website Ma'had</span>
+            <span class="inline-block px-3 py-1 bg-orange-700 text-white text-sm font-semibold rounded-full mb-4">Website Ma'had</span>
             <h1 class="text-4xl md:text-5xl font-bold font-heading mb-4">Selamat Datang di Website Ma'had</h1>
             <p class="text-green-100 text-lg">Pusat informasi program, kegiatan, berita, dan layanan Ma'had MTsN 2 Kota Malang.</p>
         </div>
