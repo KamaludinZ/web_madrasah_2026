@@ -17,8 +17,7 @@ use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use FilamentTiptapEditor\Enums\TiptapOutput;
-use FilamentTiptapEditor\TiptapEditor;
+use AmidEsfahani\FilamentTinyEditor\TinyEditor;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -61,17 +60,16 @@ class NewsResource extends Resource
                             ->live(onBlur: true)
                             ->afterStateUpdated(fn($state, Forms\Set $set) => $set('slug', Str::slug((string) $state))),
 
-                        TiptapEditor::make('content')
+                        TinyEditor::make('content')
                             ->label('Isi Berita')
                             ->required()
-                            ->profile('none')
-                            ->tools([
-                                'heading', 'bullet-list', 'ordered-list', 'blockquote', 'hr', '|',
-                                'bold', 'italic', 'underline', 'strike', 'color', 'highlight', '|',
-                                'align-left', 'align-center', 'align-right', 'align-justify', '|',
-                                'link', 'media', 'table', '|', 'code-block', 'source',
-                            ])
-                            ->output(TiptapOutput::Html)
+                            ->profile('full')
+                            ->fileAttachmentsDisk('public')
+                            ->fileAttachmentsDirectory('news-content')
+                            ->fileAttachmentsVisibility('public')
+                            ->minHeight(420)
+                            ->resize(true)
+                            ->toolbarMode('wrap')
                             ->columnSpanFull(),
 
                         Forms\Components\TextInput::make('slug')

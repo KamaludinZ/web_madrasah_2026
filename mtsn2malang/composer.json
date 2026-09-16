@@ -5,6 +5,7 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
+        "amidesfahani/filament-tinyeditor": "^3.0",
         "awcodes/filament-tiptap-editor": "^3.4",
         "bezhansalleh/filament-shield": "^3.2",
         "codeat3/blade-google-material-design-icons": "^1.21",
