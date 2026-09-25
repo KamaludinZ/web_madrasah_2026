@@ -449,17 +449,19 @@
             </div>
             @endif
 
-            {{-- Comments --}}
+            {{-- Comments (disembunyikan bila komentar dimatikan dan belum ada komentar) --}}
+            @if($news->allow_comments || $comments->isNotEmpty())
             <div class="mt-8">
                 <h2 class="text-xl font-bold font-heading text-gray-900 dark:text-white mb-6">Komentar</h2>
 
-                {{-- Comment Form --}}
+                {{-- Comment Form — saat ini hanya untuk pengguna yang login (staf) --}}
+                @if($news->allow_comments)
                 @auth
                 <form action="{{ route('komentar.store', $news->id) }}" method="POST" class="mb-8">
                     @csrf
                     <div class="flex gap-3">
                         <div class="w-10 h-10 rounded-full bg-school-green flex items-center justify-center text-white font-bold flex-shrink-0">
-                            {{ substr(auth()->user()->name, 0, 1) }}
+                            {{ mb_substr(auth()->user()->name, 0, 1) }}
                         </div>
                         <div class="flex-1">
                             <textarea name="content" rows="3" placeholder="Tulis komentar..." class="w-full px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:ring-2 focus:ring-green-200 focus:border-school-green dark:bg-gray-800 dark:text-white outline-none resize-none transition-all" required></textarea>
@@ -467,18 +469,15 @@
                         </div>
                     </div>
                 </form>
-                @else
-                <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-xl text-sm text-gray-600 dark:text-gray-400">
-                    <a href="{{ route('login') }}" class="text-school-green font-semibold hover:underline">Login</a> untuk meninggalkan komentar.
-                </div>
                 @endauth
+                @endif
 
                 {{-- Comments List --}}
                 <div class="space-y-4">
                     @forelse($comments as $comment)
                     <div class="flex gap-3">
                         <div class="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-300 font-bold flex-shrink-0">
-                            {{ substr($comment->user->name ?? 'A', 0, 1) }}
+                            {{ mb_substr($comment->user->name ?? 'A', 0, 1) }}
                         </div>
                         <div class="flex-1 bg-gray-50 dark:bg-gray-800 rounded-xl p-4">
                             <div class="flex items-center justify-between mb-2">
@@ -489,10 +488,11 @@
                         </div>
                     </div>
                     @empty
-                    <p class="text-gray-400 text-sm text-center py-6">Belum ada komentar. Jadilah yang pertama!</p>
+                    <p class="text-gray-400 text-sm text-center py-6">Belum ada komentar.</p>
                     @endforelse
                 </div>
             </div>
+            @endif
         </article>
 
         {{-- Sidebar --}}

@@ -1,0 +1,8 @@
+User-agent: *
+Disallow: /admin
+Disallow: /livewire
+Disallow: /pencarian
+Disallow: /pengaduan/pelacakan
+Disallow: /survei/saran/lacak
+
+Sitemap: https://mtsn2kotamalang.sch.id/sitemap.xml

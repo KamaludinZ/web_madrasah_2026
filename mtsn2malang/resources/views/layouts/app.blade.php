@@ -76,21 +76,12 @@
     <link rel="icon" href="/images/favicon.ico" sizes="any">
     <link rel="icon" type="{{ $faviconMime }}" href="{{ $faviconUrl }}?v={{ $faviconVersion }}">
     <link rel="shortcut icon" type="{{ $faviconMime }}" href="{{ $faviconUrl }}?v={{ $faviconVersion }}">
-    <link rel="apple-touch-icon" href="{{ $faviconUrl }}?v={{ $faviconVersion }}">
+    <link rel="apple-touch-icon" href="{{ $dynamicFavicon && $faviconExt !== 'ico' ? $faviconUrl . '?v=' . $faviconVersion : '/images/apple-touch-icon.png' }}">
 
     {{-- Fonts --}}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Poppins:wght@400;500;600;700;800&family=Amiri:wght@400;700&display=swap" rel="stylesheet">
-
-    {{-- Swiper CSS --}}
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css">
-
-    {{-- AOS CSS --}}
-    <link rel="stylesheet" href="https://unpkg.com/aos@2.3.1/dist/aos.css">
-
-    {{-- GLightbox CSS --}}
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/glightbox/dist/css/glightbox.min.css">
 
     {{-- App CSS --}}
     @vite(['resources/css/app.css', 'resources/js/app.js'])

@@ -10,6 +10,9 @@ use Illuminate\Support\Facades\Route;
 // ===== HOME =====
 Route::get('/', [HomeController::class, 'index'])->name('home');
 
+// ===== SEO =====
+Route::get('/sitemap.xml', [App\Http\Controllers\SitemapController::class, 'index'])->name('sitemap');
+
 // ===== BERITA =====
 Route::prefix('berita')->name('berita.')->group(function () {
     Route::get('/', [NewsController::class, 'index'])->name('index');
