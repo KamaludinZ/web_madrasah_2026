@@ -8,5 +8,6 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-// Clean old page views (keep last 90 days)
-Schedule::command('model:prune', ['--model' => 'App\Models\PageView'])->monthly();
+// Hapus data kunjungan lebih dari 90 hari (lihat PageView::prunable()).
+// Butuh cron `php artisan schedule:run` tiap menit — lihat DEPLOYMENT.md.
+Schedule::command('model:prune', ['--model' => [\App\Models\PageView::class]])->daily();

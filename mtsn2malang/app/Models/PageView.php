@@ -2,14 +2,28 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Prunable;
 use Illuminate\Support\Str;
 
 class PageView extends Model
 {
+    use Prunable;
+
     protected $fillable = ['page', 'ip_address', 'session_id', 'user_agent', 'viewed_date'];
 
     protected $casts = ['viewed_date' => 'date'];
+
+    /**
+     * Data kunjungan lebih dari 90 hari dihapus oleh `php artisan model:prune`
+     * (dijadwalkan di routes/console.php). Tanpa trait Prunable perintah itu
+     * tidak melakukan apa-apa dan tabel page_views terus membesar.
+     */
+    public function prunable(): Builder
+    {
+        return static::where('viewed_date', '<', now()->subDays(90)->toDateString());
+    }
 
     public static function todayCount(): int
     {

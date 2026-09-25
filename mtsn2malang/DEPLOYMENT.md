@@ -3,6 +3,42 @@
 
 ---
 
+## ⚠️ LANGKAH TAMBAHAN — PERBAIKAN HASIL AUDIT (September 2026)
+
+Lakukan **sekali** saat men-deploy versi ini, selain langkah-langkah di bawah:
+
+1. **Hapus dua skrip darurat dari server** (jika masih ada) lewat File Manager:
+   `public/db-migrate.php` dan `public/artisan-run.php`. Keduanya bisa dipakai
+   siapa pun yang tahu tokennya untuk menjalankan perintah di server.
+2. **Ganti password semua akun admin** — password bawaan lama pernah tertulis di
+   kode. Password super admin baru untuk instalasi baru diambil dari
+   `ADMIN_DEFAULT_PASSWORD` di `.env` (kosong = dibuat acak saat `db:seed`).
+3. Jalankan `php artisan migrate --force` (3 migrasi baru: kolom OTP, bio,
+   penanda newsletter).
+4. Tambahkan ke `.env` server: `SESSION_SECURE_COOKIE=true`.
+5. Pastikan **dua** cron job berjalan tiap menit (lihat bagian QUEUE WORKER):
+   queue worker **dan** `schedule:run`.
+6. **Login admin kini hanya di `/admin/login`** (`/login` otomatis dialihkan).
+   Sebelum mengaktifkan OTP di Pengaturan Website → Keamanan, isi tab Email lalu
+   pastikan tombol "Kirim Email Tes" berhasil. Jika OTP aktif tetapi email gagal
+   terkirim, matikan lewat SSH:
+   `php artisan tinker --execute="App\Models\Setting::set('login_otp_enabled', false)"`
+7. Password SMTP dan API key AI kini disimpan terenkripsi. Nilai lama tetap
+   terbaca; kolom password di form sengaja kosong (kosong = tidak diubah).
+8. Upload SVG tidak lagi diterima (bisa berisi skrip). Gunakan PNG/JPG/WEBP.
+
+### Menjalankan tes (developer)
+
+Tes memakai database terpisah dan **menolak berjalan** di database lain:
+
+```bash
+# sekali saja, di server/komputer developer (BUKAN di production)
+psql -U postgres -c "CREATE DATABASE mtsn2malang_testing;"
+./vendor/bin/phpunit
+```
+
+---
+
 ## DAFTAR FILE YANG WAJIB DI-UPLOAD ULANG
 
 Berikut daftar **folder/file yang berubah** dari versi production sebelumnya.
@@ -20,10 +56,11 @@ Upload/timpa semua ini ke server hosting.
 | `resources/css/` | `app.css` — class baru gtk-photo portrait, hm-card timeline |
 | `resources/js/` | JS utama |
 | `routes/` | `web.php` — route baru (subscription, mahad, ppdb) |
-| `public/build/` | **WAJIB** — hasil build terbaru (CSS 132KB) |
+| `public/build/` | **WAJIB** — hasil build terbaru (hapus isi `public/build/assets` lama di server dulu) |
 | `public/css/` | Filament CSS assets |
 | `public/js/` | Filament JS assets |
-| `public/images/` | favicon.png, logo.png, apple-touch-icon.png, news-placeholder.png |
+| `public/images/` | favicon, apple-touch-icon, logo & semua gambar placeholder, og-default.jpg |
+| `public/robots.txt` | Petunjuk mesin pencari + lokasi sitemap |
 
 ### ✅ FILE INDIVIDUAL — Upload/Timpa
 
@@ -100,7 +137,15 @@ Cara termudah di cPanel: buat **Cron Job** yang jalan tiap menit —
 
 ```bash
 * * * * * cd /path/to/project && php artisan queue:work --stop-when-empty --max-time=55 >> /dev/null 2>&1
+* * * * * cd /path/to/project && php artisan schedule:run >> /dev/null 2>&1
 ```
+
+Baris kedua menjalankan tugas terjadwal (mis. pembersihan data kunjungan lebih
+dari 90 hari). Newsletter berita baru juga dikirim lewat antrian ini.
+
+Catatan: `DB_QUEUE_RETRY_AFTER` (default 2000 detik) harus lebih lama dari job
+terpanjang (30 menit). Jangan diturunkan, atau job backup/restore/update yang
+masih berjalan bisa diambil ulang worker lain lalu ditandai gagal.
 
 `--stop-when-empty` membuat worker keluar sendiri setelah antrian kosong, jadi
 aman dijalankan berulang tiap menit tanpa numpuk proses. Kalau hosting punya
