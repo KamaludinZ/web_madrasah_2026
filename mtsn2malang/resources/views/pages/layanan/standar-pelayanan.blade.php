@@ -128,7 +128,7 @@
                                     <h3 class="text-base md:text-lg font-semibold text-school-green mb-2">Pengelolaan Pengaduan</h3>
                                     <div class="rounded-xl bg-gray-50 dark:bg-gray-900/40 p-4 prose prose-sm dark:prose-invert max-w-none prose-headings:text-school-green">
                                         @if($service->complaint_handling)
-                                            {!! $service->complaint_handling !!}
+                                            {!! \App\Support\SafeHtml::clean($service->complaint_handling) !!}
                                         @else
                                             <p class="text-gray-500 dark:text-gray-400">-</p>
                                         @endif

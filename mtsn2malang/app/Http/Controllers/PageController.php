@@ -402,7 +402,9 @@ class PageController extends Controller
         PageView::record('/pengaduan/pelacakan');
         $complaint = null;
         if ($request->filled('ticket')) {
-            $complaint = Complaint::where('ticket_number', $request->ticket)->first();
+            $complaint = Complaint::whereIn('type', ['whistleblowing', 'masyarakat'])
+                ->where('ticket_number', strtoupper(trim((string) $request->input('ticket'))))
+                ->first();
         }
         return view('pages.pengaduan.pelacakan', compact('complaint'));
     }
@@ -446,7 +448,11 @@ class PageController extends Controller
         $notFound = false;
 
         if ($request->filled('tiket')) {
-            $saran = Saran::where('ticket_number', trim($request->tiket))->first();
+            // Hanya tiket saran — tiket pengaduan/whistleblowing tidak boleh
+            // terbaca lewat halaman ini.
+            $saran = Saran::where('type', 'saran')
+                ->where('ticket_number', strtoupper(trim((string) $request->input('tiket'))))
+                ->first();
             if (!$saran) {
                 $notFound = true;
             }
@@ -479,7 +485,8 @@ class PageController extends Controller
 
         return redirect()
             ->route('survei.saran')
-            ->with('success', 'Terima kasih! Saran Anda telah kami terima dengan nomor tiket <strong>' . $saran->ticket_number . '</strong>. Simpan nomor tiket ini untuk melacak status saran Anda.');
+            ->with('success', 'Terima kasih! Saran Anda telah kami terima.')
+            ->with('ticket', $saran->ticket_number);
     }
 
     // ===== ARCHIVE VIEWER =====

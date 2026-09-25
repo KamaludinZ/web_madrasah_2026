@@ -111,9 +111,16 @@ return new class extends Migration
             $table->primary([$pivotPermission, $pivotRole], 'role_has_permissions_permission_id_role_id_primary');
         });
 
-        app('cache')
-            ->store(config('permission.cache.store') != 'default' ? config('permission.cache.store') : null)
-            ->forget(config('permission.cache.key'));
+        // Pada instalasi baru tabel `cache` (CACHE_STORE=database) baru dibuat
+        // oleh migrasi berikutnya. Query ke tabel yang belum ada akan
+        // membatalkan seluruh transaksi migrasi di PostgreSQL, jadi lewati
+        // saja — belum ada cache permission yang perlu dibersihkan.
+        $store = config('permission.cache.store') != 'default' ? config('permission.cache.store') : config('cache.default');
+        $usesDatabaseCache = config("cache.stores.{$store}.driver") === 'database';
+
+        if (! $usesDatabaseCache || Schema::hasTable(config("cache.stores.{$store}.table", 'cache'))) {
+            app('cache')->store($store)->forget(config('permission.cache.key'));
+        }
     }
 
     /**

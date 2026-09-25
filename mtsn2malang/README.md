@@ -165,7 +165,7 @@ mtsn2malang/
 |--|--|
 | **URL Admin** | `/admin` |
 | **Email** | `admin@mtsn2kotamalang.sch.id` |
-| **Password** | `Admin@MTsN2!2024` |
+| **Password** | Diisi dari `ADMIN_DEFAULT_PASSWORD` di `.env`, atau dibuat acak dan ditampilkan sekali saat `php artisan db:seed` |
 
 > ⚠️ **GANTI PASSWORD** setelah login pertama!
 

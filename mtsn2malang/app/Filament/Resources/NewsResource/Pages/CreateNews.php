@@ -25,7 +25,7 @@ class CreateNews extends CreateRecord
     {
         // Hapus field galeri & tags dari data news (tidak ada kolomnya di tabel news)
         unset($data['gallery_title'], $data['gallery_description'], $data['gallery_photos_upload'], $data['tags']);
-        return $data;
+        return NewsResource::enforcePermissions($data);
     }
 
     protected function afterCreate(): void

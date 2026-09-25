@@ -608,7 +608,7 @@
                 </div>
                 @if($updateCheckResult['notes'])
                 <div class="prose prose-sm dark:prose-invert max-w-none bg-white dark:bg-gray-900 rounded-lg p-3 mb-4 max-h-48 overflow-y-auto text-xs">
-                    {!! \Illuminate\Support\Str::markdown($updateCheckResult['notes']) !!}
+                    {!! \Illuminate\Support\Str::markdown($updateCheckResult['notes'], ['html_input' => 'escape', 'allow_unsafe_links' => false]) !!}
                 </div>
                 @endif
                 <label class="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300 mb-3">

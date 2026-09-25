@@ -31,6 +31,12 @@
     Header always set X-XSS-Protection "1; mode=block"
     Header always set Referrer-Policy "strict-origin-when-cross-origin"
     Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+
+    # File SVG yang dibuka langsung tidak boleh menjalankan skrip (proteksi
+    # untuk SVG lama yang mungkin sudah terunggah sebelum SVG diblokir).
+    <FilesMatch "\.svg$">
+        Header always set Content-Security-Policy "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; sandbox"
+    </FilesMatch>
 </IfModule>
 
 # Gzip Compression

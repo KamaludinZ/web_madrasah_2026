@@ -109,7 +109,7 @@
                             prose-strong:text-gray-900 dark:prose-strong:text-white
                             prose-ul:text-gray-700 dark:prose-ul:text-gray-300
                             prose-ol:text-gray-700 dark:prose-ol:text-gray-300">
-                    {!! $item->content !!}
+                    {!! \App\Support\SafeHtml::clean($item->content) !!}
                 </div>
                 @endif
                 @endforeach

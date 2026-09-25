@@ -52,7 +52,7 @@
                 <section class="bg-white dark:bg-gray-800 rounded-2xl shadow-card p-6 md:p-8">
                     <h2 class="text-2xl font-bold font-heading text-school-green mb-4">Persyaratan Umum</h2>
                     <div class="prose prose-lg dark:prose-invert max-w-none">
-                        {!! $registration->general_requirements !!}
+                        {!! \App\Support\SafeHtml::clean($registration->general_requirements) !!}
                     </div>
                 </section>
             @endif
@@ -61,7 +61,7 @@
                 <section class="bg-white dark:bg-gray-800 rounded-2xl shadow-card p-6 md:p-8">
                     <h2 class="text-2xl font-bold font-heading text-school-green mb-4">Persyaratan Khusus</h2>
                     <div class="prose prose-lg dark:prose-invert max-w-none">
-                        {!! $registration->specific_requirements !!}
+                        {!! \App\Support\SafeHtml::clean($registration->specific_requirements) !!}
                     </div>
                 </section>
             @endif

@@ -46,9 +46,9 @@
                             @if(!empty($defaultBannerSubtitle))
                             <span class="inline-block px-3 py-1 bg-orange-700 text-white text-sm font-semibold rounded-full mb-4">{{ $defaultBannerSubtitle }}</span>
                             @endif
-                            <h1 class="text-4xl md:text-6xl font-bold text-white font-heading mb-4 [&_*]:text-white [&_a]:underline">{!! $defaultBannerTitle !!}</h1>
+                            <h1 class="text-4xl md:text-6xl font-bold text-white font-heading mb-4 [&_*]:text-white [&_a]:underline">{!! \App\Support\SafeHtml::clean($defaultBannerTitle) !!}</h1>
                             @if(!empty($defaultBannerDescription))
-                            <div class="text-white/80 text-xl mb-8 [&_*]:text-white/80 [&_a]:underline">{!! $defaultBannerDescription !!}</div>
+                            <div class="text-white/80 text-xl mb-8 [&_*]:text-white/80 [&_a]:underline">{!! \App\Support\SafeHtml::clean($defaultBannerDescription) !!}</div>
                             @endif
                             <a href="{{ $defaultBannerLink ?: route('tentang.sambutan') }}" class="btn-secondary">Pelajari Lebih Lanjut</a>
                         </div>
@@ -61,9 +61,9 @@
                             @if(!empty($defaultBannerSubtitle))
                             <span class="inline-block px-3 py-1 bg-white/20 text-white text-sm font-semibold rounded-full mb-4">{{ $defaultBannerSubtitle }}</span>
                             @endif
-                            <h1 class="text-4xl md:text-6xl font-bold text-white font-heading mb-4 [&_*]:text-white [&_a]:underline">{!! $defaultBannerTitle !!}</h1>
+                            <h1 class="text-4xl md:text-6xl font-bold text-white font-heading mb-4 [&_*]:text-white [&_a]:underline">{!! \App\Support\SafeHtml::clean($defaultBannerTitle) !!}</h1>
                             @if(!empty($defaultBannerDescription))
-                            <div class="text-white/80 text-xl mb-8 [&_*]:text-white/80 [&_a]:underline">{!! $defaultBannerDescription !!}</div>
+                            <div class="text-white/80 text-xl mb-8 [&_*]:text-white/80 [&_a]:underline">{!! \App\Support\SafeHtml::clean($defaultBannerDescription) !!}</div>
                             @endif
                             <a href="{{ $defaultBannerLink ?: route('tentang.sambutan') }}" class="btn-secondary">Pelajari Lebih Lanjut</a>
                         </div>
@@ -243,7 +243,7 @@
                     <div class="flex-1 min-w-0">
                         @if($welcomeMessage)
                         <div class="prose prose-sm dark:prose-invert max-w-none text-gray-700 dark:text-gray-300 leading-relaxed">
-                            {!! $welcomeMessage !!}
+                            {!! \App\Support\SafeHtml::clean($welcomeMessage) !!}
                         </div>
                         @endif
 
@@ -312,7 +312,7 @@
                                     [&_ol]:pl-5 [&_ul]:pl-5
                                     [&_li]:text-gray-700 dark:[&_li]:text-gray-300 [&_li]:leading-relaxed [&_li]:mb-1.5
                                     [&_p]:text-gray-700 dark:[&_p]:text-gray-300">
-                            {!! $misi !!}
+                            {!! \App\Support\SafeHtml::clean($misi) !!}
                         </div>
                     </div>
                 </div>
@@ -339,7 +339,7 @@
                                     [&_ol]:pl-5 [&_ul]:pl-5
                                     [&_li]:text-gray-700 dark:[&_li]:text-gray-300 [&_li]:leading-relaxed [&_li]:mb-1.5
                                     [&_p]:text-gray-700 dark:[&_p]:text-gray-300">
-                            {!! $tujuan !!}
+                            {!! \App\Support\SafeHtml::clean($tujuan) !!}
                         </div>
                     </div>
                 </div>

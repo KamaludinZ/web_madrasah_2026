@@ -56,7 +56,7 @@ class EditNews extends EditRecord
             $data['gallery_photos_to_delete'],
             $data['tags']
         );
-        return $data;
+        return NewsResource::enforcePermissions($data, $this->record);
     }
 
     protected function afterSave(): void
@@ -84,7 +84,11 @@ class EditNews extends EditRecord
             $photoId = (int) $photoId;
             if ($photoId <= 0) continue;
 
-            $photo = GalleryPhoto::find($photoId);
+            // Hanya foto milik galeri berita INI — ID dikirim dari browser dan
+            // bisa dimanipulasi untuk menghapus foto berita lain.
+            $photo = GalleryPhoto::whereKey($photoId)
+                ->whereHas('galleryPost', fn ($q) => $q->where('news_id', $this->record->id))
+                ->first();
             if ($photo) {
                 Storage::disk('public')->delete($photo->file_path);
                 $photo->delete();

@@ -94,7 +94,7 @@ Route::prefix('pengaduan')->name('pengaduan.')->group(function () {
     Route::post('/whistleblowing', [PageController::class, 'storePengaduan'])->name('whistleblowing.store')->middleware('throttle:5,10');
     Route::get('/masyarakat', [PageController::class, 'pengaduanMasyarakat'])->name('masyarakat');
     Route::post('/masyarakat', [PageController::class, 'storePengaduan'])->name('masyarakat.store')->middleware('throttle:5,10');
-    Route::get('/pelacakan', [PageController::class, 'pelacakanPengaduan'])->name('pelacakan');
+    Route::get('/pelacakan', [PageController::class, 'pelacakanPengaduan'])->name('pelacakan')->middleware('throttle:20,1');
     Route::get('/laporan', [PageController::class, 'laporanPengaduan'])->name('laporan');
 });
 
@@ -112,18 +112,10 @@ Route::prefix('survei')->name('survei.')->group(function () {
 Route::get('/arsip/{id}/lihat', [PageController::class, 'viewArchive'])->name('archive.view');
 
 // ===== AUTH =====
-Route::get('/captcha/refresh', [App\Http\Controllers\Auth\LoginController::class, 'refreshCaptcha'])->name('captcha.refresh');
-
-Route::middleware('guest')->group(function () {
-    Route::get('/login', [App\Http\Controllers\Auth\LoginController::class, 'showLogin'])->name('login');
-    Route::post('/login', [App\Http\Controllers\Auth\LoginController::class, 'login'])->name('login.post')->middleware('throttle:10,5');
-    Route::post('/otp/verify', [App\Http\Controllers\Auth\LoginController::class, 'verifyOtp'])->name('otp.verify')->middleware('throttle:5,5');
-    Route::get('/forgot-password', fn() => redirect()->route('login')->with('error', 'Silakan hubungi administrator untuk reset password.'))->name('password.request');
-});
-
-Route::middleware('auth')->group(function () {
-    Route::post('/logout', [App\Http\Controllers\Auth\LoginController::class, 'logout'])->name('logout');
-});
+// Login hanya lewat panel admin (/admin/login) yang sudah memuat kode keamanan
+// dan OTP. /login lama dipertahankan sebagai alamat pintas (dan sebagai nama
+// route 'login' yang dipakai middleware auth).
+Route::redirect('/login', '/admin/login')->name('login');
 
 // ===== SUBSCRIPTION =====
 Route::post('/subscription', [SubscriptionController::class, 'store'])->name('subscription.store')->middleware('throttle:5,10');

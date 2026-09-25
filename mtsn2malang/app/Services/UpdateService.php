@@ -42,6 +42,16 @@ class UpdateService
         'VERSION', // ditulis terpisah setelah update sukses, bukan ditimpa mentah
     ];
 
+    /**
+     * File lama yang harus DIHAPUS dari server saat update. Sinkronisasi file
+     * hanya menyalin/menimpa, tidak pernah menghapus — tanpa daftar ini, file
+     * berbahaya yang sudah dihapus dari repo akan tetap tertinggal di server.
+     */
+    private const OBSOLETE_PATHS = [
+        'public/db-migrate.php',
+        'public/artisan-run.php',
+    ];
+
     public function repo(): ?string
     {
         return Setting::get('update_github_repo', 'KamaludinZ/web_madrasah_2026');
@@ -316,6 +326,8 @@ class UpdateService
      */
     private function finalizeUpdate(string $toVersion, callable $progress): bool
     {
+        $this->removeObsoleteFiles($progress);
+
         $shellAvailable = $this->shellExecAvailable();
 
         if ($shellAvailable) {
@@ -338,6 +350,17 @@ class UpdateService
         $progress("Versi aplikasi diperbarui ke {$toVersion}.");
 
         return $shellAvailable;
+    }
+
+    private function removeObsoleteFiles(callable $progress): void
+    {
+        foreach (self::OBSOLETE_PATHS as $relative) {
+            $path = base_path($relative);
+
+            if (is_file($path) && @unlink($path)) {
+                $progress("Menghapus file usang: {$relative}");
+            }
+        }
     }
 
     private function syncApplicationFiles(string $sourceDir, string $destDir): void
