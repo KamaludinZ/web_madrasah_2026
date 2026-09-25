@@ -21,6 +21,18 @@ class BackupService
 {
     public const DIR = 'backups';
 
+    /**
+     * Tabel operasional yang TIDAK ikut dibackup/direstore. Jika ikut, restore
+     * akan menimpa riwayat backup/restore/update (termasuk record restore yang
+     * sedang berjalan, sehingga statusnya hilang), menghidupkan lagi job
+     * antrian lama, dan mengeluarkan semua admin dari sesinya.
+     */
+    public const EXCLUDED_TABLES = [
+        'app_backups', 'app_restores', 'app_updates',
+        'jobs', 'job_batches', 'failed_jobs',
+        'cache', 'cache_locks', 'sessions',
+    ];
+
     public function backupDisk(): \Illuminate\Contracts\Filesystem\Filesystem
     {
         return \Illuminate\Support\Facades\Storage::disk('local');
@@ -166,6 +178,7 @@ class BackupService
             '--if-exists',
             '--no-owner',
             '--no-privileges',
+            ...array_map(fn (string $table) => '--exclude-table=' . $table, self::EXCLUDED_TABLES),
             '--file=' . $outputPath,
             $config['database'],
         ]);

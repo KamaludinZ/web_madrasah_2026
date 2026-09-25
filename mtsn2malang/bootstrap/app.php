@@ -12,6 +12,12 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
+
+        // Saat maintenance, panel admin tetap bisa dibuka (untuk menonaktifkan
+        // maintenance tanpa URL bypass). livewire/* dibutuhkan panel admin.
+        $middleware->preventRequestsDuringMaintenance(except: [
+            'admin', 'admin/*', 'livewire/*', 'filament/*',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\NotFoundHttpException $e, $request) {

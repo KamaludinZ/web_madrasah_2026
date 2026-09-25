@@ -1217,8 +1217,10 @@ class ManageSettings extends Page
                     return;
                 }
 
-                $storedPath = $this->restoreFile->store('tmp-uploads');
-                $absolutePath = storage_path('app/' . $storedPath);
+                // Path absolut diambil dari disk yang sama dengan tempat file
+                // disimpan (disk 'local' = storage/app/private), bukan ditebak.
+                $storedPath = $this->restoreFile->store('tmp-uploads', 'local');
+                $absolutePath = \Illuminate\Support\Facades\Storage::disk('local')->path($storedPath);
 
                 $restore = AppRestore::create([
                     'source_filename' => $originalName,
@@ -1395,8 +1397,10 @@ class ManageSettings extends Page
                     return;
                 }
 
-                $storedPath = $this->manualUpdateFile->store('tmp-uploads');
-                $absolutePath = storage_path('app/' . $storedPath);
+                // Path absolut diambil dari disk yang sama dengan tempat file
+                // disimpan (disk 'local' = storage/app/private), bukan ditebak.
+                $storedPath = $this->manualUpdateFile->store('tmp-uploads', 'local');
+                $absolutePath = \Illuminate\Support\Facades\Storage::disk('local')->path($storedPath);
                 $toVersion = trim($this->manualUpdateVersion);
 
                 $update = AppUpdate::create([

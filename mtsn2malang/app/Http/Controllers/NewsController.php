@@ -17,8 +17,8 @@ class NewsController extends Controller
 
         $query = News::published()->with(['category', 'author']);
 
-        if ($request->filled('kategori')) {
-            $query->byCategory($request->kategori);
+        if (is_string($kategori = $request->query('kategori')) && $kategori !== '') {
+            $query->byCategory($kategori);
         }
 
         if ($request->filled('tahun')) {
@@ -105,7 +105,7 @@ class NewsController extends Controller
 
         $comments = $news->comments()->with('user')->latest()->get();
         $relatedNews = News::published()
-            ->where('id', '!=', (int) data_get($news, 'attributes.id'))
+            ->where('id', '!=', $news->id)
             ->where('category_id', $news->category_id)
             ->latest('published_at')
             ->take(5)

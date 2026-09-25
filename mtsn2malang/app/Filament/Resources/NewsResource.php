@@ -214,7 +214,7 @@ class NewsResource extends Resource
                                 ->action(function (Forms\Get $get, Forms\Set $set) {
                                     try {
                                         $aiService = app(AiService::class);
-                                        $seo = $aiService->generateSeo($get('title'), $get('excerpt') ?? $get('content'));
+                                        $seo = $aiService->generateSeo((string) $get('title'), filled($get('excerpt')) ? (string) $get('excerpt') : (string) $get('content'));
                                         $set('meta_title', $seo['meta_title']);
                                         $set('meta_description', $seo['meta_description']);
                                         if (empty($get('slug'))) {
@@ -521,7 +521,7 @@ class NewsResource extends Resource
                     ->visible(fn(News $record) => $record->status !== 'published' && static::canPublish())
                     ->action(function (News $record): void {
                         $record->update(['status' => 'published', 'published_at' => now()]);
-                        app(SubscriptionMailerService::class)->sendNewsPublished($record);
+                        app(SubscriptionMailerService::class)->queueIfPublished($record);
                     }),
                 Tables\Actions\DeleteAction::make(),
             ])
@@ -535,7 +535,7 @@ class NewsResource extends Resource
                         ->action(function ($records): void {
                             $records->each(function (News $record): void {
                                 $record->update(['status' => 'published', 'published_at' => now()]);
-                                app(SubscriptionMailerService::class)->sendNewsPublished($record);
+                                app(SubscriptionMailerService::class)->queueIfPublished($record);
                             });
                         }),
                 ]),

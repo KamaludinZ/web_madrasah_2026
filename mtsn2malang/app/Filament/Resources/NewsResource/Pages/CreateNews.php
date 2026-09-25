@@ -32,6 +32,7 @@ class CreateNews extends CreateRecord
     {
         $this->saveGalleryPost($this->record->id);
         $this->syncTags();
+        app(\App\Services\SubscriptionMailerService::class)->queueIfPublished($this->record);
     }
 
     protected function syncTags(): void
