@@ -17,7 +17,6 @@ Route::get('/sitemap.xml', [App\Http\Controllers\SitemapController::class, 'inde
 Route::prefix('berita')->name('berita.')->group(function () {
     Route::get('/', [NewsController::class, 'index'])->name('index');
     Route::get('/{slug}', [NewsController::class, 'show'])->name('show');
-    Route::post('/{id}/komentar', [NewsController::class, 'storeComment'])->name('komentar.store')->middleware('auth');
 });
 
 // ===== PENULIS =====
@@ -120,9 +119,19 @@ Route::get('/arsip/{id}/lihat', [PageController::class, 'viewArchive'])->name('a
 // route 'login' yang dipakai middleware auth).
 Route::redirect('/login', '/admin/login')->name('login');
 
+// Gambar kode keamanan (angka) — setiap permintaan membuat kode baru.
+Route::get('/kode-keamanan/{context}', [App\Http\Controllers\CaptchaController::class, 'image'])
+    ->whereIn('context', App\Support\NumericCaptcha::CONTEXTS)
+    ->middleware('throttle:60,1')
+    ->name('captcha.image');
+
 // ===== SUBSCRIPTION =====
 Route::post('/subscription', [SubscriptionController::class, 'store'])->name('subscription.store')->middleware('throttle:5,10');
 Route::get('/subscription/unsubscribe/{token}', [SubscriptionController::class, 'unsubscribe'])->name('subscription.unsubscribe');
 
 // ===== KOMENTAR =====
-Route::post('/komentar/{id}', [NewsController::class, 'storeComment'])->name('komentar.store')->middleware('auth');
+// Pengunjung tanpa akun boleh berkomentar; komentar tamu wajib dimoderasi.
+Route::post('/komentar/{id}', [NewsController::class, 'storeComment'])
+    ->whereNumber('id')
+    ->name('komentar.store')
+    ->middleware('throttle:5,10');

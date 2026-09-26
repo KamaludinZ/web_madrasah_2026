@@ -8,6 +8,10 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-// Hapus data kunjungan lebih dari 90 hari (lihat PageView::prunable()).
-// Butuh cron `php artisan schedule:run` tiap menit — lihat DEPLOYMENT.md.
-Schedule::command('model:prune', ['--model' => [\App\Models\PageView::class]])->daily();
+// Ringkas detail kunjungan > 90 hari menjadi angka total (lihat
+// PageView::pruneOld()). Butuh cron `php artisan schedule:run` tiap menit —
+// lihat DEPLOYMENT.md.
+Schedule::call(fn () => \App\Models\PageView::pruneOld())
+    ->daily()
+    ->name('ringkas-data-kunjungan')
+    ->withoutOverlapping();

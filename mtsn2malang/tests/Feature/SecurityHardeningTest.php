@@ -18,6 +18,7 @@ use App\Models\Popup;
 use App\Models\PopupItem;
 use App\Models\Saran;
 use App\Models\Setting;
+use App\Support\NumericCaptcha;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
@@ -133,7 +134,7 @@ class SecurityHardeningTest extends TestCase
             ->set('data.email', $email)
             ->set('data.password', $password);
 
-        return $component->set('data.captcha', $component->get('captchaCode'))->call('authenticate');
+        return $component->set('data.captcha', NumericCaptcha::generate('login'))->call('authenticate');
     }
 
     public function test_admin_login_without_otp_logs_in_directly(): void
@@ -300,5 +301,43 @@ class SecurityHardeningTest extends TestCase
         $fresh->call('save');
         $this->assertSame('rahasia-smtp', Setting::getSecret('mail_password'));
         $this->assertSame('AIza-rahasia', Setting::getSecret('gemini_api_key'));
+    }
+
+    // ─── Kode keamanan (CAPTCHA angka bergambar) ─────────────────────────────
+
+    public function test_login_page_does_not_expose_captcha_code_as_text(): void
+    {
+        $html = $this->get('/admin/login')->assertOk()->getContent();
+
+        $this->assertStringContainsString('kode-keamanan\\/login', $html);
+        $this->assertStringNotContainsString('captchaCode', $html);
+    }
+
+    public function test_captcha_image_is_served_and_code_is_single_use(): void
+    {
+        $response = $this->get(route('captcha.image', 'login'))->assertOk();
+        $this->assertContains($response->headers->get('Content-Type'), ['image/png', 'image/svg+xml']);
+
+        $code = session('numeric_captcha.login.code');
+        $this->assertMatchesRegularExpression('/^\d{' . NumericCaptcha::LENGTH . '}$/', $code);
+
+        $this->assertTrue(NumericCaptcha::check('login', $code));
+        $this->assertFalse(NumericCaptcha::check('login', $code), 'Kode tidak boleh bisa dipakai dua kali.');
+    }
+
+    public function test_wrong_captcha_blocks_login(): void
+    {
+        Setting::set('login_otp_enabled', false);
+        NumericCaptcha::generate('login');
+
+        Livewire::test(Login::class)
+            ->set('data.email', 'editor@test.local')
+            ->set('data.password', self::TEST_PASSWORD)
+            ->set('data.captcha', '00000x')
+            ->call('authenticate')
+            ->assertHasErrors('data.captcha')
+            ->assertDispatched('captcha-reload');
+
+        $this->assertGuest();
     }
 }

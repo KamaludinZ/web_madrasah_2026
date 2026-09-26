@@ -122,6 +122,8 @@ class FunctionalFixesTest extends TestCase
             $this->assertStringNotContainsString('CREATE TABLE public.app_restores', $sql);
             $this->assertStringNotContainsString('CREATE TABLE public.jobs', $sql);
             $this->assertStringNotContainsString('CREATE TABLE public.sessions', $sql);
+            $this->assertStringNotContainsString('CREATE TABLE public.activity_log', $sql);
+            $this->assertStringNotContainsString('jobs_id_seq', $sql);
         } finally {
             app(BackupService::class)->delete($result['filename']);
         }
@@ -270,5 +272,49 @@ class FunctionalFixesTest extends TestCase
         } finally {
             $this->app->maintenanceMode()->deactivate();
         }
+    }
+
+    public function test_tables_excluded_from_backup_have_no_foreign_keys_to_restored_tables(): void
+    {
+        // Jika tabel yang dikecualikan merujuk tabel lain (mis. users), psql
+        // gagal menghapus & membuat ulang tabel itu dan SELURUH restore gagal.
+        $rows = \Illuminate\Support\Facades\DB::select(
+            "SELECT conrelid::regclass::text AS source, confrelid::regclass::text AS target
+             FROM pg_constraint WHERE contype = 'f'"
+        );
+
+        $violations = collect($rows)
+            ->filter(fn ($row) => in_array($row->source, BackupService::EXCLUDED_TABLES, true)
+                && ! in_array($row->target, BackupService::EXCLUDED_TABLES, true))
+            ->map(fn ($row) => "{$row->source} → {$row->target}")
+            ->values()
+            ->all();
+
+        $this->assertSame([], $violations, 'Tabel yang tidak ikut backup tidak boleh punya foreign key ke tabel yang direstore.');
+    }
+
+    // ─── Audit log & statistik pengunjung ────────────────────────────────────
+
+    public function test_audit_log_cannot_be_cleared_from_settings_page(): void
+    {
+        $this->assertFalse(method_exists(ManageSettings::class, 'clearAuditLog'));
+
+        Livewire::actingAs($this->superAdmin())
+            ->test(ManageSettings::class)
+            ->set('activeMainTab', 'audit')
+            ->assertSee('Audit log permanen')
+            ->assertDontSee('Bersihkan Audit');
+    }
+
+    public function test_pruning_old_visits_keeps_total_visitor_count(): void
+    {
+        \App\Models\PageView::create(['page' => '/', 'session_id' => 'lama', 'viewed_date' => now()->subDays(200)->toDateString()]);
+        \App\Models\PageView::create(['page' => '/', 'session_id' => 'baru', 'viewed_date' => now()->toDateString()]);
+
+        $this->assertSame(2, \App\Models\PageView::totalCount());
+        $this->assertSame(1, \App\Models\PageView::pruneOld());
+
+        $this->assertSame(1, \App\Models\PageView::count(), 'Detail kunjungan lama dihapus.');
+        $this->assertSame(2, \App\Models\PageView::totalCount(), 'Total pengunjung tidak boleh berkurang.');
     }
 }

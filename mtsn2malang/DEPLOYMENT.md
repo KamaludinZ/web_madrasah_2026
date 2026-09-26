@@ -13,8 +13,9 @@ Lakukan **sekali** saat men-deploy versi ini, selain langkah-langkah di bawah:
 2. **Ganti password semua akun admin** — password bawaan lama pernah tertulis di
    kode. Password super admin baru untuk instalasi baru diambil dari
    `ADMIN_DEFAULT_PASSWORD` di `.env` (kosong = dibuat acak saat `db:seed`).
-3. Jalankan `php artisan migrate --force` (3 migrasi baru: kolom OTP, bio,
-   penanda newsletter).
+3. Jalankan `php artisan migrate --force` (4 migrasi baru: kolom OTP, bio,
+   penanda newsletter, dan pelepasan relasi tabel riwayat backup agar restore
+   berhasil).
 4. Tambahkan ke `.env` server: `SESSION_SECURE_COOKIE=true`.
 5. Pastikan **dua** cron job berjalan tiap menit (lihat bagian QUEUE WORKER):
    queue worker **dan** `schedule:run`.
@@ -26,6 +27,16 @@ Lakukan **sekali** saat men-deploy versi ini, selain langkah-langkah di bawah:
 7. Password SMTP dan API key AI kini disimpan terenkripsi. Nilai lama tetap
    terbaca; kolom password di form sengaja kosong (kosong = tidak diubah).
 8. Upload SVG tidak lagi diterima (bisa berisi skrip). Gunakan PNG/JPG/WEBP.
+9. **Komentar pengunjung** kini terbuka tanpa akun: wajib isi nama + kode
+   keamanan, dan selalu masuk antrean **Moderasi Komentar** sebelum tampil.
+10. **Kode keamanan** (login & komentar) berupa gambar angka. Membutuhkan
+    ekstensi PHP GD (umumnya sudah aktif di cPanel); tanpa GD otomatis memakai
+    gambar SVG sederhana.
+11. **Audit log bersifat permanen**: tidak ada tombol hapus, dan restore backup
+    tidak menimpanya. Salinan audit log tetap ikut diarsipkan di file backup
+    (`activity_log.sql`).
+12. "Total Pengunjung" tetap utuh: detail kunjungan > 90 hari diringkas menjadi
+    angka total (jumlah dibaca per berita tidak terpengaruh).
 
 ### Menjalankan tes (developer)
 

@@ -181,15 +181,11 @@
                 @endforeach
             </select>
 
-            {{-- Clear Audit --}}
-            <x-filament::button
-                wire:click="clearAuditLog"
-                wire:confirm="Yakin ingin menghapus semua audit log? Tindakan ini tidak dapat dibatalkan."
-                color="danger"
-                size="sm"
-            >
-                Bersihkan Audit
-            </x-filament::button>
+            {{-- Audit log sengaja tidak bisa dihapus dari panel (termasuk oleh super admin) --}}
+            <span class="inline-flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400" title="Audit log bersifat permanen agar jejak perubahan tidak bisa dihilangkan.">
+                <x-heroicon-o-lock-closed class="w-4 h-4" />
+                Audit log permanen
+            </span>
         </div>
     </div>
 

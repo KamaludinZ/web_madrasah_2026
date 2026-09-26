@@ -35,13 +35,6 @@ class Login extends BaseLogin
 
     protected static string $view = 'filament.pages.auth.login';
 
-    /**
-     * Kode CAPTCHA — public property Livewire agar reaktif di view.
-     * #[Locked] mencegah user manipulasi nilai dari browser.
-     */
-    #[Locked]
-    public string $captchaCode = '';
-
     /** true = sedang di langkah memasukkan kode OTP. */
     #[Locked]
     public bool $otpStep = false;
@@ -52,25 +45,16 @@ class Login extends BaseLogin
     #[Locked]
     public bool $otpRemember = false;
 
-    // ─── Generate ────────────────────────────────────────────────────────────
+    // ─── Kode keamanan ───────────────────────────────────────────────────────
+    // Kode disimpan di session server dan ditampilkan sebagai GAMBAR
+    // (App\Support\NumericCaptcha). Sebelumnya kode dikirim ke browser sebagai
+    // teks/properti Livewire sehingga mudah dibaca bot.
 
+    /** Minta browser memuat gambar kode baru & kosongkan isian. */
     private function newCaptcha(): void
     {
-        $this->captchaCode = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-    }
-
-    public function mount(): void
-    {
-        parent::mount();
-        $this->newCaptcha();
-    }
-
-    // ─── Refresh (wire:click dari view) ──────────────────────────────────────
-
-    public function refreshCaptcha(): void
-    {
-        $this->newCaptcha();
         $this->data['captcha'] = '';
+        $this->dispatch('captcha-reload');
     }
 
     // ─── Form ────────────────────────────────────────────────────────────────
@@ -90,10 +74,10 @@ class Login extends BaseLogin
     {
         return TextInput::make('captcha')
             ->label('Kode Keamanan')
-            ->helperText('Salin kode yang tertera, lalu ketik di kolom ini.')
+            ->helperText('Ketik angka yang tampil pada gambar di bawah.')
             ->placeholder('Ketik kode keamanan')
             ->required()
-            ->maxLength(6)
+            ->maxLength(\App\Support\NumericCaptcha::LENGTH)
             ->autocomplete('off')
             ->extraInputAttributes([
                 'inputmode'    => 'numeric',
@@ -133,19 +117,22 @@ class Login extends BaseLogin
             return $this->verifyOtp();
         }
 
-        // Validasi CAPTCHA — bandingkan dengan public property (bukan session)
-        $input = trim($this->data['captcha'] ?? '');
-
-        if ($input === '' || $input !== $this->captchaCode) {
+        // Validasi kode keamanan (sekali pakai — gambar selalu diganti setelah dicek)
+        if (! \App\Support\NumericCaptcha::check('login', $this->data['captcha'] ?? null)) {
             $this->newCaptcha();
-            $this->data['captcha'] = '';
 
             throw ValidationException::withMessages([
                 'data.captcha' => 'Kode keamanan tidak sesuai. Silakan coba lagi.',
             ]);
         }
 
-        $data = $this->form->getState();
+        try {
+            $data = $this->form->getState();
+        } catch (ValidationException $e) {
+            $this->newCaptcha(); // kode sudah terpakai — tampilkan gambar baru
+            throw $e;
+        }
+
         $credentials = $this->getCredentialsFromFormData($data);
         $guard = Filament::auth();
 

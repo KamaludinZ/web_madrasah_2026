@@ -993,18 +993,6 @@ class ManageSettings extends Page
         }
     }
 
-    public function clearAuditLog(): void
-    {
-        try {
-            Activity::truncate();
-        } catch (\Throwable $e) {
-            Notification::make()->title('Gagal membersihkan audit log')->body($e->getMessage())->danger()->send();
-            return;
-        }
-        $this->logActivity('Audit log dibersihkan');
-        Notification::make()->title('Audit log berhasil dibersihkan')->success()->send();
-    }
-
     public function getAuditLogNames(): array
     {
         try {
