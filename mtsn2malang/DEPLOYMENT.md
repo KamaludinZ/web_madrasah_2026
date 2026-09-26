@@ -1,6 +1,9 @@
 # Panduan Deploy Ulang ke Production — MTsN 2 Kota Malang
 **Versi: 23 Juni 2026 | Commit: fd4cebb4**
 
+> 🐳 **Deploy dengan Docker / Coolify?** Ikuti **[DEPLOY-COOLIFY.md](DEPLOY-COOLIFY.md)**.
+> Panduan di bawah ini untuk hosting cPanel (upload file + SSH).
+
 ---
 
 ## ⚠️ LANGKAH TAMBAHAN — PERBAIKAN HASIL AUDIT (September 2026)

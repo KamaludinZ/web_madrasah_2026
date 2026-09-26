@@ -1,0 +1,139 @@
+# =============================================================================
+# Deploy MTsN 2 Kota Malang di Coolify (build pack: Docker Compose)
+#
+# Di Coolify:  Base Directory = /mtsn2malang
+#              Docker Compose Location = /docker-compose.yml
+# Panduan lengkap: DEPLOY-COOLIFY.md
+#
+# Variabel yang perlu diisi di tab "Environment Variables" Coolify:
+#   APP_URL   (wajib)  mis. https://mtsn2kotamalang.sch.id
+#   APP_KEY   (sangat disarankan) — lihat DEPLOY-COOLIFY.md cara membuatnya
+#   SERVICE_USER_POSTGRES / SERVICE_PASSWORD_POSTGRES dibuat otomatis Coolify.
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # Web & panel admin (nginx + php-fpm). Menjalankan migrasi saat start.
+  # ---------------------------------------------------------------------------
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      # Coolify: arahkan domain ke port 8080 container ini (domain bisa
+      # diubah di pengaturan service "app").
+      - SERVICE_FQDN_APP_8080
+      - CONTAINER_ROLE=app
+      - APP_NAME=${APP_NAME:-MTsN 2 Kota Malang}
+      - APP_URL=${APP_URL}
+      - APP_KEY=${APP_KEY:-}
+      - DB_DATABASE=${DB_DATABASE:-mtsn2malang}
+      - DB_USERNAME=${SERVICE_USER_POSTGRES}
+      - DB_PASSWORD=${SERVICE_PASSWORD_POSTGRES}
+      - ADMIN_DEFAULT_PASSWORD=${ADMIN_DEFAULT_PASSWORD:-}
+      - MAINTENANCE_SECRET=${MAINTENANCE_SECRET:-}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    volumes:
+      - app-storage:/var/www/html/storage
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "app-healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 180s
+
+  # ---------------------------------------------------------------------------
+  # Antrian: backup/restore, migrasi WordPress, newsletter.
+  # ---------------------------------------------------------------------------
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command: ["php", "artisan", "queue:work", "--sleep=3", "--tries=1", "--memory=256"]
+    # Beri waktu job yang sedang berjalan untuk selesai saat redeploy
+    stop_grace_period: 120s
+    environment:
+      - CONTAINER_ROLE=worker
+      - APP_NAME=${APP_NAME:-MTsN 2 Kota Malang}
+      - APP_URL=${APP_URL}
+      - APP_KEY=${APP_KEY:-}
+      - DB_DATABASE=${DB_DATABASE:-mtsn2malang}
+      - DB_USERNAME=${SERVICE_USER_POSTGRES}
+      - DB_PASSWORD=${SERVICE_PASSWORD_POSTGRES}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    volumes:
+      - app-storage:/var/www/html/storage
+    depends_on:
+      db:
+        condition: service_healthy
+      app:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "app-healthcheck"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 300s
+
+  # ---------------------------------------------------------------------------
+  # Tugas terjadwal (ringkas data kunjungan harian, dsb.)
+  # ---------------------------------------------------------------------------
+  scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command: ["php", "artisan", "schedule:work"]
+    environment:
+      - CONTAINER_ROLE=scheduler
+      - APP_NAME=${APP_NAME:-MTsN 2 Kota Malang}
+      - APP_URL=${APP_URL}
+      - APP_KEY=${APP_KEY:-}
+      - DB_DATABASE=${DB_DATABASE:-mtsn2malang}
+      - DB_USERNAME=${SERVICE_USER_POSTGRES}
+      - DB_PASSWORD=${SERVICE_PASSWORD_POSTGRES}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    volumes:
+      - app-storage:/var/www/html/storage
+    depends_on:
+      db:
+        condition: service_healthy
+      app:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "app-healthcheck"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 300s
+
+  # ---------------------------------------------------------------------------
+  # PostgreSQL. Versi mayor HARUS sama dengan PG_MAJOR di Dockerfile (16),
+  # karena pg_dump/psql di container app dipakai fitur Backup & Restore.
+  # ---------------------------------------------------------------------------
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${SERVICE_USER_POSTGRES}
+      - POSTGRES_PASSWORD=${SERVICE_PASSWORD_POSTGRES}
+      - POSTGRES_DB=${DB_DATABASE:-mtsn2malang}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  # Upload (foto, berkas), file backup, log, sesi, cache — dipakai bersama
+  # oleh app, worker, dan scheduler.
+  app-storage:
+  # Data PostgreSQL
+  db-data:
