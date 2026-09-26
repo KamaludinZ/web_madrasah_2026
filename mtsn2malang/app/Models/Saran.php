@@ -15,7 +15,7 @@ class Saran extends Complaint
     {
         static::creating(function ($model) {
             $model->type          = 'saran';
-            $model->ticket_number = 'SAR-' . date('Ymd') . '-' . str_pad(random_int(1, 9999), 4, '0', STR_PAD_LEFT);
+            $model->ticket_number = static::generateTicketNumber('SAR');
         });
     }
 }

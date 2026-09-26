@@ -59,6 +59,11 @@ use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 class AdminPanelProvider extends PanelProvider
 {
+    private static function setting(string $key): ?string
+    {
+        return rescue(fn () => \App\Models\Setting::get($key), null, report: false) ?: null;
+    }
+
     public function panel(Panel $panel): Panel
     {
         return $panel
@@ -76,17 +81,15 @@ class AdminPanelProvider extends PanelProvider
                 'warning' => Color::Orange,
             ])
             ->brandName('MTsN 2 Kota Malang')
-            ->brandLogo(
-                \App\Models\Setting::get('logo')
-                    ? asset('storage/' . \App\Models\Setting::get('logo'))
-                    : asset('images/logo.png')
-            )
+            // Closure: dibaca saat halaman dirender, BUKAN saat aplikasi booting —
+            // query ke tabel settings di sini membuat semua perintah `php artisan`
+            // (termasuk migrate) gagal pada instalasi baru yang tabelnya belum ada.
+            // Tanpa logo tersimpan, Filament menampilkan brandName sebagai teks.
+            ->brandLogo(fn () => ($logo = static::setting('logo')) ? asset('storage/' . $logo) : null)
             ->brandLogoHeight('2.5rem')
-            ->favicon(
-                \App\Models\Setting::get('favicon')
-                    ? asset('storage/' . \App\Models\Setting::get('favicon'))
-                    : asset('images/favicon.png')
-            )
+            ->favicon(fn () => ($favicon = static::setting('favicon'))
+                ? asset('storage/' . $favicon)
+                : asset('images/favicon.png'))
             ->darkMode(true)
             ->sidebarCollapsibleOnDesktop()
             ->profile(EditProfile::class, isSimple: false)

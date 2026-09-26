@@ -10,11 +10,13 @@ use Illuminate\Support\Facades\Route;
 // ===== HOME =====
 Route::get('/', [HomeController::class, 'index'])->name('home');
 
+// ===== SEO =====
+Route::get('/sitemap.xml', [App\Http\Controllers\SitemapController::class, 'index'])->name('sitemap');
+
 // ===== BERITA =====
 Route::prefix('berita')->name('berita.')->group(function () {
     Route::get('/', [NewsController::class, 'index'])->name('index');
     Route::get('/{slug}', [NewsController::class, 'show'])->name('show');
-    Route::post('/{id}/komentar', [NewsController::class, 'storeComment'])->name('komentar.store')->middleware('auth');
 });
 
 // ===== PENULIS =====
@@ -94,7 +96,7 @@ Route::prefix('pengaduan')->name('pengaduan.')->group(function () {
     Route::post('/whistleblowing', [PageController::class, 'storePengaduan'])->name('whistleblowing.store')->middleware('throttle:5,10');
     Route::get('/masyarakat', [PageController::class, 'pengaduanMasyarakat'])->name('masyarakat');
     Route::post('/masyarakat', [PageController::class, 'storePengaduan'])->name('masyarakat.store')->middleware('throttle:5,10');
-    Route::get('/pelacakan', [PageController::class, 'pelacakanPengaduan'])->name('pelacakan');
+    Route::get('/pelacakan', [PageController::class, 'pelacakanPengaduan'])->name('pelacakan')->middleware('throttle:20,1');
     Route::get('/laporan', [PageController::class, 'laporanPengaduan'])->name('laporan');
 });
 
@@ -112,22 +114,24 @@ Route::prefix('survei')->name('survei.')->group(function () {
 Route::get('/arsip/{id}/lihat', [PageController::class, 'viewArchive'])->name('archive.view');
 
 // ===== AUTH =====
-Route::get('/captcha/refresh', [App\Http\Controllers\Auth\LoginController::class, 'refreshCaptcha'])->name('captcha.refresh');
+// Login hanya lewat panel admin (/admin/login) yang sudah memuat kode keamanan
+// dan OTP. /login lama dipertahankan sebagai alamat pintas (dan sebagai nama
+// route 'login' yang dipakai middleware auth).
+Route::redirect('/login', '/admin/login')->name('login');
 
-Route::middleware('guest')->group(function () {
-    Route::get('/login', [App\Http\Controllers\Auth\LoginController::class, 'showLogin'])->name('login');
-    Route::post('/login', [App\Http\Controllers\Auth\LoginController::class, 'login'])->name('login.post')->middleware('throttle:10,5');
-    Route::post('/otp/verify', [App\Http\Controllers\Auth\LoginController::class, 'verifyOtp'])->name('otp.verify')->middleware('throttle:5,5');
-    Route::get('/forgot-password', fn() => redirect()->route('login')->with('error', 'Silakan hubungi administrator untuk reset password.'))->name('password.request');
-});
-
-Route::middleware('auth')->group(function () {
-    Route::post('/logout', [App\Http\Controllers\Auth\LoginController::class, 'logout'])->name('logout');
-});
+// Gambar kode keamanan (angka) — setiap permintaan membuat kode baru.
+Route::get('/kode-keamanan/{context}', [App\Http\Controllers\CaptchaController::class, 'image'])
+    ->whereIn('context', App\Support\NumericCaptcha::CONTEXTS)
+    ->middleware('throttle:60,1')
+    ->name('captcha.image');
 
 // ===== SUBSCRIPTION =====
 Route::post('/subscription', [SubscriptionController::class, 'store'])->name('subscription.store')->middleware('throttle:5,10');
 Route::get('/subscription/unsubscribe/{token}', [SubscriptionController::class, 'unsubscribe'])->name('subscription.unsubscribe');
 
 // ===== KOMENTAR =====
-Route::post('/komentar/{id}', [NewsController::class, 'storeComment'])->name('komentar.store')->middleware('auth');
+// Pengunjung tanpa akun boleh berkomentar; komentar tamu wajib dimoderasi.
+Route::post('/komentar/{id}', [NewsController::class, 'storeComment'])
+    ->whereNumber('id')
+    ->name('komentar.store')
+    ->middleware('throttle:5,10');

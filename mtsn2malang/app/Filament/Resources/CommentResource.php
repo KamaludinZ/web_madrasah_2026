@@ -36,6 +36,14 @@ class CommentResource extends Resource
     public static function form(Form $form): Form
     {
         return $form->schema([
+            Forms\Components\TextInput::make('guest_name')
+                ->label('Nama Pengunjung')
+                ->disabled()
+                ->visible(fn ($record) => filled($record?->guest_name)),
+            Forms\Components\TextInput::make('guest_email')
+                ->label('Email Pengunjung (tidak ditampilkan publik)')
+                ->disabled()
+                ->visible(fn ($record) => filled($record?->guest_email)),
             Forms\Components\Textarea::make('content')
                 ->label('Isi Komentar')
                 ->disabled()

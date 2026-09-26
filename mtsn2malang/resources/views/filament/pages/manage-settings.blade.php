@@ -181,15 +181,11 @@
                 @endforeach
             </select>
 
-            {{-- Clear Audit --}}
-            <x-filament::button
-                wire:click="clearAuditLog"
-                wire:confirm="Yakin ingin menghapus semua audit log? Tindakan ini tidak dapat dibatalkan."
-                color="danger"
-                size="sm"
-            >
-                Bersihkan Audit
-            </x-filament::button>
+            {{-- Audit log sengaja tidak bisa dihapus dari panel (termasuk oleh super admin) --}}
+            <span class="inline-flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400" title="Audit log bersifat permanen agar jejak perubahan tidak bisa dihilangkan.">
+                <x-heroicon-o-lock-closed class="w-4 h-4" />
+                Audit log permanen
+            </span>
         </div>
     </div>
 
@@ -608,7 +604,7 @@
                 </div>
                 @if($updateCheckResult['notes'])
                 <div class="prose prose-sm dark:prose-invert max-w-none bg-white dark:bg-gray-900 rounded-lg p-3 mb-4 max-h-48 overflow-y-auto text-xs">
-                    {!! \Illuminate\Support\Str::markdown($updateCheckResult['notes']) !!}
+                    {!! \Illuminate\Support\Str::markdown($updateCheckResult['notes'], ['html_input' => 'escape', 'allow_unsafe_links' => false]) !!}
                 </div>
                 @endif
                 <label class="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300 mb-3">

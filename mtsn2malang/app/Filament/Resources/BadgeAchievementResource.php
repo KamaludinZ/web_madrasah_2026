@@ -43,7 +43,7 @@ class BadgeAchievementResource extends Resource
                     ->directory('badges')
                     ->visibility('public')
                     ->maxSize(2048)
-                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'])
+                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
                     ->helperText('Upload logo badge. Format: JPG/PNG/WebP/SVG. Maks 2MB. Disarankan ukuran persegi (1:1).'),
 
                 Forms\Components\TextInput::make('order')

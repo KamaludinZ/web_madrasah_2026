@@ -41,11 +41,16 @@ class RestoreBackupJob implements ShouldQueue
                 fn (string $line) => $restore->appendLog($line)
             );
 
-            $restore->update([
+            // Backup lama (sebelum tabel operasional dikecualikan) ikut menimpa
+            // tabel app_restores — tulis ulang record ini bila sudah hilang.
+            $record = AppRestore::find($restore->id)
+                ?? $restore->replicate()->forceFill(['id' => $restore->id]);
+
+            $record->forceFill([
                 'status' => 'completed',
                 'safety_backup_filename' => $result['safetyBackupFilename'],
                 'finished_at' => now(),
-            ]);
+            ])->save();
         } catch (Throwable $e) {
             $restore->update([
                 'status' => 'failed',

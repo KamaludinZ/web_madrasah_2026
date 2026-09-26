@@ -42,6 +42,16 @@ class UpdateService
         'VERSION', // ditulis terpisah setelah update sukses, bukan ditimpa mentah
     ];
 
+    /**
+     * File lama yang harus DIHAPUS dari server saat update. Sinkronisasi file
+     * hanya menyalin/menimpa, tidak pernah menghapus — tanpa daftar ini, file
+     * berbahaya yang sudah dihapus dari repo akan tetap tertinggal di server.
+     */
+    private const OBSOLETE_PATHS = [
+        'public/db-migrate.php',
+        'public/artisan-run.php',
+    ];
+
     public function repo(): ?string
     {
         return Setting::get('update_github_repo', 'KamaludinZ/web_madrasah_2026');
@@ -265,7 +275,11 @@ class UpdateService
      */
     private function extractAndSync(string $zipPath, string $tmpDir): void
     {
-        $sourceRoot = $this->extractOnly($zipPath, $tmpDir);
+        // Divalidasi juga: zipball GitHub berisi seluruh repo (aplikasi ada di
+        // subfolder mtsn2malang/), jadi akar aplikasi harus dicari dulu —
+        // sebelumnya kode tersalin ke base_path()/mtsn2malang/ dan aplikasi
+        // asli tidak pernah berubah meski versi dinaikkan.
+        $sourceRoot = $this->extractAndValidate($zipPath, $tmpDir);
         $this->syncApplicationFiles($sourceRoot, base_path());
     }
 
@@ -300,13 +314,32 @@ class UpdateService
         $zip->extractTo($extractDir);
         $zip->close();
 
-        // ZIP boleh membungkus isinya dalam satu folder root (zipball GitHub,
-        // atau hasil "zip -r" dari luar direktori project) — deteksi otomatis.
-        $entries = array_values(array_diff(scandir($extractDir) ?: [], ['.', '..']));
+        // ZIP boleh membungkus isinya dalam folder (zipball GitHub berisi
+        // "<repo>-<sha>/mtsn2malang/...", atau hasil "zip -r" dari luar
+        // direktori project) — cari folder terdangkal yang berisi aplikasi
+        // Laravel (composer.json + artisan).
+        return $this->findApplicationRoot($extractDir, 3) ?? $extractDir;
+    }
 
-        return (count($entries) === 1 && is_dir($extractDir . '/' . $entries[0]))
-            ? $extractDir . '/' . $entries[0]
-            : $extractDir;
+    private function findApplicationRoot(string $dir, int $depth): ?string
+    {
+        if (is_file($dir . '/composer.json') && is_file($dir . '/artisan')) {
+            return $dir;
+        }
+
+        if ($depth === 0) {
+            return null;
+        }
+
+        foreach (array_diff(scandir($dir) ?: [], ['.', '..']) as $entry) {
+            $path = $dir . '/' . $entry;
+
+            if (is_dir($path) && ! is_link($path) && ($found = $this->findApplicationRoot($path, $depth - 1))) {
+                return $found;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -316,6 +349,8 @@ class UpdateService
      */
     private function finalizeUpdate(string $toVersion, callable $progress): bool
     {
+        $this->removeObsoleteFiles($progress);
+
         $shellAvailable = $this->shellExecAvailable();
 
         if ($shellAvailable) {
@@ -338,6 +373,17 @@ class UpdateService
         $progress("Versi aplikasi diperbarui ke {$toVersion}.");
 
         return $shellAvailable;
+    }
+
+    private function removeObsoleteFiles(callable $progress): void
+    {
+        foreach (self::OBSOLETE_PATHS as $relative) {
+            $path = base_path($relative);
+
+            if (is_file($path) && @unlink($path)) {
+                $progress("Menghapus file usang: {$relative}");
+            }
+        }
     }
 
     private function syncApplicationFiles(string $sourceDir, string $destDir): void

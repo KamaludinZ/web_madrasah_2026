@@ -207,17 +207,31 @@ class PageController extends Controller
      * Daftar arsip dengan filter tahun/bulan + paginasi 20.
      * Dipakai bersama oleh halaman PPID, SAKIP, hasil survei, dan laporan pengaduan.
      */
+    /**
+     * Ambil parameter query berupa bilangan bulat dalam rentang tertentu.
+     * Nilai tidak valid (mis. ?tahun=abc) diabaikan — sebelumnya diteruskan
+     * mentah ke PostgreSQL dan menyebabkan error 500.
+     */
+    private function intQuery(string $name, int $min, int $max): ?int
+    {
+        $value = filter_var(request()->query($name), FILTER_VALIDATE_INT, [
+            'options' => ['min_range' => $min, 'max_range' => $max],
+        ]);
+
+        return $value === false ? null : $value;
+    }
+
     private function archiveIndex(string $type, string $path, string $view)
     {
         PageView::record($path);
 
         $query = Archive::ofType($type);
 
-        if (filled($tahun = request('tahun'))) {
+        if ($tahun = $this->intQuery('tahun', 1900, 2100)) {
             $query->whereYear('published_date', $tahun);
         }
 
-        if (filled($bulan = request('bulan'))) {
+        if ($bulan = $this->intQuery('bulan', 1, 12)) {
             $query->whereMonth('published_date', $bulan);
         }
 
@@ -256,11 +270,11 @@ class PageController extends Controller
 
         $query = GalleryPost::with(['photos', 'news'])->whereHas('photos');
 
-        if (filled($tahun = request('tahun'))) {
+        if ($tahun = $this->intQuery('tahun', 1900, 2100)) {
             $query->whereYear('created_at', $tahun);
         }
 
-        if (filled($bulan = request('bulan'))) {
+        if ($bulan = $this->intQuery('bulan', 1, 12)) {
             $query->whereMonth('created_at', $bulan);
         }
 
@@ -380,8 +394,11 @@ class PageController extends Controller
     public function storePengaduan(Request $request)
     {
         $request->validate([
+            'name' => 'nullable|string|max:255',
+            'email' => 'nullable|email|max:255',
+            'phone' => 'nullable|string|max:30',
             'subject' => 'required|string|max:255',
-            'content' => 'required|string',
+            'content' => 'required|string|max:10000',
             'type' => 'required|in:whistleblowing,masyarakat',
         ]);
 
@@ -402,7 +419,9 @@ class PageController extends Controller
         PageView::record('/pengaduan/pelacakan');
         $complaint = null;
         if ($request->filled('ticket')) {
-            $complaint = Complaint::where('ticket_number', $request->ticket)->first();
+            $complaint = Complaint::whereIn('type', ['whistleblowing', 'masyarakat'])
+                ->where('ticket_number', strtoupper(trim((string) $request->input('ticket'))))
+                ->first();
         }
         return view('pages.pengaduan.pelacakan', compact('complaint'));
     }
@@ -446,7 +465,11 @@ class PageController extends Controller
         $notFound = false;
 
         if ($request->filled('tiket')) {
-            $saran = Saran::where('ticket_number', trim($request->tiket))->first();
+            // Hanya tiket saran — tiket pengaduan/whistleblowing tidak boleh
+            // terbaca lewat halaman ini.
+            $saran = Saran::where('type', 'saran')
+                ->where('ticket_number', strtoupper(trim((string) $request->input('tiket'))))
+                ->first();
             if (!$saran) {
                 $notFound = true;
             }
@@ -479,17 +502,21 @@ class PageController extends Controller
 
         return redirect()
             ->route('survei.saran')
-            ->with('success', 'Terima kasih! Saran Anda telah kami terima dengan nomor tiket <strong>' . $saran->ticket_number . '</strong>. Simpan nomor tiket ini untuk melacak status saran Anda.');
+            ->with('success', 'Terima kasih! Saran Anda telah kami terima.')
+            ->with('ticket', $saran->ticket_number);
     }
 
     // ===== ARCHIVE VIEWER =====
     public function viewArchive(int $id)
     {
-        $archive = Archive::findOrFail($id);
+        // Arsip yang dinonaktifkan admin tidak boleh bisa dibuka lewat ID.
+        $archive = Archive::where('is_active', true)->findOrFail($id);
 
         $archive->incrementViewCount();
 
         if ($archive->link_type === 'link') {
+            abort_unless(preg_match('#^https?://#i', (string) $archive->external_link), 404);
+
             return redirect()->away($archive->external_link);
         }
 

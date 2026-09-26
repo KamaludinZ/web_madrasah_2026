@@ -39,6 +39,84 @@ class NewsResource extends Resource
         return static::currentUserHasRole(['editor_in_chief', 'editor', 'contributor', 'moderator']);
     }
 
+    /** Role yang boleh menerbitkan/mengarsipkan berita (menyetujui kiriman kontributor). */
+    public static function canPublish(): bool
+    {
+        return static::currentUserHasRole(['editor_in_chief', 'editor']);
+    }
+
+    /** Moderator (tanpa role konten lain) hanya boleh melihat berita. */
+    protected static function isReadOnlyUser(): bool
+    {
+        return ! static::currentUserHasRole(['editor_in_chief', 'editor', 'contributor']);
+    }
+
+    /** Kontributor tanpa role editor: hanya boleh mengelola berita miliknya yang belum terbit. */
+    protected static function isContributorOnly(): bool
+    {
+        return ! static::canPublish() && static::currentUserHasRole(['contributor']);
+    }
+
+    public static function canCreate(): bool
+    {
+        return ! static::isReadOnlyUser();
+    }
+
+    public static function canEdit(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        if (static::isReadOnlyUser()) {
+            return false;
+        }
+
+        if (static::isContributorOnly()) {
+            return (int) $record->user_id === (int) Auth::id()
+                && in_array($record->status, ['draft', 'review'], true);
+        }
+
+        return true;
+    }
+
+    public static function canDelete(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        return static::canEdit($record);
+    }
+
+    public static function canDeleteAny(): bool
+    {
+        return static::canPublish();
+    }
+
+    /** Opsi status sesuai hak akses pengguna saat ini. */
+    public static function statusOptions(): array
+    {
+        $options = [
+            'draft' => 'Draf',
+            'review' => 'Review',
+            'published' => 'Publikasi',
+            'archived' => 'Arsip',
+        ];
+
+        return static::canPublish() ? $options : array_intersect_key($options, array_flip(['draft', 'review']));
+    }
+
+    /**
+     * Terapkan aturan hak akses di sisi server (form di browser bisa
+     * dimanipulasi): kontributor tidak bisa menerbitkan dan tidak bisa
+     * mengganti penulis.
+     */
+    public static function enforcePermissions(array $data, ?News $record = null): array
+    {
+        if (! static::canPublish() && ! in_array($data['status'] ?? 'draft', ['draft', 'review'], true)) {
+            $data['status'] = 'review';
+        }
+
+        if (! static::currentUserHasRole(['editor_in_chief'])) {
+            $data['user_id'] = $record?->user_id ?? Auth::id();
+        }
+
+        return $data;
+    }
+
     protected static ?string $model = News::class;
     protected static ?string $navigationIcon = 'heroicon-o-newspaper';
     protected static ?string $navigationLabel = 'Berita';
@@ -136,7 +214,7 @@ class NewsResource extends Resource
                                 ->action(function (Forms\Get $get, Forms\Set $set) {
                                     try {
                                         $aiService = app(AiService::class);
-                                        $seo = $aiService->generateSeo($get('title'), $get('excerpt') ?? $get('content'));
+                                        $seo = $aiService->generateSeo((string) $get('title'), filled($get('excerpt')) ? (string) $get('excerpt') : (string) $get('content'));
                                         $set('meta_title', $seo['meta_title']);
                                         $set('meta_description', $seo['meta_description']);
                                         if (empty($get('slug'))) {
@@ -228,13 +306,9 @@ class NewsResource extends Resource
 
                         Forms\Components\Select::make('status')
                             ->label('Status')
-                            ->options([
-                                'draft' => 'Draf',
-                                'review' => 'Review',
-                                'published' => 'Publikasi',
-                                'archived' => 'Arsip',
-                            ])
+                            ->options(fn () => static::statusOptions())
                             ->default('draft')
+                            ->helperText(fn () => static::canPublish() ? null : 'Pilih "Review" agar berita diperiksa dan diterbitkan oleh editor.')
                             ->required(),
 
                         Forms\Components\DateTimePicker::make('published_at')
@@ -444,10 +518,10 @@ class NewsResource extends Resource
                     ->label('Publikasi')
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
-                    ->visible(fn(News $record) => $record->status !== 'published')
+                    ->visible(fn(News $record) => $record->status !== 'published' && static::canPublish())
                     ->action(function (News $record): void {
                         $record->update(['status' => 'published', 'published_at' => now()]);
-                        app(SubscriptionMailerService::class)->sendNewsPublished($record);
+                        app(SubscriptionMailerService::class)->queueIfPublished($record);
                     }),
                 Tables\Actions\DeleteAction::make(),
             ])
@@ -457,10 +531,11 @@ class NewsResource extends Resource
                     Tables\Actions\BulkAction::make('publish_bulk')
                         ->label('Publikasi Terpilih')
                         ->icon('heroicon-o-check-circle')
+                        ->visible(fn () => static::canPublish())
                         ->action(function ($records): void {
                             $records->each(function (News $record): void {
                                 $record->update(['status' => 'published', 'published_at' => now()]);
-                                app(SubscriptionMailerService::class)->sendNewsPublished($record);
+                                app(SubscriptionMailerService::class)->queueIfPublished($record);
                             });
                         }),
                 ]),

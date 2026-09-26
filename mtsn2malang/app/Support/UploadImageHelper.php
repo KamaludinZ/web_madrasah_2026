@@ -32,7 +32,6 @@ class UploadImageHelper
                 'image/png',
                 'image/webp',
                 'image/jpg',
-                'image/svg+xml',
             ])
             ->validationMessages([
                 'max' => 'Upload gagal: ukuran file terlalu besar. Maksimal 5MB.',
@@ -45,35 +44,16 @@ class UploadImageHelper
                     $safeName = str($baseName)->slug()->value() ?: 'image';
                     $targetDirectory = trim($directory, '/');
 
-                    // SVG disimpan apa adanya (tidak diproses raster)
+                    // SVG ditolak: file SVG bisa berisi skrip yang berjalan di domain
+                    // website saat dibuka langsung (stored XSS). Filter berbasis regex
+                    // mudah diakali, jadi format ini tidak diterima sama sekali.
                     $mimeType = strtolower((string) $file->getMimeType());
                     $ext = strtolower((string) $file->getClientOriginalExtension());
 
                     if ($mimeType === 'image/svg+xml' || $ext === 'svg') {
-                        $svgContent = @file_get_contents($file->getRealPath()) ?: '';
-
-                        // Sanitasi dasar SVG untuk menghindari script injection
-                        if (
-                            preg_match('/<script\b/i', $svgContent) ||
-                            preg_match('/\son\w+\s*=/i', $svgContent) ||
-                            preg_match('/javascript:/i', $svgContent)
-                        ) {
-                            throw ValidationException::withMessages([
-                                $component->getStatePath() => 'Upload gagal: SVG mengandung skrip yang tidak diizinkan.',
-                            ]);
-                        }
-
-                        $svgFileName = $safeName . '-' . now()->timestamp . '.svg';
-                        $svgRelativePath = $targetDirectory . '/' . $svgFileName;
-                        $svgFullPath = storage_path('app/public/' . $svgRelativePath);
-
-                        if (! is_dir(dirname($svgFullPath))) {
-                            mkdir(dirname($svgFullPath), 0755, true);
-                        }
-
-                        file_put_contents($svgFullPath, $svgContent);
-
-                        return $svgRelativePath;
+                        throw ValidationException::withMessages([
+                            $component->getStatePath() => 'Upload gagal: format SVG tidak diizinkan. Gunakan JPG, PNG, atau WEBP.',
+                        ]);
                     }
 
                     // Jika file sudah WEBP, simpan apa adanya tanpa konversi lagi
@@ -142,6 +122,8 @@ class UploadImageHelper
                     copy($file->getRealPath(), $fallbackFullPath);
 
                     return $fallbackRelativePath;
+                } catch (ValidationException $e) {
+                    throw $e;
                 } catch (Throwable $e) {
                     Log::error('Image upload conversion failed', [
                         'file' => $file->getClientOriginalName(),

@@ -21,6 +21,26 @@ class BackupService
 {
     public const DIR = 'backups';
 
+    /**
+     * Tabel operasional yang TIDAK ikut dibackup/direstore. Jika ikut, restore
+     * akan menimpa riwayat backup/restore/update (termasuk record restore yang
+     * sedang berjalan, sehingga statusnya hilang), menghidupkan lagi job
+     * antrian lama, dan mengeluarkan semua admin dari sesinya.
+     *
+     * PENTING: tabel di sini tidak boleh punya foreign key ke tabel yang ikut
+     * direstore — psql tidak bisa menghapus & membuat ulang tabel yang masih
+     * dirujuk, sehingga restore akan gagal total.
+     */
+    public const EXCLUDED_TABLES = [
+        'app_backups', 'app_restores', 'app_updates',
+        'jobs', 'job_batches', 'failed_jobs',
+        'cache', 'cache_locks', 'sessions',
+        // Audit log tidak pernah ditimpa oleh restore (restore backup lama tidak
+        // boleh menjadi cara menghapus jejak aktivitas). Isinya tetap diarsipkan
+        // terpisah di activity_log.sql dalam ZIP — lihat dumpAuditLog().
+        'activity_log',
+    ];
+
     public function backupDisk(): \Illuminate\Contracts\Filesystem\Filesystem
     {
         return \Illuminate\Support\Facades\Storage::disk('local');
@@ -77,6 +97,11 @@ class BackupService
 
             $zip->addFile($tmpDir . '/manifest.json', 'manifest.json');
             $zip->addFile($dbDumpPath, 'database.sql');
+
+            $auditDumpPath = $tmpDir . '/activity_log.sql';
+            if ($this->dumpAuditLog($auditDumpPath)) {
+                $zip->addFile($auditDumpPath, 'activity_log.sql');
+            }
 
             if (is_file(base_path('.env'))) {
                 $zip->addFile(base_path('.env'), '.env');
@@ -166,6 +191,13 @@ class BackupService
             '--if-exists',
             '--no-owner',
             '--no-privileges',
+            // Sequence ID ikut dikecualikan: --exclude-table hanya melewatkan
+            // tabelnya, sehingga DROP SEQUENCE saat restore akan gagal karena
+            // sequence masih dipakai tabel yang tidak ikut direstore.
+            ...array_merge(...array_map(fn (string $table) => [
+                '--exclude-table=' . $table,
+                '--exclude-table=' . $table . '_id_seq',
+            ], self::EXCLUDED_TABLES)),
             '--file=' . $outputPath,
             $config['database'],
         ]);
@@ -180,6 +212,33 @@ class BackupService
         if (! is_file($outputPath) || filesize($outputPath) === 0) {
             throw new RuntimeException('pg_dump menghasilkan file dump kosong.');
         }
+    }
+
+    /**
+     * Arsip audit log (data saja) — disimpan di ZIP untuk keperluan
+     * pemulihan manual, TIDAK dijalankan otomatis oleh RestoreService.
+     */
+    private function dumpAuditLog(string $outputPath): bool
+    {
+        $config = config('database.connections.' . config('database.default'));
+
+        $process = new Process([
+            'pg_dump',
+            '--host=' . $config['host'],
+            '--port=' . $config['port'],
+            '--username=' . $config['username'],
+            '--no-password',
+            '--format=plain',
+            '--data-only',
+            '--table=activity_log',
+            '--file=' . $outputPath,
+            $config['database'],
+        ]);
+        $process->setEnv(['PGPASSWORD' => (string) $config['password']]);
+        $process->setTimeout(600);
+        $process->run();
+
+        return $process->isSuccessful() && is_file($outputPath);
     }
 
     public function delete(string $filename): bool

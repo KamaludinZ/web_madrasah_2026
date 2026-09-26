@@ -109,7 +109,7 @@
                             prose-strong:text-gray-900 dark:prose-strong:text-white
                             prose-ul:text-gray-700 dark:prose-ul:text-gray-300
                             prose-ol:text-gray-700 dark:prose-ol:text-gray-300">
-                    {!! $item->content !!}
+                    {!! \App\Support\SafeHtml::clean($item->content) !!}
                 </div>
                 @endif
                 @endforeach
@@ -148,6 +148,7 @@
 (function () {
     var allPopups = @json($popupJsonData);
     var swiperMap = {};
+    var cleanupMap = {};
     var queue     = [];
 
     // Key sessionStorage menyertakan tanggal hari ini
@@ -217,7 +218,6 @@
         // Tutup saat klik area gelap (overlay, bukan box)
         function overlayClickHandler(e) {
             if (e.target === overlay) {
-                overlay.removeEventListener('click', overlayClickHandler);
                 closePopup(p.id);
             }
         }
@@ -226,18 +226,29 @@
         // Tutup dengan Escape
         function escHandler(e) {
             if (e.key === 'Escape') {
-                document.removeEventListener('keydown', escHandler);
                 closePopup(p.id);
             }
         }
         document.addEventListener('keydown', escHandler);
+
+        // Lepas kedua listener saat popup ini ditutup dengan cara APA PUN
+        // (tombol X, klik luar, Esc). Sebelumnya listener Esc tertinggal saat
+        // popup ditutup lewat tombol X, sehingga Esc berikutnya ikut
+        // "menutup" popup lama dan melompati popup selanjutnya di antrian.
+        cleanupMap[p.id] = function () {
+            overlay.removeEventListener('click', overlayClickHandler);
+            document.removeEventListener('keydown', escHandler);
+        };
     }
 
     // ── Tutup popup (dipanggil dari tombol onclick di HTML) ─────────────────
     window.closePopup = function(id) {
         var overlay = document.getElementById('popup-overlay-' + id);
         var box     = document.getElementById('popup-box-' + id);
-        if (!overlay) return;
+        if (!overlay || !cleanupMap[id]) return; // sudah tertutup
+
+        cleanupMap[id]();
+        delete cleanupMap[id];
 
         // Animasi keluar
         if (box) {

@@ -28,7 +28,7 @@
 
         @if(isset($content) && $content && !empty($content->content))
             <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-card p-6 prose dark:prose-invert max-w-none">
-                {!! $content->content !!}
+                {!! \App\Support\SafeHtml::clean($content->content) !!}
             </div>
         @endif
 

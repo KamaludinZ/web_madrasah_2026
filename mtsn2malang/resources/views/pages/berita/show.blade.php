@@ -58,7 +58,7 @@
 
             {{-- Content --}}
             <div class="prose prose-lg dark:prose-invert max-w-none prose-headings:font-heading prose-a:text-school-green prose-img:rounded-xl">
-                {!! $news->content !!}
+                {!! \App\Support\SafeHtml::clean($news->content) !!}
             </div>
 
             {{-- ===== GALERI FOTO ===== --}}
@@ -449,50 +449,94 @@
             </div>
             @endif
 
-            {{-- Comments --}}
-            <div class="mt-8">
+            {{-- Comments (disembunyikan bila komentar dimatikan dan belum ada komentar) --}}
+            @if($news->allow_comments || $comments->isNotEmpty())
+            <div class="mt-8" id="komentar">
                 <h2 class="text-xl font-bold font-heading text-gray-900 dark:text-white mb-6">Komentar</h2>
 
-                {{-- Comment Form --}}
-                @auth
-                <form action="{{ route('komentar.store', $news->id) }}" method="POST" class="mb-8">
+                @if(session('comment_success'))
+                <div class="mb-4 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl text-sm text-green-700 dark:text-green-400">
+                    {{ session('comment_success') }}
+                </div>
+                @endif
+                @if(session('comment_error'))
+                <div class="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-700 dark:text-red-400">
+                    {{ session('comment_error') }}
+                </div>
+                @endif
+
+                {{-- Form komentar: staf yang login langsung tampil; pengunjung perlu moderasi --}}
+                @if($news->allow_comments)
+                <form action="{{ route('komentar.store', $news->id) }}" method="POST" class="mb-8 p-5 bg-gray-50 dark:bg-gray-800/60 border border-gray-100 dark:border-gray-700 rounded-2xl space-y-3">
                     @csrf
-                    <div class="flex gap-3">
-                        <div class="w-10 h-10 rounded-full bg-school-green flex items-center justify-center text-white font-bold flex-shrink-0">
-                            {{ substr(auth()->user()->name, 0, 1) }}
+
+                    @if($errors->hasAny(['guest_name', 'guest_email', 'content', 'captcha']))
+                    <ul class="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-700 dark:text-red-400 list-disc pl-6 space-y-1">
+                        @foreach(['guest_name', 'guest_email', 'content', 'captcha'] as $field)
+                            @error($field)<li>{{ $message }}</li>@enderror
+                        @endforeach
+                    </ul>
+                    @endif
+
+                    {{-- Honeypot anti-bot: tersembunyi dari pengunjung, jangan diisi --}}
+                    <div class="hidden" aria-hidden="true">
+                        <label>Website <input type="text" name="website" tabindex="-1" autocomplete="off"></label>
+                    </div>
+
+                    @guest
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label for="guest_name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nama <span class="text-red-500">*</span></label>
+                            <input id="guest_name" type="text" name="guest_name" value="{{ old('guest_name') }}" required maxlength="100" class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:ring-2 focus:ring-green-200 focus:border-school-green dark:bg-gray-800 dark:text-white outline-none transition-all" placeholder="Nama Anda">
                         </div>
-                        <div class="flex-1">
-                            <textarea name="content" rows="3" placeholder="Tulis komentar..." class="w-full px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:ring-2 focus:ring-green-200 focus:border-school-green dark:bg-gray-800 dark:text-white outline-none resize-none transition-all" required></textarea>
-                            <button type="submit" class="mt-2 btn-primary text-sm py-2 px-4">Kirim Komentar</button>
+                        <div>
+                            <label for="guest_email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email <span class="text-gray-400 font-normal">(opsional, tidak ditampilkan)</span></label>
+                            <input id="guest_email" type="email" name="guest_email" value="{{ old('guest_email') }}" maxlength="255" class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:ring-2 focus:ring-green-200 focus:border-school-green dark:bg-gray-800 dark:text-white outline-none transition-all" placeholder="email@contoh.com">
                         </div>
                     </div>
+                    @endguest
+
+                    <div>
+                        <label for="comment_content" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Komentar <span class="text-red-500">*</span></label>
+                        <textarea id="comment_content" name="content" rows="3" required maxlength="1000" placeholder="Tulis komentar yang sopan dan membangun..." class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:ring-2 focus:ring-green-200 focus:border-school-green dark:bg-gray-800 dark:text-white outline-none transition-all resize-none">{{ old('content') }}</textarea>
+                    </div>
+
+                    @guest
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+                        <x-captcha-image context="komentar" class="justify-start" />
+                        <div class="flex-1">
+                            <label for="comment_captcha" class="sr-only">Kode keamanan</label>
+                            <input id="comment_captcha" type="text" name="captcha" required inputmode="numeric" autocomplete="off" maxlength="{{ \App\Support\NumericCaptcha::LENGTH }}" class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:ring-2 focus:ring-green-200 focus:border-school-green dark:bg-gray-800 dark:text-white outline-none transition-all tracking-widest font-mono" placeholder="Ketik angka pada gambar">
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Komentar akan tampil setelah disetujui moderator.</p>
+                    @endguest
+
+                    <button type="submit" class="btn-primary text-sm py-2 px-5">Kirim Komentar</button>
                 </form>
-                @else
-                <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-xl text-sm text-gray-600 dark:text-gray-400">
-                    <a href="{{ route('login') }}" class="text-school-green font-semibold hover:underline">Login</a> untuk meninggalkan komentar.
-                </div>
-                @endauth
+                @endif
 
                 {{-- Comments List --}}
                 <div class="space-y-4">
                     @forelse($comments as $comment)
                     <div class="flex gap-3">
                         <div class="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-300 font-bold flex-shrink-0">
-                            {{ substr($comment->user->name ?? 'A', 0, 1) }}
+                            {{ mb_substr($comment->user->name ?? $comment->guest_name ?? 'A', 0, 1) }}
                         </div>
                         <div class="flex-1 bg-gray-50 dark:bg-gray-800 rounded-xl p-4">
                             <div class="flex items-center justify-between mb-2">
-                                <span class="font-semibold text-sm text-gray-900 dark:text-white">{{ $comment->user->name ?? 'Anonim' }}</span>
+                                <span class="font-semibold text-sm text-gray-900 dark:text-white">{{ $comment->user->name ?? $comment->guest_name ?? 'Anonim' }}</span>
                                 <span class="text-xs text-gray-400">{{ $comment->created_at->diffForHumans() }}</span>
                             </div>
                             <p class="text-sm text-gray-700 dark:text-gray-300">{{ $comment->content }}</p>
                         </div>
                     </div>
                     @empty
-                    <p class="text-gray-400 text-sm text-center py-6">Belum ada komentar. Jadilah yang pertama!</p>
+                    <p class="text-gray-400 text-sm text-center py-6">Belum ada komentar.</p>
                     @endforelse
                 </div>
             </div>
+            @endif
         </article>
 
         {{-- Sidebar --}}

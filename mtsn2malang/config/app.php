@@ -123,4 +123,8 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    // Rahasia URL bypass maintenance (Pengaturan → Mode Maintenance).
+    // Kosong = dibuat acak setiap kali maintenance diaktifkan.
+    'maintenance_secret' => env('MAINTENANCE_SECRET'),
+
 ];

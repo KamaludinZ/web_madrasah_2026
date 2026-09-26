@@ -8,6 +8,7 @@ use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
@@ -28,12 +29,14 @@ class DatabaseSeeder extends Seeder
             Role::firstOrCreate(['name' => $name, 'guard_name' => 'web']);
         }
 
-        // Create Super Admin
+        // Create Super Admin — password diambil dari ADMIN_DEFAULT_PASSWORD di
+        // .env, atau dibuat acak jika kosong (tidak pernah ditulis di kode).
+        $adminPassword = env('ADMIN_DEFAULT_PASSWORD') ?: Str::password(16, symbols: false);
         $admin = User::firstOrCreate(
             ['email' => 'admin@mtsn2kotamalang.sch.id'],
             [
                 'name' => 'Super Administrator',
-                'password' => Hash::make('Admin@MTsN2!2024'),
+                'password' => Hash::make($adminPassword),
                 'is_active' => true,
                 'email_verified_at' => now(),
             ]
@@ -118,8 +121,11 @@ class DatabaseSeeder extends Seeder
         }
 
         $this->command->info('Database seeded successfully!');
-        $this->command->info('Admin credentials:');
-        $this->command->info('Email: admin@mtsn2kotamalang.sch.id');
-        $this->command->info('Password: Admin@MTsN2!2024');
+        if ($admin->wasRecentlyCreated) {
+            $this->command->info('Admin credentials:');
+            $this->command->info('Email: admin@mtsn2kotamalang.sch.id');
+            $this->command->info('Password: ' . $adminPassword);
+            $this->command->warn('Simpan password ini dan segera ganti setelah login pertama.');
+        }
     }
 }

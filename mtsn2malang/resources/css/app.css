@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Poppins:wght@400;500;600;700;800&family=Amiri:wght@400;700&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -51,6 +49,12 @@
     .loading-screen {
         @apply fixed inset-0 z-[9999] flex items-center justify-center;
         background: linear-gradient(135deg, #0f5a2a 0%, #1a7a3c 50%, #f97316 100%);
+        /* Pengaman: tetap hilang sendiri walau JavaScript gagal dimuat. */
+        animation: loadingScreenFailsafe 0.3s ease 3s forwards;
+    }
+
+    @keyframes loadingScreenFailsafe {
+        to { opacity: 0; visibility: hidden; pointer-events: none; }
     }
 
     .loading-logo {
@@ -171,8 +175,9 @@
         }
     }
 
+    /* Di ponsel panah disembunyikan (menutupi teks hero); slide tetap bisa digeser. */
     .hero-nav-btn {
-        @apply !flex items-center justify-center !text-white;
+        @apply !hidden md:!flex items-center justify-center !text-white;
         background: rgba(15, 23, 42, 0.35);
         border: 1px solid rgba(255, 255, 255, 0.45);
         backdrop-filter: blur(6px);

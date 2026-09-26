@@ -6,6 +6,12 @@ import Swiper from 'swiper';
 import { Navigation, Pagination, Autoplay, EffectFade } from 'swiper/modules';
 import AOS from 'aos';
 import GLightbox from 'glightbox';
+// CSS pustaka ikut di-bundle (versi sama dengan JS-nya) — sebelumnya dimuat
+// dari CDN dengan versi berbeda (Swiper CSS v11 vs JS v12) dan halaman rusak
+// bila CDN tidak bisa diakses.
+import 'swiper/css/bundle';
+import 'aos/dist/aos.css';
+import 'glightbox/dist/css/glightbox.min.css';
 
 // Alpine.js plugins
 Alpine.plugin(collapse);
@@ -18,13 +24,14 @@ Alpine.start();
 document.addEventListener('DOMContentLoaded', () => {
     const loadingScreen = document.getElementById('loading-screen');
     if (loadingScreen) {
+        // Tanpa jeda buatan: sebelumnya layar loading ditahan 1,8 detik di
+        // SETIAP halaman sehingga situs terasa lambat.
+        loadingScreen.style.transition = 'opacity 0.3s ease';
+        loadingScreen.style.opacity = '0';
+        loadingScreen.style.pointerEvents = 'none';
         setTimeout(() => {
-            loadingScreen.style.opacity = '0';
-            loadingScreen.style.transition = 'opacity 0.5s ease';
-            setTimeout(() => {
-                loadingScreen.style.display = 'none';
-            }, 500);
-        }, 1800);
+            loadingScreen.style.display = 'none';
+        }, 300);
     }
 });
 

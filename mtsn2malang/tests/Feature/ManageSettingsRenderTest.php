@@ -22,26 +22,15 @@ class ManageSettingsRenderTest extends TestCase
         parent::setUp();
 
         // Fake queue: test ini hanya mengecek record/status dibuat dengan benar,
-        // bukan menjalankan job sungguhan (yang butuh pg_dump dsb, sudah diverifikasi
-        // manual terpisah). Faking juga mencegah job test ini diproses oleh queue
-        // worker asli yang berjalan di server dev.
+        // bukan menjalankan job sungguhan (yang butuh pg_dump dsb).
         Queue::fake();
-
-        // Tabel ini TIDAK di-refresh via RefreshDatabase (sengaja — DB dev asli
-        // dipakai, bukan DB testing terpisah). Kosongkan manual supaya status
-        // "running" sisa test sebelumnya (job-nya di-fake, jadi tidak pernah
-        // selesai) tidak memicu guard hasRunningBackup()/hasRunningUpdate() di
-        // test lain.
-        AppBackup::query()->delete();
-        AppRestore::query()->delete();
-        AppUpdate::query()->delete();
     }
 
     protected function tearDown(): void
     {
         // Upload sementara (restoreFile/manualUpdateFile) tidak dihapus otomatis
         // di sini karena job pembersihnya di-fake (tidak benar-benar jalan).
-        \Illuminate\Support\Facades\File::deleteDirectory(storage_path('app/tmp-uploads'));
+        \Illuminate\Support\Facades\File::deleteDirectory(storage_path('app/private/tmp-uploads'));
 
         parent::tearDown();
     }

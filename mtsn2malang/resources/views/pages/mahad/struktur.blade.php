@@ -36,7 +36,7 @@
         @elseif($content && $content->content)
             <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-card p-6 md:p-8">
                 <div class="prose prose-lg dark:prose-invert mx-auto prose-headings:text-school-green prose-headings:font-heading">
-                    {!! $content->content !!}
+                    {!! \App\Support\SafeHtml::clean($content->content) !!}
                 </div>
             </div>
         @else

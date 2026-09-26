@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\File;
 use RuntimeException;
 use Symfony\Component\Process\Process;
@@ -63,7 +65,13 @@ class RestoreService
             }
 
             $progress('Memulihkan database...');
-            $this->restoreDatabase($dbDumpPath);
+            $this->preserveAuditLog();
+            try {
+                $this->restoreDatabase($dbDumpPath);
+            } finally {
+                // Audit log tidak boleh hilang karena restore backup lama.
+                $this->mergePreservedAuditLog();
+            }
 
             $storageDir = $tmpDir . '/storage/app/public';
             if (is_dir($storageDir)) {
@@ -119,6 +127,46 @@ class RestoreService
         }
 
         return $manifest;
+    }
+
+    private const AUDIT_KEEP_TABLE = 'activity_log_keep_restore';
+
+    /**
+     * Salin audit log saat ini ke tabel sementara sebelum restore. Backup lama
+     * (dibuat sebelum activity_log dikecualikan dari dump) masih berisi DROP +
+     * CREATE activity_log, yang akan menghapus jejak aktivitas terbaru.
+     */
+    private function preserveAuditLog(): void
+    {
+        if (! Schema::hasTable('activity_log')) {
+            return;
+        }
+
+        DB::statement('DROP TABLE IF EXISTS ' . self::AUDIT_KEEP_TABLE);
+        DB::statement('CREATE TABLE ' . self::AUDIT_KEEP_TABLE . ' AS TABLE activity_log');
+    }
+
+    private function mergePreservedAuditLog(): void
+    {
+        if (! Schema::hasTable(self::AUDIT_KEEP_TABLE)) {
+            return;
+        }
+
+        if (Schema::hasTable('activity_log')) {
+            $columns = array_values(array_intersect(
+                Schema::getColumnListing('activity_log'),
+                Schema::getColumnListing(self::AUDIT_KEEP_TABLE)
+            ));
+            $list = implode(', ', array_map(fn (string $column) => '"' . $column . '"', $columns));
+
+            DB::statement(
+                "INSERT INTO activity_log ({$list}) SELECT {$list} FROM " . self::AUDIT_KEEP_TABLE . ' k '
+                . 'WHERE NOT EXISTS (SELECT 1 FROM activity_log a WHERE a.id = k.id)'
+            );
+            DB::statement("SELECT setval(pg_get_serial_sequence('activity_log', 'id'), (SELECT COALESCE(MAX(id), 0) + 1 FROM activity_log), false)");
+        }
+
+        DB::statement('DROP TABLE IF EXISTS ' . self::AUDIT_KEEP_TABLE);
     }
 
     private function restoreDatabase(string $dumpPath): void
