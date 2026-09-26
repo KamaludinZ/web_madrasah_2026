@@ -140,6 +140,8 @@ mtsn2malang/
 │       └── filament/         # Custom Filament views
 ├── routes/web.php            # All routes
 ├── DEPLOYMENT.md             # Panduan deployment cPanel
+├── DEPLOY-COOLIFY.md         # Panduan deployment Docker / Coolify
+├── Dockerfile, docker-compose.yml, docker/  # Konfigurasi container
 └── README.md                 # Dokumentasi ini
 ```
 

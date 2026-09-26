@@ -317,4 +317,24 @@ class FunctionalFixesTest extends TestCase
         $this->assertSame(1, \App\Models\PageView::count(), 'Detail kunjungan lama dihapus.');
         $this->assertSame(2, \App\Models\PageView::totalCount(), 'Total pengunjung tidak boleh berkurang.');
     }
+
+    // ─── Docker / Coolify ────────────────────────────────────────────────────
+
+    public function test_self_update_can_be_disabled_for_docker(): void
+    {
+        config(['app.self_update' => false]);
+        Queue::fake();
+
+        Livewire::actingAs($this->superAdmin())
+            ->test(ManageSettings::class)
+            ->set('activeMainTab', 'update')
+            ->assertSee('Update dari panel dinonaktifkan')
+            ->set('manualUpdateFile', UploadedFile::fake()->create('update.zip', 10))
+            ->set('manualUpdateVersion', '9.9.9')
+            ->set('manualUpdateConfirm', true)
+            ->call('runManualUpdate');
+
+        Queue::assertNotPushed(ApplyManualUpdateJob::class);
+        $this->assertDatabaseCount('app_updates', 0);
+    }
 }

@@ -1234,6 +1234,24 @@ class ManageSettings extends Page
 
     // ─── Update Aplikasi ─────────────────────────────────────────────────────
 
+    /**
+     * Update dari panel dimatikan di Docker/Coolify (APP_SELF_UPDATE=false):
+     * file container dibuat ulang setiap deploy.
+     */
+    private function selfUpdateAllowed(): bool
+    {
+        if (config('app.self_update')) {
+            return true;
+        }
+
+        Notification::make()
+            ->title('Update dari panel dinonaktifkan')
+            ->body('Aplikasi berjalan di Docker/Coolify. Perbarui lewat GitHub lalu Redeploy di Coolify.')
+            ->warning()->send();
+
+        return false;
+    }
+
     public function currentAppVersion(): string
     {
         return AppVersion::current();
@@ -1246,6 +1264,10 @@ class ManageSettings extends Page
 
     public function saveGithubSettings(): void
     {
+        if (! $this->selfUpdateAllowed()) {
+            return;
+        }
+
         $service = app(UpdateService::class);
 
         if (blank($this->updateGithubRepo) || ! str_contains($this->updateGithubRepo, '/')) {
@@ -1266,6 +1288,10 @@ class ManageSettings extends Page
 
     public function checkForUpdate(): void
     {
+        if (! $this->selfUpdateAllowed()) {
+            return;
+        }
+
         try {
             $this->updateCheckResult = app(UpdateService::class)->checkForUpdate();
             $this->updateConfirm = false;
@@ -1295,6 +1321,10 @@ class ManageSettings extends Page
 
     public function applyUpdate(): void
     {
+        if (! $this->selfUpdateAllowed()) {
+            return;
+        }
+
         if (! $this->updateConfirm) {
             Notification::make()->title('Centang konfirmasi sebelum menerapkan update')->warning()->send();
             return;
@@ -1336,6 +1366,10 @@ class ManageSettings extends Page
 
     public function openManualUpdateConfirm(): void
     {
+        if (! $this->selfUpdateAllowed()) {
+            return;
+        }
+
         if (! $this->manualUpdateFile) {
             Notification::make()->title('Pilih file ZIP kode aplikasi terlebih dahulu')->warning()->send();
             return;
@@ -1366,6 +1400,10 @@ class ManageSettings extends Page
 
     public function runManualUpdate(): void
     {
+        if (! $this->selfUpdateAllowed()) {
+            return;
+        }
+
         if (! $this->manualUpdateConfirm) {
             Notification::make()->title('Centang konfirmasi sebelum menerapkan update')->warning()->send();
             return;

@@ -13,6 +13,17 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
 
+        // Di balik reverse proxy (Traefik/Caddy milik Coolify) yang menangani
+        // HTTPS, Laravel perlu mempercayai header X-Forwarded-* agar URL,
+        // redirect, dan cookie "secure" memakai https serta IP pengunjung asli
+        // terbaca. Diaktifkan lewat env TRUSTED_PROXIES (mis. "*" di Docker,
+        // karena container hanya bisa dijangkau lewat proxy). Kosong = mati.
+        if (filled($trustedProxies = env('TRUSTED_PROXIES'))) {
+            $middleware->trustProxies(
+                at: $trustedProxies === '*' ? '*' : array_map('trim', explode(',', $trustedProxies)),
+            );
+        }
+
         // Saat maintenance, panel admin tetap bisa dibuka (untuk menonaktifkan
         // maintenance tanpa URL bypass). livewire/* dibutuhkan panel admin.
         $middleware->preventRequestsDuringMaintenance(except: [
