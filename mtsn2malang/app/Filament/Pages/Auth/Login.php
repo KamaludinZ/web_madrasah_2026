@@ -35,6 +35,9 @@ class Login extends BaseLogin
 
     protected static string $view = 'filament.pages.auth.login';
 
+    /** Layout penuh (tanpa kotak bawaan Filament) untuk tampilan split-panel. */
+    protected static string $layout = 'filament.pages.auth.login-layout';
+
     /** true = sedang di langkah memasukkan kode OTP. */
     #[Locked]
     public bool $otpStep = false;
