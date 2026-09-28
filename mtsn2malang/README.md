@@ -24,7 +24,7 @@
 ### 🔐 Admin Panel (Filament PHP v3)
 - **Dashboard** dengan statistik real-time (pengunjung, berita, komentar)
 - **RBAC** - 7 role: Super Admin, Editor in Chief, Editor, Journalist, Contributor, Moderator, Staff TU
-- **Login OTP** 6 digit untuk keamanan tambahan
+- **Login OTP** 6 digit via email di `/admin/login` (aktifkan di Pengaturan Website → Keamanan)
 - **AI Content Assistant** - Generate draf berita, SEO otomatis, perbaikan tata bahasa
 - **Rich Text Editor** (TipTap) dengan drag & drop gambar
 - **Media Library** dengan auto-WebP conversion
@@ -135,11 +135,13 @@ mtsn2malang/
 │       ├── layouts/          # app.blade.php, header, footer
 │       ├── pages/            # 40+ page views
 │       ├── components/       # Reusable components
-│       ├── auth/             # Login with OTP
+│       ├── emails/           # Email OTP login & newsletter
 │       ├── errors/           # 404, 500, maintenance
 │       └── filament/         # Custom Filament views
 ├── routes/web.php            # All routes
 ├── DEPLOYMENT.md             # Panduan deployment cPanel
+├── DEPLOY-COOLIFY.md         # Panduan deployment Docker / Coolify
+├── Dockerfile, docker-compose.yml, docker/  # Konfigurasi container
 └── README.md                 # Dokumentasi ini
 ```
 
@@ -165,7 +167,7 @@ mtsn2malang/
 |--|--|
 | **URL Admin** | `/admin` |
 | **Email** | `admin@mtsn2kotamalang.sch.id` |
-| **Password** | `Admin@MTsN2!2024` |
+| **Password** | Diisi dari `ADMIN_DEFAULT_PASSWORD` di `.env`, atau dibuat acak dan ditampilkan sekali saat `php artisan db:seed` |
 
 > ⚠️ **GANTI PASSWORD** setelah login pertama!
 

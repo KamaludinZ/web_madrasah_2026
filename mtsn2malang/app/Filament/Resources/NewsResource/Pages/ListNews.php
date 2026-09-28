@@ -29,6 +29,7 @@ class ListNews extends ListRecords
                 ->label('Thumbnail Default Berita')
                 ->icon('heroicon-o-photo')
                 ->color('warning')
+                ->visible(fn () => NewsResource::canPublish())
                 ->form([
                     UploadImageHelper::webpFileUpload('default_news_thumbnail', 'Default Thumbnail Berita', 'news/default', true)
                         ->default(fn () => Setting::get('default_news_thumbnail'))

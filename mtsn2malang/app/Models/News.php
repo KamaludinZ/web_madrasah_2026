@@ -29,6 +29,7 @@ class News extends Model
         'meta_description',
         'status',
         'published_at',
+        'newsletter_sent_at',
         'view_count',
         'is_featured',
         'allow_comments',
@@ -38,6 +39,7 @@ class News extends Model
 
     protected $casts = [
         'published_at' => 'datetime',
+        'newsletter_sent_at' => 'datetime',
         'is_featured' => 'boolean',
         'allow_comments' => 'boolean',
         'view_count' => 'integer',
@@ -129,6 +131,8 @@ class News extends Model
     public function getExcerptAttribute($value): string
     {
         if ($value) return $value;
-        return strip_tags(substr($this->content, 0, 200)) . '...';
+        // strip_tags dulu, lalu potong per karakter (bukan per byte) agar
+        // huruf multibyte tidak terpotong menjadi karakter rusak.
+        return \Illuminate\Support\Str::limit(trim(strip_tags((string) $this->content)), 200);
     }
 }

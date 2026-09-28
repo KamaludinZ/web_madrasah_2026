@@ -114,4 +114,16 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+    /*
+    |--------------------------------------------------------------------------
+    | OTP Login (2FA)
+    |--------------------------------------------------------------------------
+    |
+    | Masa berlaku kode OTP login admin dalam menit. Aktif/nonaktif OTP diatur
+    | di Pengaturan Website → tab Keamanan.
+    |
+    */
+
+    'otp_expiry' => (int) env('OTP_EXPIRY_MINUTES', 5),
+
 ];

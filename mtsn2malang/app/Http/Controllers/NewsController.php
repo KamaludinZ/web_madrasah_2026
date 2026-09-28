@@ -7,6 +7,7 @@ use App\Models\Comment;
 use App\Models\Infografis;
 use App\Models\News;
 use App\Models\PageView;
+use App\Support\NumericCaptcha;
 use Illuminate\Http\Request;
 
 class NewsController extends Controller
@@ -17,8 +18,8 @@ class NewsController extends Controller
 
         $query = News::published()->with(['category', 'author']);
 
-        if ($request->filled('kategori')) {
-            $query->byCategory($request->kategori);
+        if (is_string($kategori = $request->query('kategori')) && $kategori !== '') {
+            $query->byCategory($kategori);
         }
 
         if ($request->filled('tahun')) {
@@ -105,7 +106,7 @@ class NewsController extends Controller
 
         $comments = $news->comments()->with('user')->latest()->get();
         $relatedNews = News::published()
-            ->where('id', '!=', (int) data_get($news, 'attributes.id'))
+            ->where('id', '!=', $news->id)
             ->where('category_id', $news->category_id)
             ->latest('published_at')
             ->take(5)
@@ -145,32 +146,60 @@ class NewsController extends Controller
         return view('pages.berita.author', compact('news', 'author', 'categories', 'popularNews'));
     }
 
-    public function storeComment(Request $request, int $newsId)
+    public function storeComment(Request $request, int $id)
     {
-        $request->validate(['content' => 'required|string|max:1000']);
+        $news = News::published()->findOrFail($id);
+        $user = auth()->user();
+        $redirect = redirect()->to(route('berita.show', $news->slug) . '#komentar');
 
-        $news = News::findOrFail($newsId);
-
-        if (!$news->allow_comments) {
-            return back()->with('error', 'Komentar tidak diizinkan pada berita ini.');
+        if (! $news->allow_comments) {
+            return $redirect->with('comment_error', 'Komentar tidak diizinkan pada berita ini.');
         }
 
-        $user = auth()->user();
+        // Honeypot: kolom tersembunyi yang hanya diisi bot. Pura-pura berhasil
+        // agar bot tidak tahu komentarnya dibuang.
+        if (filled($request->input('website'))) {
+            return $redirect->with('comment_success', 'Terima kasih! Komentar Anda akan tampil setelah disetujui moderator.');
+        }
 
-        // Editor ke atas langsung approved, user biasa masuk moderasi
-        $autoApprove = $user->hasAnyRole(['super_admin', 'editor_in_chief', 'editor', 'moderator']);
+        $rules = ['content' => 'required|string|min:3|max:1000'];
 
-        Comment::create([
-            'news_id' => $newsId,
-            'user_id' => $user->id,
-            'content' => $request->content,
-            'status'  => $autoApprove ? 'approved' : 'pending',
+        if (! $user) {
+            $rules += [
+                'guest_name' => 'required|string|max:100',
+                'guest_email' => 'nullable|email|max:255',
+                'captcha' => 'required|string',
+            ];
+        }
+
+        $validated = $request->validate($rules, [
+            'content.required' => 'Isi komentar wajib diisi.',
+            'content.min' => 'Komentar terlalu pendek.',
+            'content.max' => 'Komentar maksimal 1000 karakter.',
+            'guest_name.required' => 'Nama wajib diisi.',
+            'guest_email.email' => 'Format email tidak valid.',
+            'captcha.required' => 'Kode keamanan wajib diisi.',
         ]);
 
-        $message = $autoApprove
-            ? 'Komentar berhasil ditambahkan.'
-            : 'Komentar berhasil dikirim dan menunggu moderasi.';
+        if (! $user && ! NumericCaptcha::check('komentar', $request->input('captcha'))) {
+            return $redirect->withInput()->withErrors(['captcha' => 'Kode keamanan tidak sesuai. Silakan coba lagi.']);
+        }
 
-        return back()->with('success', $message);
+        // Staf (editor ke atas / moderator) langsung tampil; komentar tamu dan
+        // pengguna lain masuk antrean moderasi.
+        $autoApprove = $user?->hasAnyRole(['super_admin', 'editor_in_chief', 'editor', 'moderator']) ?? false;
+
+        Comment::create([
+            'news_id' => $news->id,
+            'user_id' => $user?->id,
+            'guest_name' => $user ? null : strip_tags($validated['guest_name']),
+            'guest_email' => $user ? null : ($validated['guest_email'] ?? null),
+            'content' => $validated['content'],
+            'status' => $autoApprove ? 'approved' : 'pending',
+        ]);
+
+        return $redirect->with('comment_success', $autoApprove
+            ? 'Komentar berhasil ditambahkan.'
+            : 'Terima kasih! Komentar Anda akan tampil setelah disetujui moderator.');
     }
 }

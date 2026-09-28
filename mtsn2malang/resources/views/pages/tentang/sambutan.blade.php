@@ -66,7 +66,7 @@
 
             <div class="flex-1 prose prose-lg dark:prose-invert max-w-none">
                 @if($content)
-                    {!! $content->content !!}
+                    {!! \App\Support\SafeHtml::clean($content->content) !!}
                 @else
                     <p>Konten sambutan belum tersedia. Silakan tambahkan melalui panel admin.</p>
                 @endif

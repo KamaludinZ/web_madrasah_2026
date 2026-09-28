@@ -147,7 +147,11 @@ class WordpressMigrationService
             }
 
             $ext      = pathinfo(parse_url($url, PHP_URL_PATH), PATHINFO_EXTENSION) ?: 'jpg';
-            $safeExt  = in_array(strtolower($ext), ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'], true) ? $ext : 'jpg';
+            // SVG sengaja tidak diizinkan (bisa berisi skrip).
+            if (strtolower($ext) === 'svg') {
+                return null;
+            }
+            $safeExt  = in_array(strtolower($ext), ['jpg', 'jpeg', 'png', 'gif', 'webp'], true) ? $ext : 'jpg';
             $filename = 'wordpress-migration/' . Str::uuid() . '.' . $safeExt;
 
             Storage::disk('public')->put($filename, $response->body());

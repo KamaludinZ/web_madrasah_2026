@@ -107,8 +107,9 @@ class ManageSettings extends Page
             'academic_year'          => Setting::get('academic_year', '2024/2025'),
             'google_analytics_id'    => Setting::get('google_analytics_id', ''),
             'recaptcha_site_key'     => Setting::get('recaptcha_site_key', ''),
-            'gemini_api_key'         => Setting::get('gemini_api_key', ''),
-            'openai_api_key'         => Setting::get('openai_api_key', ''),
+            // Rahasia tidak pernah dikirim ke browser — kosong = tidak diubah.
+            'gemini_api_key'         => '',
+            'openai_api_key'         => '',
             'ai_provider'            => Setting::get('ai_provider', 'gemini'),
             'link_sippn'             => Setting::get('link_sippn', 'https://sippn.menpan.go.id/'),
             'link_ptsp'              => Setting::get('link_ptsp', 'https://ptsp.kemenag.go.id/'),
@@ -138,7 +139,7 @@ class ManageSettings extends Page
             'mail_host'              => Setting::get('mail_host', 'smtp.gmail.com'),
             'mail_port'              => Setting::get('mail_port', '587'),
             'mail_username'          => Setting::get('mail_username', ''),
-            'mail_password'          => Setting::get('mail_password', ''),
+            'mail_password'          => '',
             'mail_encryption'        => Setting::get('mail_encryption', 'tls'),
             'mail_from_address'      => Setting::get('mail_from_address', ''),
             'mail_from_name'         => Setting::get('mail_from_name', 'MTsN 2 Kota Malang'),
@@ -362,13 +363,13 @@ class ManageSettings extends Page
                                 ->label('Gemini API Key')
                                 ->password()
                                 ->revealable()
-                                ->placeholder('AIza...')
+                                ->placeholder(fn () => filled(Setting::get('gemini_api_key')) ? '•••••••• (tersimpan — kosongkan jika tidak diubah)' : 'AIza...')
                                 ->helperText('Dapatkan di: aistudio.google.com → Get API Key'),
                             Forms\Components\TextInput::make('openai_api_key')
                                 ->label('OpenAI API Key')
                                 ->password()
                                 ->revealable()
-                                ->placeholder('sk-...')
+                                ->placeholder(fn () => filled(Setting::get('openai_api_key')) ? '•••••••• (tersimpan — kosongkan jika tidak diubah)' : 'sk-...')
                                 ->helperText('Dapatkan di: platform.openai.com → API Keys'),
                         ])->columns(2),
 
@@ -632,6 +633,7 @@ class ManageSettings extends Page
                                 ->label('Password / App Password')
                                 ->password()
                                 ->revealable()
+                                ->placeholder(fn () => filled(Setting::get('mail_password')) ? '•••••••• (tersimpan — kosongkan jika tidak diubah)' : null)
                                 ->helperText('Gmail: gunakan App Password (bukan password akun biasa)'),
                             Forms\Components\TextInput::make('mail_from_address')
                                 ->label('From Address (Alamat Pengirim)')
@@ -670,7 +672,7 @@ class ManageSettings extends Page
                 Forms\Components\Tabs\Tab::make('Keamanan')->schema([
                     Forms\Components\Toggle::make('login_otp_enabled')
                         ->label('Aktifkan Verifikasi OTP (2FA) saat Login')
-                        ->helperText('Jika diaktifkan, admin wajib memasukkan kode OTP 6 digit setelah email & password. Jika dimatikan, login hanya menggunakan email + password + kode keamanan CAPTCHA.')
+                        ->helperText('Jika diaktifkan, setelah email & password benar, kode OTP 6 digit dikirim ke email pengguna dan wajib dimasukkan. PASTIKAN tab Email sudah dikonfigurasi dan "Kirim Email Tes" berhasil sebelum mengaktifkan — jika email gagal terkirim, tidak ada yang bisa login.')
                         ->onColor('success')
                         ->offColor('danger')
                         ->inline(false),
@@ -692,7 +694,19 @@ class ManageSettings extends Page
 
         try {
             foreach ($data as $key => $value) {
+                if (in_array($key, Setting::SECRET_KEYS, true)) {
+                    // Kosong = pertahankan rahasia yang sudah tersimpan.
+                    if (filled($value)) {
+                        Setting::setSecret($key, $value);
+                    }
+                    continue;
+                }
+
                 Setting::set($key, $value);
+            }
+
+            foreach (Setting::SECRET_KEYS as $key) {
+                $this->data[$key] = '';
             }
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('ManageSettings save() Setting::set error', ['error' => $e->getMessage()]);
@@ -700,24 +714,8 @@ class ManageSettings extends Page
             return;
         }
 
-        // Sync mail settings ke runtime config agar langsung berlaku tanpa restart
-        $mailKeys = ['mail_driver','mail_host','mail_port','mail_username','mail_password','mail_encryption','mail_from_address','mail_from_name'];
-        foreach ($mailKeys as $key) {
-            if (isset($data[$key])) {
-                $configKey = match($key) {
-                    'mail_driver'       => 'mail.default',
-                    'mail_host'         => 'mail.mailers.smtp.host',
-                    'mail_port'         => 'mail.mailers.smtp.port',
-                    'mail_username'     => 'mail.mailers.smtp.username',
-                    'mail_password'     => 'mail.mailers.smtp.password',
-                    'mail_encryption'   => 'mail.mailers.smtp.encryption',
-                    'mail_from_address' => 'mail.from.address',
-                    'mail_from_name'    => 'mail.from.name',
-                    default             => null,
-                };
-                if ($configKey) config([$configKey => $data[$key]]);
-            }
-        }
+        // Terapkan pengaturan email ke config runtime agar langsung berlaku.
+        \App\Support\MailSettings::apply();
 
         $this->logActivity('Pengaturan website diperbarui', ['keys' => array_keys($data)]);
 
@@ -810,35 +808,21 @@ class ManageSettings extends Page
     public function testSendEmail(): void
     {
         try {
-            $data     = $this->data;
-            $host     = $data['mail_host']         ?? Setting::get('mail_host', '');
-            $port     = $data['mail_port']         ?? Setting::get('mail_port', '587');
-            $user     = $data['mail_username']     ?? Setting::get('mail_username', '');
-            $pass     = $data['mail_password']     ?? Setting::get('mail_password', '');
-            $enc      = $data['mail_encryption']   ?? Setting::get('mail_encryption', 'tls');
-            $from     = $data['mail_from_address'] ?? Setting::get('mail_from_address', '');
-            $fromName = $data['mail_from_name']    ?? Setting::get('mail_from_name', 'MTsN 2 Kota Malang');
-            $to       = auth()->user()->email;
+            // Tes memakai pengaturan yang SUDAH DISIMPAN (sama seperti yang
+            // dipakai OTP & newsletter), bukan isian form yang belum disimpan.
+            \App\Support\MailSettings::apply();
 
-            if (empty($host) || empty($user) || empty($pass) || empty($from)) {
+            $to       = auth()->user()->email;
+            $from     = config('mail.from.address');
+            $fromName = config('mail.from.name');
+
+            if (config('mail.default') === 'smtp' && (blank(config('mail.mailers.smtp.host')) || blank($from))) {
                 Notification::make()
                     ->title('Konfigurasi belum lengkap')
-                    ->body('Isi Host, Username, Password, dan From Address terlebih dahulu.')
+                    ->body('Isi dan simpan Host serta From Address terlebih dahulu.')
                     ->warning()->send();
                 return;
             }
-
-            // Sync config runtime
-            config([
-                'mail.default'                    => 'smtp',
-                'mail.mailers.smtp.host'          => $host,
-                'mail.mailers.smtp.port'          => (int) $port,
-                'mail.mailers.smtp.username'      => $user,
-                'mail.mailers.smtp.password'      => $pass,
-                'mail.mailers.smtp.encryption'    => $enc ?: null,
-                'mail.from.address'               => $from,
-                'mail.from.name'                  => $fromName,
-            ]);
 
             \Illuminate\Support\Facades\Mail::raw(
                 "Ini adalah email tes dari sistem MTsN 2 Kota Malang.\n\nJika Anda menerima email ini, konfigurasi SMTP sudah benar.\n\nWaktu: " . now()->format('d M Y H:i:s'),
@@ -869,16 +853,17 @@ class ManageSettings extends Page
         try {
             $data     = $this->data;
             $provider = $data['ai_provider']      ?? Setting::get('ai_provider', 'gemini');
-            $geminiKey = $data['gemini_api_key']  ?? Setting::get('gemini_api_key', '');
-            $openaiKey = $data['openai_api_key']  ?? Setting::get('openai_api_key', '');
+            $geminiKey = filled($data['gemini_api_key'] ?? null) ? $data['gemini_api_key'] : Setting::getSecret('gemini_api_key', '');
+            $openaiKey = filled($data['openai_api_key'] ?? null) ? $data['openai_api_key'] : Setting::getSecret('openai_api_key', '');
 
             if ($provider === 'gemini') {
                 if (empty($geminiKey)) {
                     Notification::make()->title('Gemini API Key belum diisi')->warning()->send();
                     return;
                 }
-                $url  = "https://generativelanguage.googleapis.com/v1beta/models?key={$geminiKey}";
-                $resp = \Illuminate\Support\Facades\Http::timeout(10)->get($url);
+                $resp = \Illuminate\Support\Facades\Http::timeout(10)
+                    ->withHeaders(['x-goog-api-key' => $geminiKey])
+                    ->get('https://generativelanguage.googleapis.com/v1beta/models');
                 if ($resp->successful()) {
                     $models = collect($resp->json('models', []))->pluck('name')->take(3)->implode(', ');
                     Notification::make()
@@ -1006,18 +991,6 @@ class ManageSettings extends Page
         if ($this->auditPage > 1) {
             $this->auditPage--;
         }
-    }
-
-    public function clearAuditLog(): void
-    {
-        try {
-            Activity::truncate();
-        } catch (\Throwable $e) {
-            Notification::make()->title('Gagal membersihkan audit log')->body($e->getMessage())->danger()->send();
-            return;
-        }
-        $this->logActivity('Audit log dibersihkan');
-        Notification::make()->title('Audit log berhasil dibersihkan')->success()->send();
     }
 
     public function getAuditLogNames(): array
@@ -1232,8 +1205,10 @@ class ManageSettings extends Page
                     return;
                 }
 
-                $storedPath = $this->restoreFile->store('tmp-uploads');
-                $absolutePath = storage_path('app/' . $storedPath);
+                // Path absolut diambil dari disk yang sama dengan tempat file
+                // disimpan (disk 'local' = storage/app/private), bukan ditebak.
+                $storedPath = $this->restoreFile->store('tmp-uploads', 'local');
+                $absolutePath = \Illuminate\Support\Facades\Storage::disk('local')->path($storedPath);
 
                 $restore = AppRestore::create([
                     'source_filename' => $originalName,
@@ -1259,6 +1234,24 @@ class ManageSettings extends Page
 
     // ─── Update Aplikasi ─────────────────────────────────────────────────────
 
+    /**
+     * Update dari panel dimatikan di Docker/Coolify (APP_SELF_UPDATE=false):
+     * file container dibuat ulang setiap deploy.
+     */
+    private function selfUpdateAllowed(): bool
+    {
+        if (config('app.self_update')) {
+            return true;
+        }
+
+        Notification::make()
+            ->title('Update dari panel dinonaktifkan')
+            ->body('Aplikasi berjalan di Docker/Coolify. Perbarui lewat GitHub lalu Redeploy di Coolify.')
+            ->warning()->send();
+
+        return false;
+    }
+
     public function currentAppVersion(): string
     {
         return AppVersion::current();
@@ -1271,6 +1264,10 @@ class ManageSettings extends Page
 
     public function saveGithubSettings(): void
     {
+        if (! $this->selfUpdateAllowed()) {
+            return;
+        }
+
         $service = app(UpdateService::class);
 
         if (blank($this->updateGithubRepo) || ! str_contains($this->updateGithubRepo, '/')) {
@@ -1291,6 +1288,10 @@ class ManageSettings extends Page
 
     public function checkForUpdate(): void
     {
+        if (! $this->selfUpdateAllowed()) {
+            return;
+        }
+
         try {
             $this->updateCheckResult = app(UpdateService::class)->checkForUpdate();
             $this->updateConfirm = false;
@@ -1320,6 +1321,10 @@ class ManageSettings extends Page
 
     public function applyUpdate(): void
     {
+        if (! $this->selfUpdateAllowed()) {
+            return;
+        }
+
         if (! $this->updateConfirm) {
             Notification::make()->title('Centang konfirmasi sebelum menerapkan update')->warning()->send();
             return;
@@ -1361,6 +1366,10 @@ class ManageSettings extends Page
 
     public function openManualUpdateConfirm(): void
     {
+        if (! $this->selfUpdateAllowed()) {
+            return;
+        }
+
         if (! $this->manualUpdateFile) {
             Notification::make()->title('Pilih file ZIP kode aplikasi terlebih dahulu')->warning()->send();
             return;
@@ -1391,6 +1400,10 @@ class ManageSettings extends Page
 
     public function runManualUpdate(): void
     {
+        if (! $this->selfUpdateAllowed()) {
+            return;
+        }
+
         if (! $this->manualUpdateConfirm) {
             Notification::make()->title('Centang konfirmasi sebelum menerapkan update')->warning()->send();
             return;
@@ -1410,8 +1423,10 @@ class ManageSettings extends Page
                     return;
                 }
 
-                $storedPath = $this->manualUpdateFile->store('tmp-uploads');
-                $absolutePath = storage_path('app/' . $storedPath);
+                // Path absolut diambil dari disk yang sama dengan tempat file
+                // disimpan (disk 'local' = storage/app/private), bukan ditebak.
+                $storedPath = $this->manualUpdateFile->store('tmp-uploads', 'local');
+                $absolutePath = \Illuminate\Support\Facades\Storage::disk('local')->path($storedPath);
                 $toVersion = trim($this->manualUpdateVersion);
 
                 $update = AppUpdate::create([

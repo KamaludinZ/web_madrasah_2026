@@ -10,11 +10,13 @@ class SearchController extends Controller
 {
     public function index(Request $request)
     {
-        $query = $request->get('q', '');
-        $kategori = $request->get('kategori');
-        $tag = $request->get('tag');
-        $from = $request->get('from');
-        $to = $request->get('to');
+        // Parameter berupa array (?q[]=x) atau tanggal tidak valid sebelumnya
+        // menyebabkan error 500 — abaikan saja.
+        $query = $this->stringParam($request, 'q');
+        $kategori = $this->stringParam($request, 'kategori') ?: null;
+        $tag = $this->stringParam($request, 'tag') ?: null;
+        $from = $this->dateParam($request, 'from');
+        $to = $this->dateParam($request, 'to');
 
         $results = collect();
 
@@ -58,9 +60,9 @@ class SearchController extends Controller
 
     public function ajax(Request $request)
     {
-        $query = $request->get('q', '');
+        $query = $this->stringParam($request, 'q');
 
-        if (strlen($query) < 2) {
+        if (mb_strlen($query) < 2) {
             return response()->json(['results' => []]);
         }
 
@@ -85,5 +87,23 @@ class SearchController extends Controller
             ]);
 
         return view('components.search-results', compact('results'));
+    }
+
+    private function stringParam(Request $request, string $name): string
+    {
+        $value = $request->query($name);
+
+        return is_string($value) ? mb_substr(trim($value), 0, 100) : '';
+    }
+
+    private function dateParam(Request $request, string $name): ?string
+    {
+        $value = $request->query($name);
+
+        if (! is_string($value) || ! preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
+            return null;
+        }
+
+        return checkdate((int) substr($value, 5, 2), (int) substr($value, 8, 2), (int) substr($value, 0, 4)) ? $value : null;
     }
 }

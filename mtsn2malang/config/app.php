@@ -123,4 +123,13 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    // Rahasia URL bypass maintenance (Pengaturan → Mode Maintenance).
+    // Kosong = dibuat acak setiap kali maintenance diaktifkan.
+    'maintenance_secret' => env('MAINTENANCE_SECRET'),
+
+    // Fitur "Update Aplikasi" dari panel admin (unduh/upload ZIP kode lalu
+    // timpa file). Matikan (false) saat berjalan di Docker/Coolify: file di
+    // container dibuat ulang setiap deploy — update dilakukan via git + redeploy.
+    'self_update' => (bool) env('APP_SELF_UPDATE', true),
+
 ];

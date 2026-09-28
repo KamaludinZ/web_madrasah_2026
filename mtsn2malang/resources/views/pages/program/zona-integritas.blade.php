@@ -119,7 +119,7 @@
                             prose-headings:text-school-green prose-headings:font-heading
                             prose-a:text-school-green prose-a:no-underline hover:prose-a:underline
                             prose-strong:text-gray-900 dark:prose-strong:text-white">
-                    {!! $content->content !!}
+                    {!! \App\Support\SafeHtml::clean($content->content) !!}
                 </div>
             </div>
         </div>

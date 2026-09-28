@@ -29,7 +29,7 @@
                         prose-a:text-school-green prose-strong:text-gray-900
                         dark:prose-strong:text-white"
                  data-aos="fade-up">
-                {!! $content->content !!}
+                {!! \App\Support\SafeHtml::clean($content->content) !!}
             </div>
         @else
             <div class="p-8 bg-white dark:bg-gray-800 rounded-2xl shadow-card" data-aos="fade-up">

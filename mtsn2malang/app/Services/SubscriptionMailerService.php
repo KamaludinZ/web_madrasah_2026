@@ -2,46 +2,69 @@
 
 namespace App\Services;
 
+use App\Jobs\SendNewsPublishedNewsletterJob;
 use App\Mail\NewsPublishedMail;
 use App\Models\News;
 use App\Models\Setting;
 use App\Models\Subscriber;
-use Illuminate\Support\Facades\Config;
+use App\Support\MailSettings;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 class SubscriptionMailerService
 {
-    public function sendNewsPublished(News $news): int
+    /**
+     * Antrekan newsletter jika berita sudah terbit dan belum pernah dikirim.
+     * Dipanggil setiap kali berita disimpan/diterbitkan dari panel admin.
+     */
+    public function queueIfPublished(News $news): void
     {
-        if (! (bool) Setting::get('subscription_enabled', true)) {
+        if ($news->status !== 'published'
+            || $news->published_at === null
+            || $news->published_at->isFuture()
+            || $news->newsletter_sent_at !== null
+            || ! (bool) Setting::get('subscription_enabled', true)) {
+            return;
+        }
+
+        SendNewsPublishedNewsletterJob::dispatch($news->id)->afterCommit();
+    }
+
+    public function sendNewsPublished(int $newsId): int
+    {
+        // Tandai terkirim secara atomik lebih dulu: jika job ini terpanggil dua
+        // kali (klik ganda, retry), hanya satu yang benar-benar mengirim.
+        $claimed = News::whereKey($newsId)
+            ->where('status', 'published')
+            ->whereNull('newsletter_sent_at')
+            ->update(['newsletter_sent_at' => now()]);
+
+        if ($claimed === 0 || ! (bool) Setting::get('subscription_enabled', true)) {
             return 0;
         }
 
-        $this->applyRuntimeMailConfig();
+        $news = News::findOrFail($newsId);
+
+        MailSettings::apply();
 
         $sent = 0;
-        $subscribers = Subscriber::query()
+
+        Subscriber::query()
             ->where('is_active', true)
             ->whereNotNull('email')
-            ->get();
-
-        foreach ($subscribers as $subscriber) {
-            Mail::to($subscriber->email)->send(new NewsPublishedMail($news, $subscriber));
-            $sent++;
-        }
+            ->each(function (Subscriber $subscriber) use ($news, &$sent) {
+                try {
+                    Mail::to($subscriber->email)->send(new NewsPublishedMail($news, $subscriber));
+                    $sent++;
+                } catch (\Throwable $e) {
+                    Log::warning('Gagal mengirim newsletter', [
+                        'news_id' => $news->id,
+                        'subscriber_id' => $subscriber->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            });
 
         return $sent;
-    }
-
-    protected function applyRuntimeMailConfig(): void
-    {
-        Config::set('mail.default', Setting::get('mail_mailer', config('mail.default', 'smtp')));
-        Config::set('mail.mailers.smtp.host', Setting::get('mail_host', config('mail.mailers.smtp.host')));
-        Config::set('mail.mailers.smtp.port', (int) Setting::get('mail_port', config('mail.mailers.smtp.port')));
-        Config::set('mail.mailers.smtp.username', Setting::get('mail_username', config('mail.mailers.smtp.username')));
-        Config::set('mail.mailers.smtp.password', Setting::get('mail_password', config('mail.mailers.smtp.password')));
-        Config::set('mail.mailers.smtp.encryption', Setting::get('mail_encryption', config('mail.mailers.smtp.encryption')));
-        Config::set('mail.from.address', Setting::get('mail_from_address', config('mail.from.address')));
-        Config::set('mail.from.name', Setting::get('mail_from_name', config('mail.from.name')));
     }
 }

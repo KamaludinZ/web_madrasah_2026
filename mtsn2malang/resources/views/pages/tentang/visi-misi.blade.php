@@ -11,7 +11,7 @@
     <div class="max-w-4xl mx-auto">
         @if($content)
         <div class="prose prose-lg dark:prose-invert mx-auto prose-headings:text-school-green prose-headings:font-heading">
-            {!! $content->content !!}
+            {!! \App\Support\SafeHtml::clean($content->content) !!}
         </div>
         @else
         <div class="space-y-8">
