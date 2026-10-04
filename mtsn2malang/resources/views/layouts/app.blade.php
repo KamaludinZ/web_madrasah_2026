@@ -144,16 +144,22 @@
     {{-- Search Overlay --}}
     @include('components.search-overlay')
 
-    {{-- Header --}}
-    @include('layouts.header')
+    {{-- Header — halaman dengan kop sendiri (mis. Portal) bisa menyembunyikannya
+         lewat @section('hide_site_header', true) --}}
+    @unless(View::hasSection('hide_site_header'))
+        @include('layouts.header')
+    @endunless
 
     {{-- Main Content --}}
     <main id="main-content" role="main">
         @yield('content')
     </main>
 
-    {{-- Footer --}}
-    @include('layouts.footer')
+    {{-- Footer — halaman dengan footer sendiri (mis. Portal) bisa
+         menyembunyikannya lewat @section('hide_site_footer', true) --}}
+    @unless(View::hasSection('hide_site_footer'))
+        @include('layouts.footer')
+    @endunless
 
     {{-- Back to Top --}}
     <button id="back-to-top" class="back-to-top" aria-label="Kembali ke atas" title="Kembali ke atas">

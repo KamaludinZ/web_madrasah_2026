@@ -26,7 +26,7 @@
         <h1>Halaman Tidak Ditemukan</h1>
         <p>Maaf, halaman yang Anda cari tidak dapat ditemukan. Mungkin halaman telah dipindahkan, dihapus, atau URL yang Anda masukkan salah.</p>
         <div>
-            <a href="/" class="btn"><span aria-hidden="true">🏠</span> Kembali ke Beranda</a>
+            <a href="{{ route('home') }}" class="btn"><span aria-hidden="true">🏠</span> Kembali ke Beranda</a>
             <button type="button" onclick="history.back()" class="btn btn-outline"><span aria-hidden="true">←</span> Kembali</button>
         </div>
     </div>

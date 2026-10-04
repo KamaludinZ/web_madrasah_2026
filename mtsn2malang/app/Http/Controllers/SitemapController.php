@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\News;
+use App\Support\PortalSettings;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Route;
 use Spatie\Sitemap\Sitemap;
@@ -12,7 +13,7 @@ class SitemapController extends Controller
 {
     /** Halaman publik statis (nama route) yang dimasukkan ke sitemap. */
     private const STATIC_ROUTES = [
-        'home', 'berita.index',
+        'portal', 'home', 'berita.index',
         'tentang.sambutan', 'tentang.selayang-pandang', 'tentang.visi-misi', 'tentang.struktur-madrasah',
         'tentang.struktur-komite', 'tentang.daftar-gtk', 'tentang.ikatan-alumni', 'tentang.ekstrakurikuler',
         'tentang.sarpras', 'tentang.kontak',
@@ -31,8 +32,11 @@ class SitemapController extends Controller
         $xml = Cache::remember('sitemap.xml', now()->addHour(), function () {
             $sitemap = Sitemap::create();
 
+            // Portal mati → "/" sudah berisi Beranda; /beranda jadi duplikat.
+            $skip = PortalSettings::enabled() ? [] : ['home'];
+
             foreach (self::STATIC_ROUTES as $name) {
-                if (Route::has($name)) {
+                if (Route::has($name) && ! in_array($name, $skip, true)) {
                     $sitemap->add(Url::create(route($name)));
                 }
             }

@@ -35,3 +35,9 @@ yarn-error.log
 *.tar.gz
 *.sql
 *.sqlite
+
+# Pengaturan lokal Claude Code & file kerja sync NgodingPakeAI
+# (.ngodingpakeai/config.json berisi ID saja dan aman di-commit)
+.claude/settings.local.json
+.ngodingpakeai/pending.json
+.ngodingpakeai/summaries.json

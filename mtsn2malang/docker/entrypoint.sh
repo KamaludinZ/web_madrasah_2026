@@ -35,6 +35,100 @@ as_app() {
 
 artisan() { as_app php artisan "$@" --no-interaction; }
 
+is_true() { case "${1:-}" in 1|true|TRUE|True|yes|on) return 0 ;; *) return 1 ;; esac; }
+
+# -----------------------------------------------------------------------------
+# 0a. DB_URL (mis. "Postgres URL (internal)" dari Coolify) → DB_HOST, DB_PORT,
+#     DB_DATABASE, DB_USERNAME, DB_PASSWORD. Laravel sendiri bisa membaca
+#     DB_URL, tetapi pg_isready di sini dan pg_dump/psql (Backup & Restore)
+#     memakai nilai terpisah — jadi nilai terpisah selalu diisi.
+# -----------------------------------------------------------------------------
+apply_db_url() {
+    local url="${DB_URL:-${DATABASE_URL:-}}"
+    [ -z "$url" ] && return
+
+    local parsed
+    parsed="$(DB_URL_RAW="$url" php -r '
+        $p = parse_url(getenv("DB_URL_RAW"));
+        if ($p === false || empty($p["host"])) { exit(1); }
+        $out = [
+            "DB_HOST"     => $p["host"],
+            "DB_PORT"     => $p["port"] ?? 5432,
+            "DB_DATABASE" => ltrim($p["path"] ?? "", "/"),
+            "DB_USERNAME" => urldecode($p["user"] ?? ""),
+            "DB_PASSWORD" => urldecode($p["pass"] ?? ""),
+        ];
+        foreach ($out as $k => $v) { if ($v !== "") { echo $k, "=", base64_encode((string) $v), "\n"; } }
+    ')" || fail "DB_URL tidak valid. Contoh: postgres://user:password@host:5432/nama_db"
+
+    while IFS='=' read -r key value; do
+        [ -n "$key" ] && export "$key=$(printf '%s' "$value" | base64 -d)"
+    done <<< "$parsed"
+    export DB_CONNECTION=pgsql DB_URL="$url"
+    log "Koneksi database diambil dari DB_URL (host: $DB_HOST, database: ${DB_DATABASE:-?})."
+}
+
+# -----------------------------------------------------------------------------
+# 0b. Nilai turunan yang aman untuk berbagai cara deploy
+# -----------------------------------------------------------------------------
+apply_runtime_defaults() {
+    # Cookie sesi "secure" hanya bila situs memakai HTTPS — domain http://
+    # (mis. domain sslip bawaan Coolify) tetap bisa login admin.
+    if [ -z "${SESSION_SECURE_COOKIE:-}" ]; then
+        case "${APP_URL:-}" in
+            https://*) export SESSION_SECURE_COOKIE=true ;;
+            *)         export SESSION_SECURE_COOKIE=false ;;
+        esac
+    fi
+
+    # Worker & scheduler di dalam container app (mode Dockerfile saja).
+    local q=false s=false
+    if [ "$ROLE" = "app" ]; then
+        is_true "${RUN_QUEUE_WORKER:-false}" && q=true
+        is_true "${RUN_SCHEDULER:-false}" && s=true
+    fi
+    export SUPERVISOR_QUEUE_AUTOSTART="$q" SUPERVISOR_SCHEDULER_AUTOSTART="$s"
+}
+
+# -----------------------------------------------------------------------------
+# 0c. Pilih client PostgreSQL (pg_dump/psql) yang versinya sama dengan server
+#     agar Backup & Restore berhasil (dump versi lebih baru bisa gagal
+#     direstore ke server lama, dan pg_dump lama menolak server yang lebih baru).
+# -----------------------------------------------------------------------------
+select_pg_client() {
+    [ "${DB_CONNECTION:-pgsql}" != "pgsql" ] && return
+
+    local newest major
+    newest="$(ls -d /usr/lib/postgresql/*/bin 2>/dev/null | sort -V | tail -n1)"
+    [ -z "$newest" ] && { warn "Client PostgreSQL tidak ditemukan di image."; return; }
+
+    major="$(PGPASSWORD="${DB_PASSWORD:-}" PGCONNECT_TIMEOUT=5 "$newest/psql" \
+        -h "${DB_HOST:-db}" -p "${DB_PORT:-5432}" -U "${DB_USERNAME:-postgres}" -d "${DB_DATABASE:-postgres}" \
+        -XAtqc 'SHOW server_version_num' 2>/dev/null | cut -c1-2 || true)"
+
+    if [ -n "$major" ] && [ -x "/usr/lib/postgresql/$major/bin/pg_dump" ]; then
+        export PATH="/usr/lib/postgresql/$major/bin:$PATH"
+        log "Server PostgreSQL versi $major — memakai pg_dump/psql versi $major."
+    elif [ -n "$major" ]; then
+        export PATH="$newest:$PATH"
+        warn "Server PostgreSQL versi $major tidak punya client yang sama di image; memakai $(basename "$(dirname "$newest")"). Fitur Backup/Restore mungkin gagal."
+    else
+        export PATH="$newest:$PATH"
+        warn "Versi server PostgreSQL tidak terbaca (cek DB_USERNAME/DB_PASSWORD); memakai client terbaru."
+    fi
+}
+
+# -----------------------------------------------------------------------------
+# 0d. Peringatan bila storage bukan volume (data hilang setiap redeploy)
+# -----------------------------------------------------------------------------
+check_storage_volume() {
+    if command -v mountpoint >/dev/null 2>&1 && ! mountpoint -q "$APP_DIR/storage"; then
+        warn "Folder $APP_DIR/storage BUKAN volume persisten. Foto/berkas upload, backup,"
+        warn "log, dan APP_KEY tersimpan akan HILANG setiap redeploy. Tambahkan Persistent"
+        warn "Storage di Coolify dengan Destination Path: $APP_DIR/storage"
+    fi
+}
+
 # -----------------------------------------------------------------------------
 # 1. Struktur folder storage (volume baru bisa kosong)
 # -----------------------------------------------------------------------------
@@ -185,12 +279,17 @@ wait_for_app() {
 # =============================================================================
 main() {
     [ -z "${APP_URL:-}" ] && warn "APP_URL kosong — isi dengan alamat situs (mis. https://mtsn2kotamalang.sch.id) agar link di email & sitemap benar."
+    apply_db_url
+    apply_runtime_defaults
+    check_storage_volume
     prepare_storage
     ensure_app_key
 
     case "$ROLE" in
         app)
             wait_for_database
+            select_pg_client
+            log "Queue worker di container ini: $SUPERVISOR_QUEUE_AUTOSTART, scheduler: $SUPERVISOR_SCHEDULER_AUTOSTART."
             run_migrations
             seed_if_empty
             optimize_app
@@ -199,6 +298,7 @@ main() {
             ;;
         worker|scheduler)
             wait_for_database
+            select_pg_client
             wait_for_app
             log "Siap. Menjalankan: $*"
             exec setpriv --reuid="$APP_USER" --regid="$APP_USER" --init-groups -- env HOME=/tmp "$@"

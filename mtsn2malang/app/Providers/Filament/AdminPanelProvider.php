@@ -9,6 +9,7 @@ use App\Filament\Pages\ManageMaintenance;
 use App\Filament\Pages\ManageSettings;
 use App\Filament\Pages\ManageWordpressMigration;
 use App\Filament\Pages\ManageWelcome;
+use App\Filament\Pages\ManagePortal;
 use App\Filament\Resources\AchievementResource;
 use App\Filament\Resources\BadgeAchievementResource;
 use App\Filament\Resources\AlumniCoordinatorResource;
@@ -26,6 +27,8 @@ use App\Filament\Resources\NewsResource;
 use App\Filament\Resources\PageContentResource;
 use App\Filament\Resources\PopupResource;
 use App\Filament\Resources\PortalAppResource;
+use App\Filament\Resources\PortalCategoryResource;
+use App\Filament\Resources\PortalQuickAccessResource;
 use App\Filament\Resources\ProgramResource;
 use App\Filament\Resources\RegistrationResource;
 use App\Filament\Resources\SaranResource;
@@ -101,6 +104,7 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->navigationGroups([
                 NavigationGroup::make('Konten')->icon('heroicon-o-document-text'),
+                NavigationGroup::make('Portal')->icon('heroicon-o-squares-plus'),
                 NavigationGroup::make('Profil Sekolah')->icon('heroicon-o-building-library'),
                 NavigationGroup::make('Layanan & PPID')->icon('heroicon-o-clipboard-document-list'),
                 NavigationGroup::make('Program')->icon('heroicon-o-academic-cap'),
@@ -124,6 +128,8 @@ class AdminPanelProvider extends PanelProvider
                 BadgeAchievementResource::class,
                 TestimonialResource::class,
                 PortalAppResource::class,
+                PortalCategoryResource::class,
+                PortalQuickAccessResource::class,
                 ServiceStandardResource::class,
                 ArchiveResource::class,
                 ProgramResource::class,
@@ -143,6 +149,7 @@ class AdminPanelProvider extends PanelProvider
                 ManageMaintenance::class,
                 ManageWordpressMigration::class,
                 ManageWelcome::class,
+                ManagePortal::class,
             ])
             ->widgets([
                 NewsStatsWidget::class,

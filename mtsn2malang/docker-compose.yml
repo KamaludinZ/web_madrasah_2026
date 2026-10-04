@@ -25,6 +25,10 @@ services:
       # diubah di pengaturan service "app").
       - SERVICE_FQDN_APP_8080
       - CONTAINER_ROLE=app
+      # Worker & scheduler sudah punya container sendiri (di bawah) — jangan
+      # jalankan juga di dalam container app agar job tidak diproses ganda.
+      - RUN_QUEUE_WORKER=false
+      - RUN_SCHEDULER=false
       - APP_NAME=${APP_NAME:-MTsN 2 Kota Malang}
       - APP_URL=${APP_URL}
       - APP_KEY=${APP_KEY:-}
@@ -113,8 +117,9 @@ services:
       start_period: 300s
 
   # ---------------------------------------------------------------------------
-  # PostgreSQL. Versi mayor HARUS sama dengan PG_MAJOR di Dockerfile (16),
-  # karena pg_dump/psql di container app dipakai fitur Backup & Restore.
+  # PostgreSQL. Image app memuat client 15–18 dan otomatis memilih yang sama
+  # dengan versi server ini (untuk Backup & Restore). JANGAN menaikkan versi
+  # mayor pada database yang sudah berisi data — perlu dump & restore.
   # ---------------------------------------------------------------------------
   db:
     image: postgres:16-alpine

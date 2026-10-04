@@ -727,7 +727,8 @@
 </section>
 @endif
 
-{{-- Prestasi Section --}}
+{{-- Prestasi Section (bisa disembunyikan: admin Prestasi Siswa → Pengaturan Tampilan Publik) --}}
+@if($showAchievementsSection ?? true)
 <section id="prestasi-section" class="py-12 bg-gradient-to-br from-school-green-dark to-school-green text-white">
     <div class="container mx-auto px-4">
         <div class="text-center mb-8" data-aos="fade-up">
@@ -856,6 +857,7 @@
         </div>
     </div>
 </section>
+@endif
 
 {{-- Sarpras Carousel --}}
 <section class="py-12 bg-white dark:bg-gray-900">

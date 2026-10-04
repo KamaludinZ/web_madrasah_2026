@@ -1,10 +1,17 @@
 # =============================================================================
 # Image produksi MTsN 2 Kota Malang (Laravel 12 + Filament 3)
 #
-# Satu image dipakai untuk 3 peran (lihat docker-compose.yml):
-#   - app       : nginx + php-fpm (web & panel admin)          CONTAINER_ROLE=app
-#   - worker    : php artisan queue:work (backup/restore/email) CONTAINER_ROLE=worker
-#   - scheduler : php artisan schedule:work (tugas terjadwal)   CONTAINER_ROLE=scheduler
+# Dua cara deploy (panduan: DEPLOY-COOLIFY.md):
+#   A. Dockerfile saja (satu container) + database PostgreSQL terpisah di
+#      Coolify. Bawaan image: nginx + php-fpm + queue worker + scheduler
+#      berjalan bersama di satu container (RUN_QUEUE_WORKER/RUN_SCHEDULER=true).
+#   B. docker-compose.yml: container app, worker, scheduler, db terpisah
+#      (compose mematikan worker/scheduler di dalam container app).
+#
+# Peran container (CONTAINER_ROLE):
+#   - app       : nginx + php-fpm (+ worker & scheduler bila diaktifkan)
+#   - worker    : php artisan queue:work (backup/restore/email)
+#   - scheduler : php artisan schedule:work (tugas terjadwal)
 #
 # Build context: folder mtsn2malang/ (tempat file ini berada).
 # =============================================================================
@@ -36,9 +43,10 @@ RUN npm run build
 # -----------------------------------------------------------------------------
 FROM php:${PHP_VERSION}-fpm-${DEBIAN_SUITE} AS runtime
 
-# Versi mayor client PostgreSQL WAJIB sama dengan server PostgreSQL
-# (pg_dump/psql dipakai fitur Backup & Restore). Default: PostgreSQL 16.
-ARG PG_MAJOR=16
+# Client PostgreSQL yang dipasang (pg_dump/psql untuk fitur Backup & Restore).
+# Versi client harus sama dengan server, jadi beberapa versi dipasang dan
+# entrypoint memilih yang cocok secara otomatis saat container start.
+ARG PG_CLIENT_VERSIONS="15 16 17 18"
 
 # Nilai bawaan produksi. Rahasia (APP_KEY, DB_PASSWORD, dst.) TIDAK ditaruh
 # di sini — diisi lewat Environment Variables di Coolify / docker-compose.
@@ -46,6 +54,8 @@ ENV DEBIAN_FRONTEND=noninteractive \
     COMPOSER_ALLOW_SUPERUSER=1 \
     COMPOSER_NO_INTERACTION=1 \
     CONTAINER_ROLE=app \
+    RUN_QUEUE_WORKER=true \
+    RUN_SCHEDULER=true \
     APP_ENV=production \
     APP_DEBUG=false \
     APP_TIMEZONE=Asia/Jakarta \
@@ -63,7 +73,6 @@ ENV DEBIAN_FRONTEND=noninteractive \
     DB_PORT=5432 \
     SESSION_DRIVER=database \
     SESSION_LIFETIME=120 \
-    SESSION_SECURE_COOKIE=true \
     CACHE_STORE=database \
     QUEUE_CONNECTION=database \
     FILESYSTEM_DISK=local \
@@ -75,7 +84,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 RUN set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends \
-        ca-certificates curl gnupg nginx procps supervisor unzip; \
+        ca-certificates curl gnupg nginx procps supervisor unzip util-linux; \
     install -d /usr/share/postgresql-common/pgdg; \
     curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
         https://www.postgresql.org/media/keys/ACCC4CF8.asc; \
@@ -83,7 +92,8 @@ RUN set -eux; \
     echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" \
         > /etc/apt/sources.list.d/pgdg.list; \
     apt-get update; \
-    apt-get install -y --no-install-recommends "postgresql-client-${PG_MAJOR}"; \
+    for v in ${PG_CLIENT_VERSIONS}; do pkgs="${pkgs:-} postgresql-client-$v"; done; \
+    apt-get install -y --no-install-recommends ${pkgs}; \
     rm -rf /var/lib/apt/lists/*
 
 # Ekstensi PHP yang dipakai aplikasi (gd+webp untuk konversi gambar, intl,

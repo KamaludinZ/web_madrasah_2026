@@ -8,7 +8,11 @@ use App\Http\Controllers\SubscriptionController;
 use Illuminate\Support\Facades\Route;
 
 // ===== HOME =====
-Route::get('/', [HomeController::class, 'index'])->name('home');
+// Halaman Portal = landing page di "/". Beranda lama pindah ke "/beranda"
+// (nama route 'home' tetap, jadi semua tautan "Beranda" ikut berpindah).
+Route::get('/', [App\Http\Controllers\PortalController::class, 'index'])->name('portal');
+Route::get('/beranda', [HomeController::class, 'index'])->name('home');
+Route::redirect('/portal', '/', 301);
 
 // ===== SEO =====
 Route::get('/sitemap.xml', [App\Http\Controllers\SitemapController::class, 'index'])->name('sitemap');

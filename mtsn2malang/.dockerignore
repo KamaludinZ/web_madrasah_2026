@@ -28,7 +28,11 @@ storage/framework/testing/*
 storage/logs/*
 bootstrap/cache/*.php
 
-# Tidak dibutuhkan saat produksi
+# Tidak dibutuhkan saat produksi (alat lokal, dokumentasi agen, tes)
+.claude
+.ngodingpakeai
+.ngodingpakeaiignore
+AGENTS.md
 tests
 phpunit.xml
 *.zip

@@ -31,6 +31,11 @@
         scroll-behavior: smooth;
     }
 
+    /* Sembunyikan elemen Alpine sebelum Alpine siap (cegah kedip) */
+    [x-cloak] {
+        display: none !important;
+    }
+
     body {
         @apply font-sans antialiased;
         background-color: var(--color-bg);
@@ -496,5 +501,88 @@
 
     .scrollbar-hide::-webkit-scrollbar {
         display: none;
+    }
+}
+
+/* ==========================================================================
+   Halaman Portal — satu kanvas hijau dari running text, kop, isi, hingga
+   footer (tanpa blok putih yang memisahkan), kartu "kaca" transparan.
+   Semua aturan dibatasi .portal-page agar halaman lain tidak terpengaruh.
+   ========================================================================== */
+@layer components {
+    .portal-canvas {
+        background:
+            radial-gradient(1200px 600px at 15% -10%, rgba(46, 168, 79, 0.45), transparent 60%),
+            radial-gradient(900px 500px at 110% 20%, rgba(249, 115, 22, 0.12), transparent 60%),
+            linear-gradient(165deg, #0f5a2a 0%, #146b33 40%, #0c4a23 100%);
+    }
+
+    .dark .portal-canvas {
+        background:
+            radial-gradient(1200px 600px at 15% -10%, rgba(26, 122, 60, 0.35), transparent 60%),
+            linear-gradient(165deg, #06301a 0%, #0a3f20 45%, #052613 100%);
+    }
+
+    /* Pola ikon pendidikan (toga, buku, pensil, atom, bintang delapan) — sangat
+       samar, memudar ke tepi agar tidak mengganggu isi. */
+    .portal-pattern {
+        background-image: url('/images/portal-pattern.svg');
+        background-size: 200px 200px;
+        opacity: 0.07;
+        -webkit-mask-image: radial-gradient(ellipse 85% 75% at 50% 35%, #000 35%, transparent 100%);
+        mask-image: radial-gradient(ellipse 85% 75% at 50% 35%, #000 35%, transparent 100%);
+    }
+
+    /* Cahaya lembut keemasan/hijau yang bergeser pelan — kesan eksklusif. */
+    .portal-glow {
+        @apply absolute rounded-full pointer-events-none;
+        filter: blur(80px);
+        animation: portalGlow 18s ease-in-out infinite alternate;
+    }
+
+    .portal-glow--gold {
+        width: 34rem; height: 34rem; top: -10rem; right: -8rem;
+        background: radial-gradient(circle, rgba(251, 191, 36, 0.28), transparent 70%);
+    }
+
+    .portal-glow--green {
+        width: 40rem; height: 40rem; bottom: -14rem; left: -12rem;
+        background: radial-gradient(circle, rgba(74, 222, 128, 0.22), transparent 70%);
+        animation-delay: -9s;
+    }
+
+    @keyframes portalGlow {
+        from { transform: translate3d(0, 0, 0) scale(1); }
+        to   { transform: translate3d(3rem, 2rem, 0) scale(1.12); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .portal-glow { animation: none; }
+    }
+
+    .portal-glass {
+        @apply bg-white/10 border border-white/15 backdrop-blur-md shadow-lg shadow-black/10;
+    }
+
+    .portal-glass-hover {
+        @apply transition-all duration-200 hover:bg-white/15 hover:border-white/30 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-black/20;
+    }
+
+    /* Ticker & footer menyatu dengan kanvas */
+    .portal-page .news-ticker {
+        @apply bg-black/15 border-b border-white/10;
+    }
+
+    .portal-page .ticker-text {
+        @apply text-green-50;
+    }
+
+    .portal-page .site-footer {
+        background: transparent;
+        @apply border-t border-white/10;
+    }
+
+    .portal-page .site-footer .border-green-700 {
+        @apply border-white/10;
     }
 }

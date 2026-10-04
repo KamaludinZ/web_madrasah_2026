@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200" fill="none" stroke="#ffffff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Pola latar Halaman Portal: ikon pendidikan (toga, buku, pensil, atom, bintang
+       delapan, bola dunia). Ditampilkan sangat samar lewat opacity di CSS. -->
+
+  <!-- Toga -->
+  <g transform="translate(18 22)">
+    <path d="M0 14 L22 4 L44 14 L22 24 Z"/>
+    <path d="M10 18.5 V28 C10 32 34 32 34 28 V18.5"/>
+    <path d="M44 14 V26"/>
+    <circle cx="44" cy="28" r="1.6"/>
+  </g>
+
+  <!-- Buku terbuka -->
+  <g transform="translate(118 26)">
+    <path d="M28 8 C20 2 8 2 0 6 V34 C8 30 20 30 28 36 Z"/>
+    <path d="M28 8 C36 2 48 2 56 6 V34 C48 30 36 30 28 36"/>
+    <path d="M6 13 C12 11 18 11 22 13 M6 20 C12 18 18 18 22 20 M34 13 C38 11 44 11 50 13 M34 20 C38 18 44 18 50 20"/>
+  </g>
+
+  <!-- Bintang delapan (motif geometris islami) -->
+  <g transform="translate(100 100)">
+    <path d="M0 -16 L4.6 -11.1 L11.3 -11.3 L11.1 -4.6 L16 0 L11.1 4.6 L11.3 11.3 L4.6 11.1 L0 16 L-4.6 11.1 L-11.3 11.3 L-11.1 4.6 L-16 0 L-11.1 -4.6 L-11.3 -11.3 L-4.6 -11.1 Z"/>
+    <circle r="5"/>
+  </g>
+
+  <!-- Pensil -->
+  <g transform="translate(24 128) rotate(-40)">
+    <path d="M0 0 H38 L46 5 L38 10 H0 Z"/>
+    <path d="M8 0 V10 M38 0 V10"/>
+    <path d="M43 3 L46 5 L43 7"/>
+  </g>
+
+  <!-- Atom -->
+  <g transform="translate(160 150)">
+    <ellipse rx="20" ry="7.5"/>
+    <ellipse rx="20" ry="7.5" transform="rotate(60)"/>
+    <ellipse rx="20" ry="7.5" transform="rotate(-60)"/>
+    <circle r="2.2"/>
+  </g>
+
+  <!-- Bola dunia kecil -->
+  <g transform="translate(78 176)">
+    <circle r="11"/>
+    <path d="M-11 0 H11 M0 -11 C-5 -6 -5 6 0 11 C5 6 5 -6 0 -11"/>
+  </g>
+
+  <!-- Titik penghias -->
+  <circle cx="176" cy="88" r="1.6"/>
+  <circle cx="60" cy="72" r="1.2"/>
+  <circle cx="140" cy="196" r="1.2"/>
+</svg>

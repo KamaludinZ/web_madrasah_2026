@@ -1,0 +1,8 @@
+# Skrip & konfigurasi container wajib berakhir LF — CRLF membuat container
+# gagal start ("bad interpreter" / konfigurasi tidak terbaca) meskipun
+# repositori di-clone di Windows dengan core.autocrlf=true.
+*.sh              text eol=lf
+Dockerfile        text eol=lf
+docker-compose*.yml text eol=lf
+docker/**         text eol=lf
+artisan           text eol=lf

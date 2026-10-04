@@ -23,7 +23,7 @@
         <div class="number">500</div>
         <h1>Terjadi Kesalahan Server</h1>
         <p>Maaf, terjadi kesalahan pada server kami. Tim teknis kami sedang bekerja untuk memperbaikinya. Silakan coba lagi beberapa saat.</p>
-        <a href="/" class="btn"><span aria-hidden="true">🏠</span> Kembali ke Beranda</a>
+        <a href="{{ route('home') }}" class="btn"><span aria-hidden="true">🏠</span> Kembali ke Beranda</a>
     </div>
 </body>
 </html>

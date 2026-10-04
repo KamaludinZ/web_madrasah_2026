@@ -19,7 +19,7 @@ class HomeController extends Controller
 {
     public function index()
     {
-        PageView::record('/');
+        PageView::record('/beranda');
 
         $banners = Banner::where('is_active', true)->orderBy('order')->get();
         $defaultBannerImage       = Setting::get('default_banner_image');
@@ -58,6 +58,8 @@ class HomeController extends Controller
         $sarpras = Facility::where('is_active', true)->orderBy('order')->take(12)->get();
         $testimonials = Testimonial::where('is_active', true)->orderBy('order')->take(9)->get();
         $showTestimonialsSection = (bool) Setting::get('show_testimonials_section', true);
+        // Diatur di admin: Prestasi Siswa → Pengaturan Tampilan Publik.
+        $showAchievementsSection = (bool) Setting::get('show_achievements_section', true);
         $portalApps = PortalApp::where('is_active', true)->orderBy('order')->get();
 
         return view('pages.home', compact(
@@ -65,7 +67,7 @@ class HomeController extends Controller
             'defaultBannerSubtitle', 'defaultBannerTitle', 'defaultBannerDescription', 'defaultBannerLink',
             'latestNews', 'popularNews', 'prestasiNews', 'pengumumanNews',
             'prestasiStats', 'prestasiList', 'unggulanPrograms', 'socialMediaContents',
-            'sarpras', 'testimonials', 'showTestimonialsSection', 'portalApps'
+            'sarpras', 'testimonials', 'showTestimonialsSection', 'showAchievementsSection', 'portalApps'
         ));
     }
 }

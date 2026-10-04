@@ -1,0 +1,24 @@
+# .ngodingpakeaiignore — extra paths to keep out of NgodingPakeAI sync.
+# Uses .gitignore syntax. Secrets, node_modules, build output and .env files
+# are ALWAYS blocked by the CLI regardless of what is listed here.
+
+# Examples:
+# docs/internal/
+# *.snap
+# fixtures/
+
+# File hasil generate lokal Laravel (di-ignore oleh .gitignore bersarang,
+# yang tidak dibaca CLI)
+storage/
+bootstrap/cache/
+
+# Pengaturan lokal & skill hasil `ngodingpakeai init`
+.claude/
+
+# Aset Filament/plugin hasil publish vendor (minified pihak ketiga)
+public/js/
+public/css/
+
+# Lockfile
+composer.lock
+package-lock.json

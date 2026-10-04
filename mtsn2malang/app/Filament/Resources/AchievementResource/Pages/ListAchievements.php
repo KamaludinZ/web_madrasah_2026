@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\AchievementResource\Pages;
 
 use App\Filament\Resources\AchievementResource;
+use App\Models\Setting;
 use App\Services\AchievementImportService;
 use Filament\Actions;
 use Filament\Forms;
@@ -18,6 +19,25 @@ class ListAchievements extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
+            Actions\Action::make('publicDisplaySetting')
+                ->label('Pengaturan Tampilan Publik')
+                ->icon('heroicon-o-eye')
+                ->color('warning')
+                ->form([
+                    Forms\Components\Toggle::make('show_achievements_section')
+                        ->label('Tampilkan section "Ringkasan Prestasi" di halaman Beranda')
+                        ->helperText('Bila dimatikan, ringkasan & daftar prestasi tidak tampil di Beranda. Data prestasi tetap tersimpan.')
+                        ->default(fn () => (bool) Setting::get('show_achievements_section', true)),
+                ])
+                ->action(function (array $data): void {
+                    Setting::set('show_achievements_section', (bool) ($data['show_achievements_section'] ?? true));
+
+                    Notification::make()
+                        ->title('Pengaturan tampilan prestasi berhasil disimpan')
+                        ->success()
+                        ->send();
+                }),
+
             Actions\Action::make('download_template_excel')
                 ->label('Download Template Excel')
                 ->icon('heroicon-o-arrow-down-tray')

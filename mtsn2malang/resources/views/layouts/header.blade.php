@@ -36,6 +36,13 @@
         ->flip();
 
     $hasPage = fn (string $key): bool => isset($availablePageKeys[$key]);
+
+    // Menu Portal & Beranda disembunyikan saat berada di Halaman Portal.
+    // Saat Portal dinonaktifkan, "/" menampilkan Beranda dan menu Portal
+    // tidak ditampilkan sama sekali.
+    $portalEnabled = \App\Support\PortalSettings::enabled();
+    $showPortalMenus = ! ($portalEnabled && request()->routeIs('portal'));
+    $showPortalLink = $portalEnabled && $showPortalMenus;
 @endphp
 
 <header id="site-header" class="site-header" x-data="{ mobileOpen: false, activeDropdown: null }">
@@ -83,22 +90,8 @@
         </div>
     </div>
 
-    {{-- Announcement Ticker --}}
-    @php
-        $announcement = \App\Models\Setting::get('announcement_text', 'Selamat datang di website resmi MTsN 2 Kota Malang. Madrasah Tsanawiyah Negeri 2 Kota Malang - Unggul, Berkarakter, dan Berwawasan Global.');
-        $announcementSpeed = (int) \App\Models\Setting::get('announcement_speed', 30);
-        if ($announcementSpeed < 5 || $announcementSpeed > 120) {
-            $announcementSpeed = 30;
-        }
-    @endphp
-    @if($announcement)
-    <div class="news-ticker py-1.5 px-4" style="--ticker-duration: {{ $announcementSpeed }}s;">
-        <span class="ticker-label">Pengumuman</span>
-        <div class="ticker-content px-4">
-            <span class="ticker-text">{{ $announcement }}</span>
-        </div>
-    </div>
-    @endif
+    {{-- Announcement Ticker (sumber yang sama dipakai Halaman Portal) --}}
+    <x-announcement-ticker />
 
     {{-- Main Navigation --}}
     <nav class="bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800" role="navigation" aria-label="Navigasi Utama">
@@ -127,6 +120,15 @@
 
                 {{-- Desktop Menu --}}
                 <div class="hidden lg:flex items-center gap-1">
+
+                    {{-- Portal & Beranda: hanya di halaman selain Portal --}}
+                    @if($showPortalMenus)
+                        @if($showPortalLink)
+                            <a href="{{ route('portal') }}" class="nav-link">Portal</a>
+                        @endif
+                        <a href="{{ route('home') }}" class="nav-link {{ request()->routeIs('home') ? 'text-school-green' : '' }}"
+                           @if(request()->routeIs('home')) aria-current="page" @endif>Beranda</a>
+                    @endif
 
                     <a href="{{ route('berita.index') }}" class="nav-link">Berita</a>
 
@@ -335,6 +337,13 @@
         {{-- Mobile Menu --}}
         <div x-show="mobileOpen" x-collapse class="lg:hidden bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 overflow-y-auto max-h-[80vh]">
             <div class="container mx-auto px-4 py-4 space-y-1">
+                @if($showPortalMenus)
+                    @if($showPortalLink)
+                    <a href="{{ route('portal') }}" class="block px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-school-green rounded-lg transition-colors">Portal</a>
+                    @endif
+                    <a href="{{ route('home') }}" class="block px-4 py-3 text-sm font-medium {{ request()->routeIs('home') ? 'text-school-green bg-green-50 dark:bg-green-900/20' : 'text-gray-700 dark:text-gray-200' }} hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-school-green rounded-lg transition-colors"
+                       @if(request()->routeIs('home')) aria-current="page" @endif>Beranda</a>
+                @endif
                 <a href="{{ route('berita.index') }}" class="block px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-school-green rounded-lg transition-colors">Berita</a>
 
                 @php
