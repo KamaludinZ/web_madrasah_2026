@@ -32,11 +32,22 @@ class CreateBackupJob implements ShouldQueue
             return;
         }
 
+        // Sudah ditandai gagal (mis. dianggap macet) — jangan dikerjakan lagi.
+        if ($backup->status !== 'running') {
+            return;
+        }
+
         try {
-            $result = $service->create();
+            $backup->update(['progress' => 'Memulai backup...']);
+
+            $result = $service->create(function (string $message) use ($backup) {
+                // update() juga menyentuh updated_at → penanda backup masih hidup.
+                $backup->update(['progress' => mb_substr($message, 0, 250)]);
+            });
 
             $backup->update([
                 'status' => 'completed',
+                'progress' => 'Selesai.',
                 'filename' => $result['filename'],
                 'size_bytes' => $result['sizeBytes'],
                 'finished_at' => now(),

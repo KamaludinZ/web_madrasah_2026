@@ -72,11 +72,12 @@ class BackupService
         mkdir($tmpDir, 0755, true);
 
         try {
-            $progress('Membuat dump database...');
+            $progress('Tahap 1/4: Membuat dump database...');
             $dbDumpPath = $tmpDir . '/database.sql';
             $this->dumpDatabase($dbDumpPath);
+            $progress('Tahap 1/4: Dump database selesai (' . $this->formatBytes((int) filesize($dbDumpPath)) . ').');
 
-            $progress('Menulis manifest...');
+            $progress('Tahap 2/4: Menulis manifest & arsip audit log...');
             $manifest = [
                 'app_name' => config('app.name'),
                 'app_version' => $version,
@@ -89,7 +90,6 @@ class BackupService
             ];
             file_put_contents($tmpDir . '/manifest.json', json_encode($manifest, JSON_PRETTY_PRINT));
 
-            $progress('Mengemas file ke ZIP...');
             $zip = new ZipArchive();
             if ($zip->open($absolutePath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
                 throw new RuntimeException("Tidak bisa membuat file ZIP di {$absolutePath}");
@@ -109,10 +109,27 @@ class BackupService
 
             $storagePublic = storage_path('app/public');
             if (is_dir($storagePublic)) {
-                $this->addDirectoryToZip($zip, $storagePublic, 'storage/app/public');
+                $progress('Tahap 3/4: Mendata file media...');
+                $this->addDirectoryToZip($zip, $storagePublic, 'storage/app/public', $progress);
             }
 
-            $zip->close();
+            // Kompresi sebenarnya terjadi saat close() — bisa lama untuk media
+            // yang besar, jadi laporkan persentasenya (tiap kelipatan 10%).
+            $progress('Tahap 4/4: Mengompres & menulis file ZIP...');
+            if (method_exists($zip, 'registerProgressCallback')) {
+                $lastReported = -1;
+                $zip->registerProgressCallback(0.01, function (float $rate) use ($progress, &$lastReported) {
+                    $percent = (int) floor($rate * 10) * 10;
+                    if ($percent > $lastReported) {
+                        $lastReported = $percent;
+                        $progress("Tahap 4/4: Mengompres & menulis file ZIP... {$percent}%");
+                    }
+                });
+            }
+
+            if (! $zip->close()) {
+                throw new RuntimeException('Gagal menulis file ZIP (ruang disk penuh?): ' . $zip->getStatusString());
+            }
 
             $progress('Selesai.');
 
@@ -148,23 +165,50 @@ class BackupService
         ]);
     }
 
-    private function addDirectoryToZip(ZipArchive $zip, string $sourceDir, string $zipPrefix): void
+    private function addDirectoryToZip(ZipArchive $zip, string $sourceDir, string $zipPrefix, ?callable $onProgress = null): void
     {
         $sourceDir = rtrim($sourceDir, '/');
-        $iterator = new \RecursiveIteratorIterator(
+        $iterator = fn () => new \RecursiveIteratorIterator(
             new \RecursiveDirectoryIterator($sourceDir, \FilesystemIterator::SKIP_DOTS),
             \RecursiveIteratorIterator::SELF_FIRST
         );
 
-        foreach ($iterator as $item) {
+        $total = 0;
+        foreach ($iterator() as $item) {
+            if (! $item->isDir()) {
+                $total++;
+            }
+        }
+
+        $added = 0;
+        foreach ($iterator() as $item) {
             $relativePath = $zipPrefix . '/' . ltrim(substr($item->getPathname(), strlen($sourceDir)), '/');
 
             if ($item->isDir()) {
                 $zip->addEmptyDir($relativePath);
-            } else {
-                $zip->addFile($item->getPathname(), $relativePath);
+                continue;
+            }
+
+            $zip->addFile($item->getPathname(), $relativePath);
+            $added++;
+
+            if ($onProgress && ($added % 200 === 0 || $added === $total)) {
+                $onProgress("Tahap 3/4: Mendata file media {$added}/{$total}...");
             }
         }
+    }
+
+    private function formatBytes(int $bytes): string
+    {
+        $units = ['B', 'KB', 'MB', 'GB'];
+        $i = 0;
+
+        while ($bytes >= 1024 && $i < count($units) - 1) {
+            $bytes /= 1024;
+            $i++;
+        }
+
+        return round($bytes, 1) . ' ' . $units[$i];
     }
 
     private function dumpDatabase(string $outputPath): void

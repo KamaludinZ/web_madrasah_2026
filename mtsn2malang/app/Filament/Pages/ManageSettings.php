@@ -1054,7 +1054,14 @@ class ManageSettings extends Page
 
     public function hasRunningBackup(): bool
     {
+        AppBackup::failStale();
+
         return AppBackup::where('status', 'running')->exists();
+    }
+
+    public function getRunningBackup(): ?AppBackup
+    {
+        return AppBackup::where('status', 'running')->latest()->first();
     }
 
     /**

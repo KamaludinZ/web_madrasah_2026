@@ -355,11 +355,25 @@
             </x-filament::button>
         </div>
 
-        @if($backupBusy)
-        <div class="mb-4 flex items-center gap-2 text-sm text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg px-4 py-3">
-            <svg class="w-4 h-4 animate-spin flex-shrink-0" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-            Sedang membuat backup di background. Halaman ini otomatis memperbarui status tiap beberapa detik.
-        </div>
+        @if($backupBusy && ($runningBackup = $this->getRunningBackup()))
+            @if($runningBackup->isWaitingForWorker())
+            <div class="mb-4 text-sm text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-4 py-3">
+                <p class="font-semibold">Backup belum diproses ({{ $runningBackup->created_at->diffForHumans(null, true) }} menunggu)</p>
+                <p class="mt-1">Job sudah masuk antrian tetapi belum diambil worker. Pastikan container <code class="font-mono text-xs">worker</code> berstatus <em>Running</em> di Coolify. Jika tidak ada kabar, backup otomatis ditandai gagal setelah {{ \App\Models\AppBackup::STALE_AFTER_MINUTES }} menit.</p>
+            </div>
+            @else
+            <div class="mb-4 flex items-start gap-2 text-sm text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg px-4 py-3">
+                <svg class="w-4 h-4 mt-0.5 animate-spin flex-shrink-0" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                <div>
+                    <p class="font-semibold">{{ $runningBackup->progress ?: 'Menunggu worker...' }}</p>
+                    <p class="text-xs mt-0.5 opacity-80">
+                        Berjalan {{ ($runningBackup->started_at ?? $runningBackup->created_at)->diffForHumans(null, true) }}
+                        · pembaruan terakhir {{ $runningBackup->updated_at->diffForHumans() }}.
+                        Halaman ini memperbarui status otomatis tiap 3 detik.
+                    </p>
+                </div>
+            </div>
+            @endif
         @endif
 
         @if($backups->isEmpty())
@@ -407,8 +421,11 @@
                                 @if($backup->status === 'running')<svg class="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>@endif
                                 {{ match($backup->status) { 'running' => 'Berjalan', 'completed' => 'Selesai', 'failed' => 'Gagal', default => $backup->status } }}
                             </span>
+                            @if($backup->status === 'running' && $backup->progress)
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 max-w-xs truncate" title="{{ $backup->progress }}">{{ $backup->progress }}</p>
+                            @endif
                             @if($backup->status === 'failed' && $backup->error)
-                            <p class="text-xs text-red-500 mt-1 max-w-xs truncate" title="{{ $backup->error }}">{{ $backup->error }}</p>
+                            <p class="text-xs text-red-500 mt-1 max-w-xs whitespace-normal break-words">{{ $backup->error }}</p>
                             @endif
                         </td>
                         <td class="px-4 py-2.5 text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">{{ $backup->created_at->format('d M Y H:i') }}</td>
