@@ -31,6 +31,28 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
+        // "This page has expired" (419) karena token CSRF tidak cocok bawaannya
+        // tidak pernah dicatat Laravel, sehingga penyebabnya tidak bisa dilacak
+        // di production. Catat ringkas (tanpa nilai token) untuk diagnosis.
+        $exceptions->stopIgnoring(\Illuminate\Session\TokenMismatchException::class);
+        $exceptions->report(function (\Illuminate\Session\TokenMismatchException $e) {
+            $request = request();
+            $session = $request->hasSession() ? $request->session() : null;
+
+            \Illuminate\Support\Facades\Log::warning('CSRF token mismatch (419)', [
+                'path'                  => $request->path(),
+                'user_id'               => $request->user()?->getAuthIdentifier(),
+                'session_cookie_sent'   => $request->cookies->has(config('session.cookie')),
+                'session_id_prefix'     => $session ? substr($session->getId(), 0, 8) : null,
+                'session_token_present' => filled($session?->token()),
+                'request_token_present' => filled($request->header('X-CSRF-TOKEN') ?: $request->input('_token')),
+                'remember_cookie_sent'  => collect($request->cookies->keys())->contains(fn ($k) => str_starts_with($k, 'remember_')),
+                'cookie_names'          => $request->cookies->keys(),
+            ]);
+
+            return false;
+        });
+
         $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\NotFoundHttpException $e, $request) {
             return response()->view('errors.404', [], 404);
         });
