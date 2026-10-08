@@ -359,7 +359,7 @@
             @if($runningBackup->isWaitingForWorker())
             <div class="mb-4 text-sm text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-4 py-3">
                 <p class="font-semibold">Backup belum diproses ({{ $runningBackup->created_at->diffForHumans(null, true) }} menunggu)</p>
-                <p class="mt-1">Job sudah masuk antrian tetapi belum diambil worker. Pastikan container <code class="font-mono text-xs">worker</code> berstatus <em>Running</em> di Coolify. Jika tidak ada kabar, backup otomatis ditandai gagal setelah {{ \App\Models\AppBackup::STALE_AFTER_MINUTES }} menit.</p>
+                <p class="mt-1">Job sudah masuk antrian tetapi belum diambil worker. Di Coolify: pastikan container <code class="font-mono text-xs">worker</code> berstatus <em>Running</em>. Di hosting cPanel: pastikan Cron Job <code class="font-mono text-xs">php artisan queue:work --stop-when-empty --max-time=55</code> berjalan tiap menit (lihat DEPLOYMENT.md). Jika tidak ada kabar, backup otomatis ditandai gagal setelah {{ \App\Models\AppBackup::STALE_AFTER_MINUTES }} menit.</p>
             </div>
             @else
             <div class="mb-4 flex items-start gap-2 text-sm text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg px-4 py-3">

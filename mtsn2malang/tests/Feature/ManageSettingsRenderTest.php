@@ -146,10 +146,23 @@ class ManageSettingsRenderTest extends TestCase
         ]);
 
         try {
-            Livewire::actingAs($user)
+            // Aksi Livewire hanya mengarahkan ke URL unduh bertanda tangan...
+            $url = Livewire::actingAs($user)
                 ->test(ManageSettings::class)
                 ->call('downloadBackup', $backup->id)
-                ->assertOk();
+                ->effects['redirect'] ?? null;
+
+            $this->assertNotNull($url);
+
+            // ...yang mengalirkan file dari disk (bukan lewat respons Livewire).
+            $response = $this->actingAs($user)->get($url);
+            $response->assertOk();
+            $this->assertStringContainsString($result['filename'], (string) $response->headers->get('content-disposition'));
+
+            // Tanpa tanda tangan atau tanpa login → ditolak.
+            $this->get(route('backup.download', $backup))->assertForbidden();
+            auth()->logout();
+            $this->get($url)->assertRedirect();
         } finally {
             app(BackupService::class)->delete($result['filename']);
         }

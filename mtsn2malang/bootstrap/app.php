@@ -38,11 +38,20 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->report(function (\Illuminate\Session\TokenMismatchException $e) {
             $request = request();
             $session = $request->hasSession() ? $request->session() : null;
+            $cookieName = config('session.cookie');
+            $cookieValue = $request->cookies->get($cookieName);
 
             \Illuminate\Support\Facades\Log::warning('CSRF token mismatch (419)', [
                 'path'                  => $request->path(),
                 'user_id'               => $request->user()?->getAuthIdentifier(),
-                'session_cookie_sent'   => $request->cookies->has(config('session.cookie')),
+                'session_cookie_sent'   => $request->cookies->has($cookieName),
+                // >1 = browser mengirim cookie sesi bernama sama dari domain lain
+                // (mis. domain induk) sehingga sesi yang benar tidak terbaca.
+                'session_cookie_count'  => preg_match_all('/(?:^|;)\s*' . preg_quote($cookieName, '/') . '=/', (string) $request->headers->get('cookie')),
+                // false = cookie gagal didekripsi (APP_KEY berbeda / cookie asing).
+                'session_cookie_valid'  => filled($cookieValue),
+                // false = sesi di cookie tidak ditemukan sehingga dibuat sesi baru.
+                'session_restored'      => $session !== null && $cookieValue === $session->getId(),
                 'session_id_prefix'     => $session ? substr($session->getId(), 0, 8) : null,
                 'session_token_present' => filled($session?->token()),
                 'request_token_present' => filled($request->header('X-CSRF-TOKEN') ?: $request->input('_token')),

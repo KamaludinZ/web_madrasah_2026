@@ -127,9 +127,14 @@ return [
     |
     */
 
+    // Awalan "__Host-" (hanya untuk HTTPS tanpa SESSION_DOMAIN) membuat cookie
+    // sesi tidak bisa ditimpa/diduplikasi cookie bernama sama dari domain induk
+    // (mis. hosting lama di mtsn2kotamalang.sch.id) — duplikat seperti itu
+    // membuat sesi tidak terbaca dan login selalu gagal "page expired" (419).
     'cookie' => env(
         'SESSION_COOKIE',
-        Str::slug((string) env('APP_NAME', 'laravel')).'-session'
+        (env('SESSION_SECURE_COOKIE') && blank(env('SESSION_DOMAIN')) ? '__Host-' : '')
+            .Str::slug((string) env('APP_NAME', 'laravel')).'-session'
     ),
 
     /*

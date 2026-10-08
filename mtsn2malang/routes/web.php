@@ -129,6 +129,12 @@ Route::get('/kode-keamanan/{context}', [App\Http\Controllers\CaptchaController::
     ->middleware('throttle:60,1')
     ->name('captcha.image');
 
+// Unduh backup (dialirkan dari disk). URL bertanda tangan & berumur pendek,
+// dibuat dari Pengaturan Website → Backup; tetap wajib login super_admin.
+Route::get('/admin/backup/{backup}/unduh', App\Http\Controllers\BackupDownloadController::class)
+    ->middleware(['auth', 'signed'])
+    ->name('backup.download');
+
 // ===== SUBSCRIPTION =====
 Route::post('/subscription', [SubscriptionController::class, 'store'])->name('subscription.store')->middleware('throttle:5,10');
 Route::get('/subscription/unsubscribe/{token}', [SubscriptionController::class, 'unsubscribe'])->name('subscription.unsubscribe');

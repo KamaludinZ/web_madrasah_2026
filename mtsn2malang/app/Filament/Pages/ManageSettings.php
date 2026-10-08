@@ -22,6 +22,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\URL;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
 use Spatie\Activitylog\Models\Activity;
@@ -1137,7 +1138,11 @@ class ManageSettings extends Page
 
         $this->logActivity('Mengunduh backup', ['backup_id' => $backup->id, 'filename' => $backup->filename]);
 
-        return response()->download($path, $backup->filename);
+        // Diunduh lewat route biasa yang mengalirkan file dari disk — download
+        // langsung dari aksi Livewire memuat seluruh file ke memori.
+        $this->redirect(URL::temporarySignedRoute('backup.download', now()->addMinutes(5), ['backup' => $backup->id]));
+
+        return null;
     }
 
     public function deleteBackup(int $backupId): void
