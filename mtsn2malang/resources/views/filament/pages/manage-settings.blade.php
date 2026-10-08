@@ -463,21 +463,54 @@
             kondisi saat ini sebelum mulai menimpa apa pun.
         </p>
 
-        @if($restoreBusy)
-        <div class="mb-4 flex items-center gap-2 text-sm text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg px-4 py-3">
-            <svg class="w-4 h-4 animate-spin flex-shrink-0" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+        @if($restoreBusy && ($runningRestore = $this->getRunningRestore()))
+        @php
+            $restoreLines = collect(preg_split('/\R/', (string) $runningRestore->log))->filter()->values();
+            // Tahap utama = baris terakhir yang bukan rincian backup pengaman (↳).
+            $restoreStage = $restoreLines->reverse()->first(fn ($line) => ! str_contains($line, '↳'));
+            $restoreStage = $restoreStage ? preg_replace('/^\[[\d:]+\]\s*/', '', $restoreStage) : null;
+            $restoreWaiting = blank($runningRestore->log)
+                && $runningRestore->created_at?->lt(now()->subSeconds(\App\Models\AppBackup::WAITING_WORKER_AFTER_SECONDS));
+        @endphp
+        @if($restoreWaiting)
+        <div class="mb-4 text-sm text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-4 py-3">
+            <p class="font-semibold">Restore belum diproses ({{ $runningRestore->created_at->diffForHumans(null, true) }} menunggu)</p>
+            <p class="mt-1">File sudah terunggah dan job sudah masuk antrian, tetapi belum diambil worker. Di Coolify: pastikan container <code class="font-mono text-xs">worker</code> berstatus <em>Running</em>. Di hosting cPanel: pastikan Cron Job <code class="font-mono text-xs">php artisan queue:work --stop-when-empty --max-time=55</code> berjalan tiap menit.</p>
+        </div>
+        @else
+        <div class="mb-4 text-sm text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg px-4 py-3">
+            <div class="flex items-start gap-2">
+                <svg class="w-4 h-4 mt-0.5 animate-spin flex-shrink-0" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                <div class="min-w-0">
+                    <p class="font-semibold">{{ $restoreStage ?: 'Menunggu worker...' }}</p>
+                    <p class="text-xs mt-0.5 opacity-80">
+                        Restore dari <span class="font-mono">{{ $runningRestore->source_filename }}</span>
+                        · berjalan {{ ($runningRestore->started_at ?? $runningRestore->created_at)->diffForHumans(null, true) }}.
+                        Jangan tutup halaman ini; status diperbarui otomatis tiap 3 detik.
+                        Saat database dipulihkan, halaman bisa sesaat tidak merespons atau meminta login ulang — itu normal.
+                    </p>
+                </div>
+            </div>
+            @if($restoreLines->isNotEmpty())
+            <pre class="mt-3 max-h-40 overflow-y-auto whitespace-pre-wrap rounded-lg bg-white/70 dark:bg-gray-900/60 border border-amber-200 dark:border-amber-800 p-2 font-mono text-[11px] leading-relaxed text-gray-700 dark:text-gray-300">{{ $restoreLines->take(-8)->implode("\n") }}</pre>
+            @endif
+        </div>
+        @endif
+        @elseif($restoreBusy)
+        <div class="mb-4 text-sm text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg px-4 py-3">
             Restore sedang berjalan. Jangan tutup atau reload halaman ini.
         </div>
         @else
+        <ol class="mb-4 grid gap-2 sm:grid-cols-3 text-xs text-gray-600 dark:text-gray-400">
+            <li class="rounded-lg bg-gray-50 dark:bg-gray-800/50 px-3 py-2"><span class="font-semibold text-gray-800 dark:text-gray-200">1. Unggah</span> file backup .zip dan tunggu sampai 100%.</li>
+            <li class="rounded-lg bg-gray-50 dark:bg-gray-800/50 px-3 py-2"><span class="font-semibold text-gray-800 dark:text-gray-200">2. Konfirmasi</span> dengan mengetik RESTORE.</li>
+            <li class="rounded-lg bg-gray-50 dark:bg-gray-800/50 px-3 py-2"><span class="font-semibold text-gray-800 dark:text-gray-200">3. Tunggu</span> 5 tahap restore selesai di halaman ini.</li>
+        </ol>
         <div class="flex flex-wrap items-end gap-3">
-            <div class="flex-1 min-w-[240px]">
-                <label for="restore-file-input" class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">File Backup (.zip)</label>
-                <input id="restore-file-input" type="file" wire:model="restoreFile" accept=".zip"
-                       class="block w-full text-sm text-gray-600 dark:text-gray-300 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-red-50 file:text-red-700 dark:file:bg-red-900/30 dark:file:text-red-300 hover:file:bg-red-100 border border-gray-300 dark:border-gray-600 rounded-lg">
-                @error('restoreFile') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
-                <div wire:loading wire:target="restoreFile" class="text-xs text-gray-400 mt-1">Mengunggah...</div>
-            </div>
-            <x-filament::button color="danger" wire:click="openRestoreConfirm" :disabled="! $restoreFile">
+            <x-zip-upload class="flex-1 min-w-[240px]" model="restoreFile" id="restore-file-input"
+                          label="File Backup (.zip)" :limit="$this->getUploadLimitBytes()" accent="red" />
+            <x-filament::button color="danger" wire:click="openRestoreConfirm" :disabled="! $restoreFile"
+                                wire:loading.attr="disabled" wire:target="restoreFile">
                 Lanjutkan Restore
             </x-filament::button>
         </div>
@@ -670,19 +703,15 @@
         </div>
         @else
         <div class="flex flex-wrap items-end gap-3">
-            <div class="flex-1 min-w-[220px]">
-                <label for="manual-update-file-input" class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">File ZIP Kode Aplikasi</label>
-                <input id="manual-update-file-input" type="file" wire:model="manualUpdateFile" accept=".zip"
-                       class="block w-full text-sm text-gray-600 dark:text-gray-300 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-amber-50 file:text-amber-700 dark:file:bg-amber-900/30 dark:file:text-amber-300 hover:file:bg-amber-100 border border-gray-300 dark:border-gray-600 rounded-lg">
-                @error('manualUpdateFile') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
-                <div wire:loading wire:target="manualUpdateFile" class="text-xs text-gray-400 mt-1">Mengunggah...</div>
-            </div>
+            <x-zip-upload class="flex-1 min-w-[220px]" model="manualUpdateFile" id="manual-update-file-input"
+                          label="File ZIP Kode Aplikasi" :limit="$this->getUploadLimitBytes()" accent="amber" />
             <div class="w-40">
                 <label for="manual-update-version" class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Versi Baru</label>
                 <input id="manual-update-version" type="text" wire:model="manualUpdateVersion" placeholder="mis. 1.1.0"
                        class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white text-sm font-mono">
             </div>
-            <x-filament::button color="warning" wire:click="openManualUpdateConfirm" :disabled="! $manualUpdateFile">
+            <x-filament::button color="warning" wire:click="openManualUpdateConfirm" :disabled="! $manualUpdateFile"
+                                wire:loading.attr="disabled" wire:target="manualUpdateFile">
                 Lanjutkan Update
             </x-filament::button>
         </div>

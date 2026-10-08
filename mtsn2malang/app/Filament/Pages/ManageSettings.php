@@ -1174,6 +1174,29 @@ class ManageSettings extends Page
         return AppRestore::where('status', 'running')->exists();
     }
 
+    public function getRunningRestore(): ?AppRestore
+    {
+        return AppRestore::where('status', 'running')->latest()->first();
+    }
+
+    /**
+     * Batas ukuran upload efektif (byte): yang terkecil dari upload_max_filesize,
+     * post_max_size, dan aturan upload sementara Livewire. Ditampilkan di form
+     * upload supaya file yang kebesaran langsung ditolak sebelum diunggah.
+     */
+    public function getUploadLimitBytes(): int
+    {
+        $limit = \Symfony\Component\HttpFoundation\File\UploadedFile::getMaxFilesize();
+
+        foreach ((array) config('livewire.temporary_file_upload.rules', []) as $rule) {
+            if (is_string($rule) && preg_match('/^max:(\d+)$/', $rule, $m)) {
+                $limit = min($limit, (int) $m[1] * 1024);
+            }
+        }
+
+        return (int) $limit;
+    }
+
     public function openRestoreConfirm(): void
     {
         if (! $this->restoreFile) {

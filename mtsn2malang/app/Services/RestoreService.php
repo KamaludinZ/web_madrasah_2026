@@ -40,18 +40,18 @@ class RestoreService
     {
         $progress = $onProgress ?? function (string $_) {};
 
-        $progress('Memvalidasi file backup...');
+        $progress('Tahap 1/5: Memvalidasi file backup...');
         $manifest = $this->validateAndReadManifest($uploadedZipAbsolutePath);
 
-        $progress('Membuat backup pengaman dari kondisi saat ini...');
-        $safety = $this->backupService->create(fn (string $m) => $progress("  {$m}"));
+        $progress('Tahap 2/5: Membuat backup pengaman dari kondisi saat ini...');
+        $safety = $this->backupService->create(fn (string $m) => $progress("  ↳ {$m}"));
         $this->backupService->recordCompleted($safety, 'pre_restore');
 
         $tmpDir = storage_path('app/tmp-restore-' . uniqid());
         mkdir($tmpDir, 0755, true);
 
         try {
-            $progress('Mengekstrak file backup...');
+            $progress('Tahap 3/5: Mengekstrak file backup...');
             $zip = new ZipArchive();
             if ($zip->open($uploadedZipAbsolutePath) !== true) {
                 throw new RuntimeException('Gagal membuka file ZIP backup.');
@@ -64,7 +64,7 @@ class RestoreService
                 throw new RuntimeException('database.sql tidak ditemukan di dalam backup.');
             }
 
-            $progress('Memulihkan database...');
+            $progress('Tahap 4/5: Memulihkan database...');
             $this->preserveAuditLog();
             try {
                 $this->restoreDatabase($dbDumpPath);
@@ -75,7 +75,7 @@ class RestoreService
 
             $storageDir = $tmpDir . '/storage/app/public';
             if (is_dir($storageDir)) {
-                $progress('Memulihkan file media (storage)...');
+                $progress('Tahap 5/5: Memulihkan file media (storage)...');
                 $this->restoreStorageFiles($storageDir);
             }
 

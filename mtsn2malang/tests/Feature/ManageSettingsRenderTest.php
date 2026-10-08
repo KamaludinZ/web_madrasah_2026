@@ -90,7 +90,31 @@ class ManageSettingsRenderTest extends TestCase
             ->assertSee('Versi Aplikasi Saat Ini')
             ->assertSee('Buat Backup Sekarang')
             ->assertSee('Restore Aplikasi')
-            ->assertSee('v1.0.0');
+            ->assertSee('v1.0.0')
+            ->assertSee('Batas ukuran upload server');
+    }
+
+    public function test_running_restore_shows_current_stage_and_log(): void
+    {
+        $user = User::where('email', 'admin@mtsn2kotamalang.sch.id')->firstOrFail();
+
+        $restore = AppRestore::create([
+            'source_filename' => 'backup-uji.zip',
+            'status' => 'running',
+            'triggered_by' => $user->id,
+            'started_at' => now(),
+        ]);
+        $restore->appendLog('Tahap 1/5: Memvalidasi file backup...');
+        $restore->appendLog('Tahap 2/5: Membuat backup pengaman dari kondisi saat ini...');
+        $restore->appendLog('  ↳ Tahap 4/4: Mengompres & menulis file ZIP... 40%');
+
+        Livewire::actingAs($user)
+            ->test(ManageSettings::class)
+            ->set('activeMainTab', 'backup')
+            ->assertSee('Tahap 2/5: Membuat backup pengaman dari kondisi saat ini...')
+            ->assertSee('Mengompres & menulis file ZIP... 40%')
+            ->assertSee('backup-uji.zip')
+            ->assertDontSee('Lanjutkan Restore');
     }
 
     public function test_update_tab_renders(): void

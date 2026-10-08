@@ -77,7 +77,9 @@ return [
             'mov', 'avi', 'wmv', 'mp3', 'm4a',
             'jpg', 'jpeg', 'mpga', 'webp', 'wma',
         ],
-        'max_upload_time' => 5, // Max duration (in minutes) before an upload is invalidated...
+        // Upload ZIP backup ratusan MB lewat koneksi sekolah bisa > 5 menit; lewat
+        // batas ini URL upload kedaluwarsa dan upload gagal di tengah jalan.
+        'max_upload_time' => 30, // Max duration (in minutes) before an upload is invalidated...
         'cleanup' => true, // Should cleanup temporary uploads older than 24 hrs...
     ],
 
