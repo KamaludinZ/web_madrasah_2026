@@ -17,12 +17,15 @@ class RestoreBackupJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public int $timeout = 900;
+    // Backup berukuran GB: backup pengaman + ekstrak + impor database bisa lama.
+    public int $timeout = 3600;
     public int $tries = 1;
 
     public function __construct(
         public readonly int $restoreId,
         public readonly string $uploadedZipAbsolutePath,
+        // false = sumbernya backup tersimpan di server, jangan dihapus.
+        public readonly bool $deleteSourceAfter = true,
     ) {
     }
 
@@ -62,7 +65,7 @@ class RestoreBackupJob implements ShouldQueue
 
             throw $e;
         } finally {
-            if (is_file($this->uploadedZipAbsolutePath)) {
+            if ($this->deleteSourceAfter && is_file($this->uploadedZipAbsolutePath)) {
                 @unlink($this->uploadedZipAbsolutePath);
             }
         }

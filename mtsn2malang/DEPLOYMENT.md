@@ -157,8 +157,8 @@ Cara termudah di cPanel: buat **Cron Job** yang jalan tiap menit —
 Baris kedua menjalankan tugas terjadwal (mis. pembersihan data kunjungan lebih
 dari 90 hari). Newsletter berita baru juga dikirim lewat antrian ini.
 
-Catatan: `DB_QUEUE_RETRY_AFTER` (default 2000 detik) harus lebih lama dari job
-terpanjang (30 menit). Jangan diturunkan, atau job backup/restore/update yang
+Catatan: `DB_QUEUE_RETRY_AFTER` (default 3700 detik) harus lebih lama dari job
+terpanjang (60 menit). Jangan diturunkan, atau job backup/restore/update yang
 masih berjalan bisa diambil ulang worker lain lalu ditandai gagal.
 
 `--stop-when-empty` membuat worker keluar sendiri setelah antrian kosong, jadi

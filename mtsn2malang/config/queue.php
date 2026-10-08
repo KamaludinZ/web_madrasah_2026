@@ -40,10 +40,10 @@ return [
             'connection' => env('DB_QUEUE_CONNECTION'),
             'table' => env('DB_QUEUE_TABLE', 'jobs'),
             'queue' => env('DB_QUEUE', 'default'),
-            // Harus LEBIH LAMA dari timeout job terpanjang (WordpressMigrationJob
-            // 1800 detik). Jika lebih pendek, worker lain (cron tiap menit)
+            // Harus LEBIH LAMA dari timeout job terpanjang (CreateBackupJob /
+            // RestoreBackupJob 3600 detik). Jika lebih pendek, worker lain (cron tiap menit)
             // mengambil ulang job yang masih berjalan lalu menandainya gagal.
-            'retry_after' => (int) env('DB_QUEUE_RETRY_AFTER', 2000),
+            'retry_after' => (int) env('DB_QUEUE_RETRY_AFTER', 3700),
             'after_commit' => false,
         ],
 

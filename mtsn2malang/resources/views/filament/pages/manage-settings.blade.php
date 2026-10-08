@@ -431,6 +431,11 @@
                         <td class="px-4 py-2.5 text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">{{ $backup->created_at->format('d M Y H:i') }}</td>
                         <td class="px-4 py-2.5 text-right">
                             <div class="flex items-center justify-end gap-1">
+                                @if($backup->status === 'completed' && ! $restoreBusy)
+                                <button wire:click="confirmRestoreFromBackup({{ $backup->id }})" class="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" title="Restore dari backup ini" aria-label="Restore dari backup ini">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a5 5 0 015 5v2M3 10l5-5M3 10l5 5"/></svg>
+                                </button>
+                                @endif
                                 @if($backup->status === 'completed')
                                 <button wire:click="downloadBackup({{ $backup->id }})" class="p-1.5 rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors" title="Unduh">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
@@ -502,15 +507,18 @@
         </div>
         @else
         <ol class="mb-4 grid gap-2 sm:grid-cols-3 text-xs text-gray-600 dark:text-gray-400">
-            <li class="rounded-lg bg-gray-50 dark:bg-gray-800/50 px-3 py-2"><span class="font-semibold text-gray-800 dark:text-gray-200">1. Unggah</span> file backup .zip dan tunggu sampai 100%.</li>
+            <li class="rounded-lg bg-gray-50 dark:bg-gray-800/50 px-3 py-2"><span class="font-semibold text-gray-800 dark:text-gray-200">1. Unggah</span> file backup .zip dan tunggu sampai 100% — atau klik ikon restore pada daftar backup di atas bila filenya sudah ada di server.</li>
             <li class="rounded-lg bg-gray-50 dark:bg-gray-800/50 px-3 py-2"><span class="font-semibold text-gray-800 dark:text-gray-200">2. Konfirmasi</span> dengan mengetik RESTORE.</li>
             <li class="rounded-lg bg-gray-50 dark:bg-gray-800/50 px-3 py-2"><span class="font-semibold text-gray-800 dark:text-gray-200">3. Tunggu</span> 5 tahap restore selesai di halaman ini.</li>
         </ol>
         <div class="flex flex-wrap items-end gap-3">
-            <x-zip-upload class="flex-1 min-w-[240px]" model="restoreFile" id="restore-file-input"
-                          label="File Backup (.zip)" :limit="$this->getUploadLimitBytes()" accent="red" />
-            <x-filament::button color="danger" wire:click="openRestoreConfirm" :disabled="! $restoreFile"
-                                wire:loading.attr="disabled" wire:target="restoreFile">
+            <x-chunked-zip-upload class="flex-1 min-w-[240px]" id="restore-file-input"
+                                  label="File Backup (.zip)"
+                                  :endpoint="route('restore.chunk-upload')"
+                                  :limit="$this->getUploadLimitBytes()"
+                                  on-complete="useChunkedRestoreUpload"
+                                  on-reset="clearChunkedRestoreUpload" />
+            <x-filament::button color="danger" wire:click="openRestoreConfirm" :disabled="! $restoreUploadToken && ! $restoreFile">
                 Lanjutkan Restore
             </x-filament::button>
         </div>
@@ -533,7 +541,7 @@
                 </div>
                 <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
                     Anda akan menimpa <strong>seluruh database dan file media saat ini</strong> dengan isi file
-                    <span class="font-mono text-xs bg-gray-100 dark:bg-gray-700 px-1 rounded">{{ $restoreFile?->getClientOriginalName() }}</span>.
+                    <span class="font-mono text-xs bg-gray-100 dark:bg-gray-700 px-1 rounded">{{ $this->getRestoreSourceLabel() }}</span>.
                     Ketik <strong class="font-mono">RESTORE</strong> untuk melanjutkan.
                 </p>
                 <label for="restore-confirm-text" class="sr-only">Ketik RESTORE untuk konfirmasi</label>

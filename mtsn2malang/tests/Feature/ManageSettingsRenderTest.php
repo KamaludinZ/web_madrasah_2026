@@ -91,7 +91,7 @@ class ManageSettingsRenderTest extends TestCase
             ->assertSee('Buat Backup Sekarang')
             ->assertSee('Restore Aplikasi')
             ->assertSee('v1.0.0')
-            ->assertSee('Batas ukuran upload server');
+            ->assertSee('diunggah bertahap');
     }
 
     public function test_running_restore_shows_current_stage_and_log(): void

@@ -15,3 +15,8 @@ Schedule::call(fn () => \App\Models\PageView::pruneOld())
     ->daily()
     ->name('ringkas-data-kunjungan')
     ->withoutOverlapping();
+
+// Hapus sisa upload restore bertahap yang tidak jadi dipakai (> 24 jam).
+Schedule::call(fn () => \App\Support\ChunkedUpload::cleanupStale())
+    ->daily()
+    ->name('bersihkan-upload-restore');

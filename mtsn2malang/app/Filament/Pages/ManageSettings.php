@@ -13,6 +13,7 @@ use App\Models\Setting;
 use App\Services\BackupService;
 use App\Services\UpdateService;
 use App\Support\AppVersion;
+use App\Support\ChunkedUpload;
 use App\Support\UploadImageHelper;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -23,6 +24,7 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\URL;
+use Livewire\Attributes\Locked;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
 use Spatie\Activitylog\Models\Activity;
@@ -51,6 +53,20 @@ class ManageSettings extends Page
 
     /** File ZIP backup yang diunggah untuk direstore. */
     public ?TemporaryUploadedFile $restoreFile = null;
+
+    /**
+     * Token file backup yang diunggah bertahap (App\Support\ChunkedUpload) —
+     * dipakai untuk backup besar yang melebihi batas upload sekali kirim.
+     */
+    #[Locked]
+    public ?string $restoreUploadToken = null;
+
+    #[Locked]
+    public ?string $restoreUploadName = null;
+
+    /** Restore dari backup yang sudah tersimpan di server (tanpa upload). */
+    #[Locked]
+    public ?int $restoreFromBackupId = null;
 
     /** Konfirmasi mengetik "RESTORE" sebelum tombol restore aktif. */
     public string $restoreConfirmText = '';
@@ -1197,13 +1213,49 @@ class ManageSettings extends Page
         return (int) $limit;
     }
 
+    /** Dipanggil komponen upload bertahap setelah potongan terakhir diterima. */
+    public function useChunkedRestoreUpload(string $token, string $name): void
+    {
+        if (! ChunkedUpload::completedPath($token)) {
+            Notification::make()->title('File unggahan tidak ditemukan di server, unggah ulang')->danger()->send();
+            return;
+        }
+
+        $this->restoreUploadToken = $token;
+        $this->restoreUploadName = mb_substr($name, 0, 255);
+    }
+
+    /** Dipanggil saat memilih file baru — buang unggahan sebelumnya. */
+    public function clearChunkedRestoreUpload(): void
+    {
+        ChunkedUpload::discard($this->restoreUploadToken);
+        $this->restoreUploadToken = null;
+        $this->restoreUploadName = null;
+    }
+
     public function openRestoreConfirm(): void
     {
-        if (! $this->restoreFile) {
+        if (! $this->restoreFile && ! ChunkedUpload::completedPath($this->restoreUploadToken)) {
             Notification::make()->title('Pilih file backup (.zip) terlebih dahulu')->warning()->send();
             return;
         }
 
+        $this->restoreFromBackupId = null;
+        $this->restoreConfirmText = '';
+        $this->showRestoreConfirmModal = true;
+    }
+
+    /** Restore memakai backup yang sudah ada di daftar — tanpa unduh & unggah ulang. */
+    public function confirmRestoreFromBackup(int $backupId): void
+    {
+        $backup = AppBackup::findOrFail($backupId);
+
+        if ($backup->status !== 'completed' || blank($backup->filename)) {
+            Notification::make()->title('Backup ini belum siap dipakai untuk restore')->warning()->send();
+            return;
+        }
+
+        $this->restoreFromBackupId = $backup->id;
         $this->restoreConfirmText = '';
         $this->showRestoreConfirmModal = true;
     }
@@ -1212,6 +1264,17 @@ class ManageSettings extends Page
     {
         $this->showRestoreConfirmModal = false;
         $this->restoreConfirmText = '';
+        $this->restoreFromBackupId = null;
+    }
+
+    /** Nama file yang akan direstore, untuk ditampilkan di modal konfirmasi. */
+    public function getRestoreSourceLabel(): ?string
+    {
+        if ($this->restoreFromBackupId) {
+            return AppBackup::find($this->restoreFromBackupId)?->filename;
+        }
+
+        return $this->restoreUploadToken ? $this->restoreUploadName : $this->restoreFile?->getClientOriginalName();
     }
 
     /**
@@ -1226,24 +1289,51 @@ class ManageSettings extends Page
             return;
         }
 
-        if (! $this->restoreFile) {
+        $backupSource = $this->restoreFromBackupId ? AppBackup::find($this->restoreFromBackupId) : null;
+        $chunkedPath = ChunkedUpload::completedPath($this->restoreUploadToken);
+
+        if ($this->restoreFromBackupId && (! $backupSource || $backupSource->status !== 'completed')) {
+            Notification::make()->title('Backup sumber tidak ditemukan')->danger()->send();
+            return;
+        }
+
+        if (! $backupSource && ! $chunkedPath && ! $this->restoreFile) {
             Notification::make()->title('File backup tidak ditemukan, unggah ulang')->danger()->send();
             return;
         }
 
-        $this->withExclusiveMaintenanceLock(function () {
+        $this->withExclusiveMaintenanceLock(function () use ($backupSource, $chunkedPath) {
             try {
-                $originalName = $this->restoreFile->getClientOriginalName();
+                // File dihapus setelah restore — kecuali backup tersimpan yang dipakai ulang.
+                $deleteSourceAfter = true;
 
-                if (! str_ends_with(strtolower($originalName), '.zip')) {
-                    Notification::make()->title('File harus berformat .zip')->danger()->send();
-                    return;
+                if ($backupSource) {
+                    $service = app(BackupService::class);
+                    $service->assertSafeFilename($backupSource->filename);
+                    $originalName = $backupSource->filename;
+                    $absolutePath = $service->absolutePathFor($backupSource->filename);
+                    $deleteSourceAfter = false;
+
+                    if (! is_file($absolutePath)) {
+                        Notification::make()->title('File backup tidak ditemukan di server')->danger()->send();
+                        return;
+                    }
+                } elseif ($chunkedPath) {
+                    $originalName = $this->restoreUploadName ?? basename($chunkedPath);
+                    $absolutePath = $chunkedPath;
+                } else {
+                    $originalName = $this->restoreFile->getClientOriginalName();
+
+                    if (! str_ends_with(strtolower($originalName), '.zip')) {
+                        Notification::make()->title('File harus berformat .zip')->danger()->send();
+                        return;
+                    }
+
+                    // Path absolut diambil dari disk yang sama dengan tempat file
+                    // disimpan (disk 'local' = storage/app/private), bukan ditebak.
+                    $storedPath = $this->restoreFile->store('tmp-uploads', 'local');
+                    $absolutePath = \Illuminate\Support\Facades\Storage::disk('local')->path($storedPath);
                 }
-
-                // Path absolut diambil dari disk yang sama dengan tempat file
-                // disimpan (disk 'local' = storage/app/private), bukan ditebak.
-                $storedPath = $this->restoreFile->store('tmp-uploads', 'local');
-                $absolutePath = \Illuminate\Support\Facades\Storage::disk('local')->path($storedPath);
 
                 $restore = AppRestore::create([
                     'source_filename' => $originalName,
@@ -1252,10 +1342,19 @@ class ManageSettings extends Page
                     'started_at' => now(),
                 ]);
 
-                RestoreBackupJob::dispatch($restore->id, $absolutePath);
+                RestoreBackupJob::dispatch($restore->id, $absolutePath, $deleteSourceAfter);
+
+                // Metadata upload bertahap tidak diperlukan lagi; file .zip-nya
+                // dihapus oleh job setelah restore.
+                if ($chunkedPath) {
+                    @unlink(ChunkedUpload::metaPath($this->restoreUploadToken));
+                }
 
                 $this->logActivity('Memulai restore aplikasi', ['source' => $originalName]);
-                $this->reset(['restoreFile', 'restoreConfirmText', 'showRestoreConfirmModal']);
+                $this->reset([
+                    'restoreFile', 'restoreUploadToken', 'restoreUploadName', 'restoreFromBackupId',
+                    'restoreConfirmText', 'showRestoreConfirmModal',
+                ]);
 
                 Notification::make()
                     ->title('Restore dimulai')

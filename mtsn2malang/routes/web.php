@@ -135,6 +135,11 @@ Route::get('/admin/backup/{backup}/unduh', App\Http\Controllers\BackupDownloadCo
     ->middleware(['auth', 'signed'])
     ->name('backup.download');
 
+// Upload file backup besar untuk restore secara bertahap (per potongan).
+Route::post('/admin/restore/unggah-bagian', App\Http\Controllers\RestoreChunkUploadController::class)
+    ->middleware(['auth', 'throttle:600,1'])
+    ->name('restore.chunk-upload');
+
 // ===== SUBSCRIPTION =====
 Route::post('/subscription', [SubscriptionController::class, 'store'])->name('subscription.store')->middleware('throttle:5,10');
 Route::get('/subscription/unsubscribe/{token}', [SubscriptionController::class, 'unsubscribe'])->name('subscription.unsubscribe');
