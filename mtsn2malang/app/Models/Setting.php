@@ -12,7 +12,7 @@ class Setting extends Model
      * Setting berisi rahasia (password/API key). Disimpan terenkripsi dan
      * tidak pernah dikirim kembali ke browser di form pengaturan.
      */
-    public const SECRET_KEYS = ['mail_password', 'gemini_api_key', 'openai_api_key'];
+    public const SECRET_KEYS = ['mail_password', 'gemini_api_key', 'openai_api_key', 'wa_fonnte_token', 'wa_balesotomatis_api_key'];
 
     protected $fillable = ['key', 'value', 'type', 'group', 'label'];
 

@@ -11,10 +11,12 @@ use App\Models\AppRestore;
 use App\Models\AppUpdate;
 use App\Models\Setting;
 use App\Services\BackupService;
+use App\Services\ComplaintNotifier;
 use App\Services\UpdateService;
 use App\Support\AppVersion;
 use App\Support\ChunkedUpload;
 use App\Support\UploadImageHelper;
+use App\Support\WhatsappGateway;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
@@ -192,6 +194,18 @@ class ManageSettings extends Page
             'mahad_social_facebook'     => Setting::get('mahad_social_facebook', ''),
             'mahad_social_tiktok'       => Setting::get('mahad_social_tiktok', ''),
             'mahad_wa_channel'          => Setting::get('mahad_wa_channel', ''),
+
+            // Notifikasi Pengaduan & Saran
+            'notif_email_enabled'        => (bool) Setting::get('notif_email_enabled', false),
+            'notif_whatsapp_enabled'     => (bool) Setting::get('notif_whatsapp_enabled', false),
+            'notif_reporter_enabled'     => (bool) Setting::get('notif_reporter_enabled', true),
+            'notif_officer_emails'       => Setting::get('notif_officer_emails', ''),
+            'notif_officer_whatsapp'     => Setting::get('notif_officer_whatsapp', ''),
+            'wa_provider'                => Setting::get('wa_provider', 'fonnte'),
+            'wa_fonnte_token'            => '',
+            'wa_balesotomatis_api_key'   => '',
+            'wa_balesotomatis_number_id' => Setting::get('wa_balesotomatis_number_id', ''),
+            ...collect(ComplaintNotifier::TEMPLATES)->mapWithKeys(fn ($default, $key) => [$key => ComplaintNotifier::template($key)])->all(),
         ]);
 
         $this->updateGithubRepo = app(UpdateService::class)->repo() ?? '';
@@ -685,6 +699,97 @@ class ManageSettings extends Page
                         ]),
                 ]),
 
+                // ── Tab: Notifikasi Pengaduan & Saran ─────────────────────────
+                Forms\Components\Tabs\Tab::make('Notifikasi')->schema([
+                    Forms\Components\Section::make('Saluran Notifikasi')
+                        ->description('Notifikasi dikirim di background (queue worker harus berjalan). Pengaduan baru dikirim ke petugas dan pelapor; perubahan status/tanggapan dikirim ke pelapor; saran baru hanya ke petugas.')
+                        ->schema([
+                            Forms\Components\Toggle::make('notif_email_enabled')
+                                ->label('Kirim via Email')
+                                ->helperText('Memakai konfigurasi SMTP di tab Email.')
+                                ->inline(false),
+                            Forms\Components\Toggle::make('notif_whatsapp_enabled')
+                                ->label('Kirim via WhatsApp')
+                                ->helperText('Memakai gateway WhatsApp di bawah.')
+                                ->inline(false),
+                            Forms\Components\Toggle::make('notif_reporter_enabled')
+                                ->label('Kirim juga ke Pelapor')
+                                ->helperText('Tanda terima & kabar perkembangan, bila pelapor mengisi email/nomor HP.')
+                                ->inline(false),
+                        ])->columns(3),
+
+                    Forms\Components\Section::make('Penerima Petugas')
+                        ->schema([
+                            Forms\Components\Textarea::make('notif_officer_emails')
+                                ->label('Email Petugas')
+                                ->rows(3)
+                                ->placeholder("humas@mtsn2kotamalang.sch.id\nkepala@mtsn2kotamalang.sch.id")
+                                ->helperText('Satu alamat per baris (atau pisahkan dengan koma).'),
+                            Forms\Components\Textarea::make('notif_officer_whatsapp')
+                                ->label('Nomor WhatsApp Petugas')
+                                ->rows(3)
+                                ->placeholder("081234567890\n6285163350000")
+                                ->helperText('Satu nomor per baris. Format 08xx atau 62xx.'),
+                        ])->columns(2),
+
+                    Forms\Components\Section::make('Gateway WhatsApp')
+                        ->schema([
+                            Forms\Components\Select::make('wa_provider')
+                                ->label('Penyedia')
+                                ->options(WhatsappGateway::PROVIDERS)
+                                ->live()
+                                ->columnSpanFull(),
+                            Forms\Components\TextInput::make('wa_fonnte_token')
+                                ->label('Token Fonnte')
+                                ->password()
+                                ->revealable()
+                                ->placeholder(fn () => filled(Setting::get('wa_fonnte_token')) ? '•••••••• (tersimpan — kosongkan jika tidak diubah)' : null)
+                                ->helperText('Dari dashboard Fonnte → menu Device → Token.')
+                                ->visible(fn (Forms\Get $get) => $get('wa_provider') === 'fonnte')
+                                ->columnSpanFull(),
+                            Forms\Components\TextInput::make('wa_balesotomatis_api_key')
+                                ->label('API Key BalesOtomatis.id')
+                                ->password()
+                                ->revealable()
+                                ->placeholder(fn () => filled(Setting::get('wa_balesotomatis_api_key')) ? '•••••••• (tersimpan — kosongkan jika tidak diubah)' : null)
+                                ->visible(fn (Forms\Get $get) => $get('wa_provider') === 'balesotomatis'),
+                            Forms\Components\TextInput::make('wa_balesotomatis_number_id')
+                                ->label('Number ID')
+                                ->helperText('ID nomor WhatsApp yang terhubung, dari dashboard BalesOtomatis.id.')
+                                ->visible(fn (Forms\Get $get) => $get('wa_provider') === 'balesotomatis'),
+                            Forms\Components\Actions::make([
+                                Forms\Components\Actions\Action::make('test_send_whatsapp')
+                                    ->label('Kirim WA Tes')
+                                    ->icon('heroicon-o-paper-airplane')
+                                    ->color('success')
+                                    ->modalHeading('Kirim WhatsApp Tes')
+                                    ->modalDescription('Memakai pengaturan gateway yang SUDAH DISIMPAN.')
+                                    ->form([
+                                        Forms\Components\TextInput::make('phone')
+                                            ->label('Nomor Tujuan')
+                                            ->default(fn () => ComplaintNotifier::parseList(Setting::get('notif_officer_whatsapp'))[0] ?? '')
+                                            ->required(),
+                                    ])
+                                    ->modalSubmitActionLabel('Kirim')
+                                    ->action(fn (array $data) => $this->testSendWhatsapp($data['phone'])),
+                            ])->columnSpanFull(),
+                        ])->columns(2),
+
+                    Forms\Components\Section::make('Template Pesan')
+                        ->description(new \Illuminate\Support\HtmlString(
+                            'Variabel yang bisa dipakai: ' . collect(ComplaintNotifier::PLACEHOLDERS)
+                                ->map(fn ($desc, $tag) => '<code title="' . e($desc) . '">' . e($tag) . '</code>')
+                                ->implode(' ')
+                            . '<br>Untuk WhatsApp, <code>*teks*</code> = tebal. Kosongkan isian untuk kembali ke template bawaan.'
+                        ))
+                        ->schema([
+                            $this->templateSection('Pengaduan baru → Petugas', 'officer_new'),
+                            $this->templateSection('Pengaduan diterima → Pelapor', 'reporter_new'),
+                            $this->templateSection('Status / tanggapan diperbarui → Pelapor', 'reporter_update'),
+                            $this->templateSection('Saran baru → Petugas', 'officer_saran'),
+                        ]),
+                ]),
+
                 // ── Tab 8: Keamanan ───────────────────────────────────────────
                 Forms\Components\Tabs\Tab::make('Keamanan')->schema([
                     Forms\Components\Toggle::make('login_otp_enabled')
@@ -858,6 +963,43 @@ class ManageSettings extends Page
         } catch (\Throwable $e) {
             Notification::make()
                 ->title('❌ Gagal mengirim email tes')
+                ->body($e->getMessage())
+                ->danger()->send();
+        }
+    }
+
+    // ─── Notifikasi Pengaduan ────────────────────────────────────────────────
+
+    private function templateSection(string $title, string $key): Forms\Components\Section
+    {
+        return Forms\Components\Section::make($title)
+            ->collapsible()
+            ->collapsed()
+            ->schema([
+                Forms\Components\TextInput::make("notif_tpl_{$key}_subject")
+                    ->label('Subjek Email')
+                    ->columnSpanFull(),
+                Forms\Components\Textarea::make("notif_tpl_{$key}_email")
+                    ->label('Isi Email')
+                    ->rows(10),
+                Forms\Components\Textarea::make("notif_tpl_{$key}_wa")
+                    ->label('Pesan WhatsApp')
+                    ->rows(10),
+            ])->columns(2);
+    }
+
+    public function testSendWhatsapp(string $phone): void
+    {
+        try {
+            WhatsappGateway::send($phone, "Ini adalah pesan tes dari sistem " . Setting::get('site_name', 'MTsN 2 Kota Malang') . ".\n\nJika Anda menerima pesan ini, gateway WhatsApp sudah terhubung.\n\nWaktu: " . now()->format('d M Y H:i:s'));
+
+            Notification::make()
+                ->title('✅ WhatsApp tes berhasil dikirim')
+                ->body("Pesan tes dikirim ke {$phone}.")
+                ->success()->send();
+        } catch (\Throwable $e) {
+            Notification::make()
+                ->title('❌ Gagal mengirim WhatsApp tes')
                 ->body($e->getMessage())
                 ->danger()->send();
         }

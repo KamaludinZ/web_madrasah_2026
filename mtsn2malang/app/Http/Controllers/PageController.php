@@ -7,6 +7,7 @@ use App\Models\AlumniCoordinator;
 use App\Models\HeadmasterHistory;
 use App\Models\Archive;
 use App\Models\Category;
+use App\Jobs\SendComplaintNotificationJob;
 use App\Models\Complaint;
 use App\Models\GalleryPost;
 use App\Models\Saran;
@@ -23,6 +24,7 @@ use App\Models\ServiceStandard;
 use App\Models\Setting;
 use App\Models\SocialMediaContent;
 use App\Models\SurveyLink;
+use App\Services\ComplaintNotifier;
 use Illuminate\Http\Request;
 
 class PageController extends Controller
@@ -411,6 +413,8 @@ class PageController extends Controller
             'content' => $request->input('content'),
         ]);
 
+        SendComplaintNotificationJob::dispatch($complaint->id, ComplaintNotifier::EVENT_CREATED);
+
         return back()->with('success', 'Pengaduan berhasil dikirim. Nomor tiket Anda: ' . $complaint->ticket_number);
     }
 
@@ -499,6 +503,8 @@ class PageController extends Controller
             'content' => $request->input('content'),
             'status'  => 'pending',
         ]);
+
+        SendComplaintNotificationJob::dispatch($saran->id, ComplaintNotifier::EVENT_CREATED);
 
         return redirect()
             ->route('survei.saran')
