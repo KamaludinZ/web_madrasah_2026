@@ -291,11 +291,11 @@
                         @endif
                     </div>
 
-                    {{-- Tanggapan dari madrasah (admin / petugas) --}}
-                    @if(filled($saran->response))
+                    {{-- Tanggapan untuk pengirim (bukan catatan internal `response`) --}}
+                    @if(filled($saran->public_response))
                     <div class="mt-4 p-4 bg-white/70 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 rounded-xl">
                         <p class="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5 uppercase tracking-wide">Tanggapan dari Madrasah</p>
-                        <p class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-line break-words">{{ $saran->response }}</p>
+                        <p class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-line break-words">{{ $saran->public_response }}</p>
                     </div>
                     @endif
 

@@ -8,7 +8,7 @@ class Complaint extends Model
 {
     protected $fillable = [
         'ticket_number', 'type', 'name', 'email', 'phone',
-        'subject', 'content', 'attachment', 'status', 'response', 'responded_at'
+        'subject', 'content', 'attachment', 'status', 'response', 'public_response', 'responded_at'
     ];
 
     protected $casts = [

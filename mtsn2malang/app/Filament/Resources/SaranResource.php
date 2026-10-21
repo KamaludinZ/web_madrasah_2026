@@ -98,12 +98,18 @@ class SaranResource extends Resource
                                 ->icon('heroicon-m-clock')
                                 ->action(fn (Forms\Set $set) => $set('responded_at', Carbon::now()))
                         ),
-                    Forms\Components\Textarea::make('response')
+                    Forms\Components\Textarea::make('public_response')
                         ->label('Tanggapan untuk Pengirim')
                         ->rows(4)
                         ->maxLength(5000)
-                        ->placeholder('Tuliskan tanggapan / tindak lanjut atas saran ini...')
-                        ->helperText('Tanggapan ini ditampilkan kepada pengirim saat melacak nomor tiket di halaman Saran.')
+                        ->placeholder('Tuliskan tanggapan yang akan dibaca pengirim saran...')
+                        ->helperText('Ditampilkan kepada pengirim saat melacak nomor tiket di halaman Saran.')
+                        ->columnSpanFull(),
+                    Forms\Components\Textarea::make('response')
+                        ->label('Catatan Internal')
+                        ->rows(4)
+                        ->placeholder('Catatan tindak lanjut internal...')
+                        ->helperText('Hanya terlihat oleh petugas di panel admin — tidak ditampilkan kepada pengirim.')
                         ->columnSpanFull(),
                 ])->columns(2),
         ]);

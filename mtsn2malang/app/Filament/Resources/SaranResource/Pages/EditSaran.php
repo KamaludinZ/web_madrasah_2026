@@ -17,10 +17,10 @@ class EditSaran extends EditRecord
         ];
     }
 
-    /** Tanggapan baru tanpa tanggal tindak lanjut → isi otomatis dengan waktu sekarang. */
+    /** Tanggapan untuk pengirim tanpa tanggal tindak lanjut → isi otomatis dengan waktu sekarang. */
     protected function mutateFormDataBeforeSave(array $data): array
     {
-        if (filled($data['response'] ?? null) && blank($data['responded_at'] ?? null)) {
+        if (filled($data['public_response'] ?? null) && blank($data['responded_at'] ?? null)) {
             $data['responded_at'] = now();
         }
 

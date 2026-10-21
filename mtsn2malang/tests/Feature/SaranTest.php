@@ -56,12 +56,13 @@ class SaranTest extends TestCase
         ])->assertSessionHasErrors('phone');
     }
 
-    public function test_tracking_shows_response_from_admin_but_not_phone(): void
+    public function test_tracking_shows_public_response_but_not_internal_note_or_phone(): void
     {
         $saran = $this->makeSaran([
-            'status'       => 'resolved',
-            'response'     => "Terima kasih, jam buka diperpanjang sampai 16.00.\nBerlaku mulai bulan depan.",
-            'responded_at' => now(),
+            'status'          => 'resolved',
+            'public_response' => "Terima kasih, jam buka diperpanjang sampai 16.00.\nBerlaku mulai bulan depan.",
+            'response'        => 'RAHASIA: tunggu persetujuan kepala madrasah.',
+            'responded_at'    => now(),
         ]);
 
         $this->get(route('survei.saran.lacak', ['tiket' => $saran->ticket_number]))
@@ -69,7 +70,18 @@ class SaranTest extends TestCase
             ->assertSee('Tanggapan dari Madrasah')
             ->assertSee('jam buka diperpanjang sampai 16.00.')
             ->assertSee('Berlaku mulai bulan depan.')
+            ->assertDontSee('RAHASIA: tunggu persetujuan')
             ->assertDontSee('085755512345');
+    }
+
+    public function test_internal_note_alone_is_never_shown_to_sender(): void
+    {
+        $saran = $this->makeSaran(['response' => 'Catatan internal petugas saja.']);
+
+        $this->get(route('survei.saran.lacak', ['tiket' => $saran->ticket_number]))
+            ->assertOk()
+            ->assertDontSee('Catatan internal petugas saja.')
+            ->assertDontSee('Tanggapan dari Madrasah');
     }
 
     public function test_tracking_without_response_hides_response_box(): void
@@ -82,7 +94,7 @@ class SaranTest extends TestCase
             ->assertDontSee('Tanggapan dari Madrasah');
     }
 
-    public function test_admin_detail_shows_phone_and_saves_response_for_tracking(): void
+    public function test_admin_saves_public_response_and_internal_note_separately(): void
     {
         Queue::fake();
         $saran = $this->makeSaran();
@@ -91,16 +103,23 @@ class SaranTest extends TestCase
             ->test(EditSaran::class, ['record' => $saran->getRouteKey()])
             ->assertFormSet(['phone' => '085755512345'])
             ->assertSee('Tanggapan untuk Pengirim')
-            ->fillForm(['status' => 'resolved', 'response' => 'Sudah kami tindak lanjuti.'])
+            ->assertSee('Catatan Internal')
+            ->fillForm([
+                'status'          => 'resolved',
+                'public_response' => 'Sudah kami tindak lanjuti.',
+                'response'        => 'Dibahas di rapat guru.',
+            ])
             ->call('save')
             ->assertHasNoFormErrors();
 
         $saran->refresh();
-        $this->assertSame('Sudah kami tindak lanjuti.', $saran->response);
+        $this->assertSame('Sudah kami tindak lanjuti.', $saran->public_response);
+        $this->assertSame('Dibahas di rapat guru.', $saran->response);
         $this->assertNotNull($saran->responded_at, 'Tanggal tindak lanjut terisi otomatis.');
 
         $this->get(route('survei.saran.lacak', ['tiket' => $saran->ticket_number]))
-            ->assertSee('Sudah kami tindak lanjuti.');
+            ->assertSee('Sudah kami tindak lanjuti.')
+            ->assertDontSee('Dibahas di rapat guru.');
     }
 
     public function test_whatsapp_number_is_normalized_for_wa_link(): void
