@@ -51,7 +51,19 @@ class SaranResource extends Resource
                         ->disabled(),
                     Forms\Components\TextInput::make('email')
                         ->label('Email')
+                        ->placeholder('-')
                         ->disabled(),
+                    Forms\Components\TextInput::make('phone')
+                        ->label('No. Telepon / WhatsApp')
+                        ->placeholder('-')
+                        ->disabled()
+                        ->suffixAction(
+                            Forms\Components\Actions\Action::make('hubungi_wa')
+                                ->label('Chat WhatsApp')
+                                ->icon('heroicon-m-chat-bubble-left-right')
+                                ->visible(fn ($record) => filled(static::whatsappNumber($record?->phone)))
+                                ->url(fn ($record) => 'https://wa.me/' . static::whatsappNumber($record?->phone), shouldOpenInNewTab: true)
+                        ),
                     Forms\Components\TextInput::make('subject')
                         ->label('Subjek')
                         ->disabled()
@@ -86,10 +98,18 @@ class SaranResource extends Resource
                                 ->icon('heroicon-m-clock')
                                 ->action(fn (Forms\Set $set) => $set('responded_at', Carbon::now()))
                         ),
+                    Forms\Components\Textarea::make('public_response')
+                        ->label('Tanggapan untuk Pengirim')
+                        ->rows(4)
+                        ->maxLength(5000)
+                        ->placeholder('Tuliskan tanggapan yang akan dibaca pengirim saran...')
+                        ->helperText('Ditampilkan kepada pengirim saat melacak nomor tiket di halaman Saran.')
+                        ->columnSpanFull(),
                     Forms\Components\Textarea::make('response')
-                        ->label('Catatan / Tanggapan Internal')
+                        ->label('Catatan Internal')
                         ->rows(4)
                         ->placeholder('Catatan tindak lanjut internal...')
+                        ->helperText('Hanya terlihat oleh petugas di panel admin — tidak ditampilkan kepada pengirim.')
                         ->columnSpanFull(),
                 ])->columns(2),
         ]);
@@ -111,7 +131,7 @@ class SaranResource extends Resource
                     ->label('Pengirim')
                     ->getStateUsing(fn ($record) => $record->name ?: 'Anonim')
                     ->searchable()
-                    ->description(fn ($record) => $record->email ?: ''),
+                    ->description(fn ($record) => collect([$record->email, $record->phone])->filter()->implode(' · ')),
 
                 Tables\Columns\TextColumn::make('subject')
                     ->label('Subjek')
@@ -178,6 +198,18 @@ class SaranResource extends Resource
             ->emptyStateHeading('Belum ada saran')
             ->emptyStateDescription('Saran dari masyarakat akan muncul di sini.')
             ->emptyStateIcon('heroicon-o-light-bulb');
+    }
+
+    /** Ubah nomor lokal (08xx) menjadi format internasional untuk tautan wa.me. */
+    public static function whatsappNumber(?string $phone): ?string
+    {
+        $digits = preg_replace('/\D+/', '', (string) $phone);
+
+        if ($digits === '') {
+            return null;
+        }
+
+        return str_starts_with($digits, '0') ? '62' . substr($digits, 1) : $digits;
     }
 
     public static function getPages(): array

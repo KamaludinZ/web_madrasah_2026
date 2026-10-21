@@ -487,9 +487,12 @@ class PageController extends Controller
         $request->validate([
             'name'    => 'nullable|string|max:255',
             'email'   => 'nullable|email|max:255',
+            'phone'   => ['nullable', 'string', 'max:20', 'regex:/^\+?[0-9\s\-().]{8,20}$/'],
             'subject' => 'required|string|max:255',
             'content' => 'required|string|min:10',
         ], [
+            'phone.regex'      => 'Nomor telepon hanya boleh berisi angka (boleh diawali +), minimal 8 digit.',
+            'phone.max'        => 'Nomor telepon maksimal 20 karakter.',
             'subject.required' => 'Subjek saran wajib diisi.',
             'content.required' => 'Isi saran wajib diisi.',
             'content.min'      => 'Isi saran minimal 10 karakter.',
@@ -498,7 +501,7 @@ class PageController extends Controller
         $saran = Saran::create([
             'name'    => $request->name ?: 'Anonim',
             'email'   => $request->email,
-            'phone'   => null,
+            'phone'   => filled($request->phone) ? trim((string) $request->phone) : null,
             'subject' => $request->subject,
             'content' => $request->input('content'),
             'status'  => 'pending',

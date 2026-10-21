@@ -101,6 +101,27 @@
                     </div>
                 </div>
 
+                {{-- Nomor Telepon --}}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                        Nomor Telepon / WhatsApp <span class="text-gray-400 font-normal">(opsional)</span>
+                    </label>
+                    <input
+                        type="tel"
+                        name="phone"
+                        value="{{ old('phone') }}"
+                        placeholder="Contoh: 081234567890"
+                        inputmode="tel"
+                        autocomplete="tel"
+                        maxlength="20"
+                        class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:ring-2 focus:ring-green-200 focus:border-school-green dark:bg-gray-700 dark:text-white outline-none transition-colors @error('phone') border-red-400 @enderror"
+                    >
+                    @error('phone')
+                    <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
+                    @enderror
+                    <p class="mt-1 text-xs text-gray-400">Agar tim kami dapat menghubungi Anda bila perlu. Tidak ditampilkan ke publik.</p>
+                </div>
+
                 {{-- Subjek --}}
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
@@ -269,6 +290,14 @@
                         </div>
                         @endif
                     </div>
+
+                    {{-- Tanggapan untuk pengirim (bukan catatan internal `response`) --}}
+                    @if(filled($saran->public_response))
+                    <div class="mt-4 p-4 bg-white/70 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 rounded-xl">
+                        <p class="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5 uppercase tracking-wide">Tanggapan dari Madrasah</p>
+                        <p class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-line break-words">{{ $saran->public_response }}</p>
+                    </div>
+                    @endif
 
                     {{-- Progress steps --}}
                     <div class="mt-4 pt-4 border-t border-current border-opacity-10">

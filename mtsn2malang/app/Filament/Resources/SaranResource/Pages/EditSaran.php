@@ -17,6 +17,16 @@ class EditSaran extends EditRecord
         ];
     }
 
+    /** Tanggapan untuk pengirim tanpa tanggal tindak lanjut → isi otomatis dengan waktu sekarang. */
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        if (filled($data['public_response'] ?? null) && blank($data['responded_at'] ?? null)) {
+            $data['responded_at'] = now();
+        }
+
+        return $data;
+    }
+
     protected function getRedirectUrl(): string
     {
         return $this->getResource()::getUrl('index');
