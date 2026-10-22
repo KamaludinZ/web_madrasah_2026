@@ -42,6 +42,7 @@ use App\Filament\Resources\UserResource;
 use App\Filament\Widgets\ComplaintStatsWidget;
 use App\Filament\Widgets\NewsStatsWidget;
 use App\Filament\Widgets\PageViewsWidget;
+use App\Filament\Widgets\PhpSecurityWidget;
 use App\Filament\Widgets\RecentNewsWidget;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -152,6 +153,7 @@ class AdminPanelProvider extends PanelProvider
                 ManagePortal::class,
             ])
             ->widgets([
+                PhpSecurityWidget::class,
                 NewsStatsWidget::class,
                 ComplaintStatsWidget::class,
                 PageViewsWidget::class,

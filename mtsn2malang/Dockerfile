@@ -16,7 +16,11 @@
 # Build context: folder mtsn2malang/ (tempat file ini berada).
 # =============================================================================
 
-ARG PHP_VERSION=8.4
+# Versi PHP DIKUNCI ke rilis patch (bukan "8.4" saja) agar redeploy selalu
+# menarik image yang benar walau Docker masih menyimpan cache image lama.
+# 8.4.27 (22 Okt 2026) menambal PHP2Shell CVE-2026-109618 & CVE-2026-109619.
+# Naikkan angka ini saat ada rilis keamanan PHP baru.
+ARG PHP_VERSION=8.4.27
 ARG NODE_VERSION=22
 # Rilis Debian untuk image dasar (ganti ke "trixie" bila tag bookworm tidak
 # lagi tersedia di Docker Hub).
@@ -123,6 +127,16 @@ RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist --no-pr
 # Kode aplikasi + hasil build frontend
 COPY --chown=www-data:www-data . .
 COPY --from=assets --chown=www-data:www-data /app/public/build ./public/build
+
+# Gerbang keamanan: build GAGAL bila versi PHP masih rentan (mis. PHP_VERSION
+# diturunkan) atau session.upload_progress tidak mati. Daftar versi aman ada
+# di app/Support/PhpSecurity.php.
+RUN php -r 'require "app/Support/PhpSecurity.php"; \
+    $v = App\Support\PhpSecurity::isVulnerable(); $u = App\Support\PhpSecurity::uploadProgressEnabled(); \
+    if ($v) fwrite(STDERR, "PHP " . PHP_VERSION . " rentan " . App\Support\PhpSecurity::ADVISORY . ". " . App\Support\PhpSecurity::recommendation() . PHP_EOL); \
+    if ($u) fwrite(STDERR, "session.upload_progress.enabled harus Off (docker/php/php.ini)." . PHP_EOL); \
+    exit($v || $u ? 1 : 0);' \
+    && php -v
 
 # Autoload, folder storage, discovery paket & aset Filament (tidak butuh
 # database), symlink public/storage.
