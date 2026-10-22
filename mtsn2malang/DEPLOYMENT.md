@@ -6,6 +6,24 @@
 
 ---
 
+## 🚨 KEAMANAN DARURAT — PHP2Shell (CVE-2026-109618 & CVE-2026-109619, Okt 2026)
+
+Celah di **PHP itu sendiri** (bukan di kode aplikasi): server bisa diretas
+tanpa login. Di hosting cPanel:
+
+1. **Perbarui versi PHP** lewat cPanel → *MultiPHP Manager* / *Select PHP
+   Version* ke **8.4.27** (atau 8.3.36 / 8.2.35 / 8.5.12) atau lebih baru.
+   Bila versi itu belum tersedia, minta penyedia hosting segera memperbarui.
+   PHP 8.1 ke bawah sudah tidak mendapat tambalan — wajib naik versi.
+2. Upload ulang `public/.user.ini` dan `public/.htaccess` versi terbaru —
+   keduanya mematikan `session.upload_progress.enabled` (jalur serangan
+   CVE-2026-109618). Bila hosting mengabaikan kedua file itu, set
+   `session.upload_progress.enabled = Off` lewat *MultiPHP INI Editor*.
+3. Login sebagai super admin: bila dashboard masih menampilkan kotak merah
+   **"Peringatan keamanan server"**, berarti langkah 1/2 belum berlaku.
+
+---
+
 ## ⚠️ LANGKAH TAMBAHAN — PERBAIKAN HASIL AUDIT (September 2026)
 
 Lakukan **sekali** saat men-deploy versi ini, selain langkah-langkah di bawah:

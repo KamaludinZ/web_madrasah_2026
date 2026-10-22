@@ -308,6 +308,16 @@ Klik **Deploy**. Build pertama ±5–10 menit. Lanjut ke [bagian 5](#5-setelah-d
 3. Migrasi berjalan otomatis; volume & database tidak tersentuh.
 4. Bila build gagal, versi lama **tetap berjalan** — perbaiki lalu deploy ulang.
 
+### Pembaruan keamanan PHP
+Versi PHP di image **dikunci** lewat `ARG PHP_VERSION` di `Dockerfile`
+(saat ini `8.4.27`, sudah menambal PHP2Shell CVE-2026-109618 &
+CVE-2026-109619). Saat ada rilis keamanan PHP baru: naikkan angka itu,
+push ke `main`, lalu **Redeploy**. Build otomatis **gagal** bila versi PHP
+masih rentan (daftar versi aman di `app/Support/PhpSecurity.php`), dan
+dashboard admin menampilkan peringatan merah untuk super admin.
+
+Cek versi yang sedang berjalan: Terminal container `app` → `php -v`.
+
 ### Menjalankan perintah artisan
 Coolify → container aplikasi (`app`) → **Terminal**, gunakan **`app-artisan`**
 (bukan `php artisan` — terminal masuk sebagai root dan bisa membuat file
@@ -382,7 +392,7 @@ Nilai bawaan image (tidak perlu diisi): `APP_ENV=production`, `APP_DEBUG=false`,
 `LOG_STACK=single,stderr`, cache/queue/session memakai database.
 
 ### Berkas teknis
-- `Dockerfile` — image PHP 8.4-FPM + nginx + client PostgreSQL 15–18; aset
+- `Dockerfile` — image PHP 8.4.27-FPM (versi dikunci, build ditolak bila PHP rentan) + nginx + client PostgreSQL 15–18; aset
   frontend dibangun ulang saat build.
 - `docker/entrypoint.sh` — urutan start per peran (`CONTAINER_ROLE` = `app`,
   `worker`, `scheduler`), pembacaan `DB_URL`, pemilihan client PostgreSQL.

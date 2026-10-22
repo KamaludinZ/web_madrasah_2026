@@ -24,6 +24,19 @@
     RewriteRule ^ index.php [L]
 </IfModule>
 
+# PHP2Shell (CVE-2026-109618): matikan upload progress sesi untuk hosting
+# mod_php / LiteSpeed (PHP-FPM membaca public/.user.ini). Dibungkus IfModule
+# agar tidak memicu error 500 di server yang tidak mendukung php_flag.
+<IfModule mod_php.c>
+    php_flag session.upload_progress.enabled off
+</IfModule>
+<IfModule mod_php7.c>
+    php_flag session.upload_progress.enabled off
+</IfModule>
+<IfModule LiteSpeed>
+    php_flag session.upload_progress.enabled off
+</IfModule>
+
 # Security Headers
 <IfModule mod_headers.c>
     Header always set X-Content-Type-Options "nosniff"
