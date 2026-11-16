@@ -35,12 +35,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+// ===== HEMAT CPU: slider berhenti berputar saat tidak terlihat =====
+// Autoplay yang terus berjalan di luar layar membuat HP pengunjung bekerja
+// tanpa guna (animasi + repaint setiap beberapa detik).
+const pauseWhenOffscreen = (swiper) => {
+    if (!swiper || !swiper.autoplay || !('IntersectionObserver' in window)) return swiper;
+    new IntersectionObserver(([entry]) => {
+        if (!swiper.params.autoplay || !swiper.params.autoplay.enabled) return;
+        entry.isIntersecting ? swiper.autoplay.start() : swiper.autoplay.stop();
+    }).observe(swiper.el);
+    return swiper;
+};
+
 // ===== HERO SLIDER =====
 window.initHeroSlider = function() {
     const el = document.querySelector('.hero-swiper');
     if (!el) return;
     const slideCount = el.querySelectorAll('.swiper-slide').length;
-    return new Swiper('.hero-swiper', {
+    return pauseWhenOffscreen(new Swiper('.hero-swiper', {
         modules: [Navigation, Pagination, Autoplay, EffectFade],
         effect: 'fade',
         loop: slideCount > 1,
@@ -53,7 +65,7 @@ window.initHeroSlider = function() {
             nextEl: '.swiper-button-next',
             prevEl: '.swiper-button-prev',
         },
-    });
+    }));
 };
 
 // ===== BANNER SLIDER =====
@@ -61,7 +73,7 @@ window.initBannerSlider = function() {
     const el = document.querySelector('.banner-swiper');
     if (!el) return;
     const slideCount = el.querySelectorAll('.swiper-slide').length;
-    return new Swiper('.banner-swiper', {
+    return pauseWhenOffscreen(new Swiper('.banner-swiper', {
         modules: [Navigation, Pagination, Autoplay],
         loop: slideCount > 1,
         autoplay: slideCount > 1 ? { delay: 4000 } : false,
@@ -73,7 +85,7 @@ window.initBannerSlider = function() {
             nextEl: '.banner-next',
             prevEl: '.banner-prev',
         },
-    });
+    }));
 };
 
 // ===== SARPRAS CAROUSEL =====
@@ -81,7 +93,7 @@ window.initSarprasSlider = function() {
     const el = document.querySelector('.sarpras-swiper');
     if (!el) return;
     const slideCount = el.querySelectorAll('.swiper-slide').length;
-    return new Swiper('.sarpras-swiper', {
+    return pauseWhenOffscreen(new Swiper('.sarpras-swiper', {
         modules: [Navigation, Pagination, Autoplay],
         slidesPerView: 1,
         spaceBetween: 20,
@@ -95,7 +107,7 @@ window.initSarprasSlider = function() {
             el: '.sarpras-pagination',
             clickable: true,
         },
-    });
+    }));
 };
 
 // ===== TESTIMONI CAROUSEL =====
@@ -103,7 +115,7 @@ window.initTestimoniSlider = function() {
     const el = document.querySelector('.testimoni-swiper');
     if (!el) return;
     const slideCount = el.querySelectorAll('.swiper-slide').length;
-    return new Swiper('.testimoni-swiper', {
+    return pauseWhenOffscreen(new Swiper('.testimoni-swiper', {
         modules: [Navigation, Pagination, Autoplay],
         slidesPerView: 1,
         spaceBetween: 24,
@@ -117,7 +129,7 @@ window.initTestimoniSlider = function() {
             el: '.testimoni-pagination',
             clickable: true,
         },
-    });
+    }));
 };
 
 // ===== LIGHTBOX =====
@@ -133,12 +145,8 @@ window.initLightbox = function() {
 const backToTop = document.getElementById('back-to-top');
 if (backToTop) {
     window.addEventListener('scroll', () => {
-        if (window.scrollY > 300) {
-            backToTop.classList.add('visible');
-        } else {
-            backToTop.classList.remove('visible');
-        }
-    });
+        backToTop.classList.toggle('visible', window.scrollY > 300);
+    }, { passive: true });
 
     backToTop.addEventListener('click', () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -245,18 +253,20 @@ window.accessibilityManager = {
 window.accessibilityManager.init();
 
 // ===== COUNTER ANIMATION =====
+// requestAnimationFrame: mengikuti refresh layar dan otomatis berhenti saat
+// tab tidak aktif (setInterval 16ms tetap berjalan). Pengguna yang memilih
+// "kurangi animasi" langsung melihat angka akhir.
 window.animateCounter = function(el, target, duration = 2000, suffix = '') {
-    let start = 0;
-    const step = target / (duration / 16);
-    const timer = setInterval(() => {
-        start += step;
-        if (start >= target) {
-            el.textContent = target.toLocaleString('id-ID') + suffix;
-            clearInterval(timer);
-        } else {
-            el.textContent = Math.floor(start).toLocaleString('id-ID') + suffix;
-        }
-    }, 16);
+    const finish = () => { el.textContent = target.toLocaleString('id-ID') + suffix; };
+    if (!target || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return finish();
+    const startTime = performance.now();
+    const tick = (now) => {
+        const progress = Math.min((now - startTime) / duration, 1);
+        if (progress >= 1) return finish();
+        el.textContent = Math.floor(target * progress).toLocaleString('id-ID') + suffix;
+        requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
 };
 
 // ===== OTP INPUT =====
@@ -295,6 +305,33 @@ window.toggleSearch = function() {
     }
 };
 
+// Hasil cepat saat mengetik: jeda 350ms, permintaan lama dibatalkan, dan
+// kata yang sama tidak dikirim ulang (hemat server & kuota pengunjung).
+const searchInput = document.getElementById('search-input');
+const searchResults = document.getElementById('search-results');
+if (searchInput && searchResults && searchInput.dataset.searchUrl) {
+    let timer, controller, lastQuery = '';
+    searchInput.addEventListener('input', () => {
+        clearTimeout(timer);
+        timer = setTimeout(async () => {
+            const q = searchInput.value.trim();
+            if (q.length < 2 || q === lastQuery) return;
+            lastQuery = q;
+            controller?.abort();
+            controller = new AbortController();
+            try {
+                const res = await fetch(searchInput.dataset.searchUrl + '?q=' + encodeURIComponent(q), {
+                    signal: controller.signal,
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                });
+                if (res.ok) searchResults.innerHTML = await res.text();
+            } catch (e) {
+                // dibatalkan / jaringan putus — biarkan hasil sebelumnya
+            }
+        }, 350);
+    });
+}
+
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
         document.getElementById('search-overlay')?.classList.remove('open');
@@ -308,16 +345,9 @@ document.addEventListener('keydown', (e) => {
 // ===== STICKY HEADER =====
 const header = document.getElementById('site-header');
 if (header) {
-    let lastScroll = 0;
     window.addEventListener('scroll', () => {
-        const currentScroll = window.scrollY;
-        if (currentScroll > 100) {
-            header.classList.add('scrolled');
-        } else {
-            header.classList.remove('scrolled');
-        }
-        lastScroll = currentScroll;
-    });
+        header.classList.toggle('scrolled', window.scrollY > 100);
+    }, { passive: true });
 }
 
 // ===== POPUP SWIPER (dipanggil dari komponen popup) =====

@@ -16,29 +16,54 @@ class Setting extends Model
 
     protected $fillable = ['key', 'value', 'type', 'group', 'label'];
 
+    /** Kunci cache yang menyimpan SELURUH setting dalam satu entri. */
+    public const CACHE_KEY = 'settings_v3_all';
+
+    protected static function booted(): void
+    {
+        // Perubahan lewat model (set(), seeder, Filament) langsung berlaku.
+        static::saved(fn () => static::flushCache());
+        static::deleted(fn () => static::flushCache());
+    }
+
     public static function get(string $key, mixed $default = null): mixed
     {
-        // Cache menyimpan nilai asli dari database (null jika belum ada),
-        // bukan $default — supaya pemanggil lain dengan default berbeda tidak
-        // ikut menerima default milik pemanggil pertama. Dibungkus array agar
-        // nilai null juga ikut di-cache.
-        $cached = Cache::remember(static::cacheKey($key), 3600, function () use ($key) {
-            return ['value' => static::where('key', $key)->value('value')];
-        });
-
-        return $cached['value'] ?? $default;
+        return static::values()[$key] ?? $default;
     }
 
     public static function set(string $key, mixed $value): void
     {
         static::updateOrCreate(['key' => $key], ['value' => $value]);
-        Cache::forget(static::cacheKey($key));
-        Cache::forget("setting_{$key}"); // format cache lama
+        static::flushCache();
     }
 
-    private static function cacheKey(string $key): string
+    public static function flushCache(): void
     {
-        return "setting_v2_{$key}";
+        Cache::forget(static::CACHE_KEY);
+        app()->forgetInstance('settings.values');
+    }
+
+    /**
+     * Semua setting (key => value) dimuat SEKALI per request / per job antrian:
+     * satu baca cache, bukan satu query per setting (halaman publik memanggil
+     * Setting::get puluhan kali). `scoped` direset otomatis tiap job antrian
+     * sehingga worker yang berjalan lama tidak memakai nilai basi.
+     *
+     * @return array<string, mixed>
+     */
+    protected static function values(): array
+    {
+        $app = app();
+
+        if (! $app->bound('settings.values')) {
+            $app->scoped('settings.values', fn () => Cache::remember(
+                static::CACHE_KEY,
+                3600,
+                fn () => static::query()->pluck('value', 'key')->all(),
+            ));
+        }
+
+        return $app->make('settings.values');
     }
 
     /**

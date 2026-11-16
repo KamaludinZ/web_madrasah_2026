@@ -37,12 +37,17 @@ class HomeController extends Controller
             ->latest('published_at')->take(6)->get();
 
         $academicYear = Setting::get('academic_year', '2024/2025');
+        // Satu query GROUP BY (bukan 5 query COUNT terpisah).
+        $levelCounts = Achievement::where('academic_year', $academicYear)
+            ->selectRaw('level, COUNT(*) as total')
+            ->groupBy('level')
+            ->pluck('total', 'level');
         $prestasiStats = [
-            'total' => Achievement::where('academic_year', $academicYear)->count(),
-            'regional' => Achievement::where('academic_year', $academicYear)->where('level', 'regional')->count(),
-            'provinsi' => Achievement::where('academic_year', $academicYear)->where('level', 'provinsi')->count(),
-            'nasional' => Achievement::where('academic_year', $academicYear)->where('level', 'nasional')->count(),
-            'internasional' => Achievement::where('academic_year', $academicYear)->where('level', 'internasional')->count(),
+            'total' => (int) $levelCounts->sum(),
+            'regional' => (int) ($levelCounts['regional'] ?? 0),
+            'provinsi' => (int) ($levelCounts['provinsi'] ?? 0),
+            'nasional' => (int) ($levelCounts['nasional'] ?? 0),
+            'internasional' => (int) ($levelCounts['internasional'] ?? 0),
         ];
 
         $prestasiList = Achievement::where('academic_year', $academicYear)

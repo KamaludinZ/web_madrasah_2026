@@ -28,7 +28,7 @@
                         <div class="w-12 h-12 rounded-xl bg-white p-0.5 shadow-sm border border-white/30">
                             <div class="w-full h-full bg-white/10 backdrop-blur-sm rounded-[11px] overflow-hidden flex items-center justify-center">
                                 @if($logo && file_exists(public_path('storage/' . $logo)))
-                                    <img src="/storage/{{ $logo }}" alt="{{ $siteName }}" class="w-full h-full object-cover">
+                                    <img loading="lazy" decoding="async" src="/storage/{{ $logo }}" alt="{{ $siteName }}" class="w-full h-full object-cover">
                                 @else
                                     <svg viewBox="0 0 60 60" class="w-10 h-10" fill="none">
                                         <rect x="4" y="4" width="52" height="52" rx="12" fill="white" fill-opacity="0.2"/>
@@ -55,7 +55,7 @@
                             @foreach($badgeAchievements as $badge)
                             @if($badge->logo)
                             <div class="bg-white/10 hover:bg-white/20 rounded-xl p-2 transition-colors" title="{{ $badge->name }}">
-                                <img src="/storage/{{ $badge->logo }}"
+                                <img loading="lazy" decoding="async" src="/storage/{{ $badge->logo }}"
                                      alt="{{ $badge->name }}"
                                      class="w-16 h-16 object-contain">
                             </div>
@@ -118,13 +118,14 @@
                             <svg class="w-4 h-4 text-school-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                             Statistik Pengunjung
                         </h3>
+                        @php($visitorCounters = \App\Models\PageView::publicCounters())
                         <div class="grid grid-cols-2 gap-2 text-xs">
                             <div class="text-center">
-                                <div class="text-white font-bold text-lg" data-counter="{{ \App\Models\PageView::todayCount() }}">0</div>
+                                <div class="text-white font-bold text-lg" data-counter="{{ $visitorCounters['today'] }}">0</div>
                                 <div class="text-green-100">Hari Ini</div>
                             </div>
                             <div class="text-center">
-                                <div class="text-white font-bold text-lg" data-counter="{{ \App\Models\PageView::totalCount() }}">0</div>
+                                <div class="text-white font-bold text-lg" data-counter="{{ $visitorCounters['total'] }}">0</div>
                                 <div class="text-green-100">Total</div>
                             </div>
                         </div>

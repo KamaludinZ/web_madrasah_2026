@@ -103,7 +103,7 @@
                         <div class="flex justify-end pr-10">
                             <div class="hm-card">
                                 @if($history->photo_url)
-                                    <img src="{{ $history->photo_url }}" alt="{{ $history->name }}" class="hm-avatar-green">
+                                    <img loading="lazy" decoding="async" src="{{ $history->photo_url }}" alt="{{ $history->name }}" class="hm-avatar-green">
                                 @else
                                     <div class="hm-avatar-placeholder-green">
                                         <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -134,7 +134,7 @@
                         <div class="flex justify-start pl-10">
                             <div class="hm-card">
                                 @if($history->photo_url)
-                                    <img src="{{ $history->photo_url }}" alt="{{ $history->name }}" class="hm-avatar-orange">
+                                    <img loading="lazy" decoding="async" src="{{ $history->photo_url }}" alt="{{ $history->name }}" class="hm-avatar-orange">
                                 @else
                                     <div class="hm-avatar-placeholder-orange">
                                         <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">

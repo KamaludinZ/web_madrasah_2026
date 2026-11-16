@@ -108,7 +108,7 @@
                         {{-- Gambar utama --}}
                         <div class="relative aspect-video overflow-hidden bg-gray-100 dark:bg-gray-700 flex-shrink-0">
                             @if($item->thumbnail)
-                                <img src="{{ asset('storage/' . $item->thumbnail) }}"
+                                <img loading="lazy" decoding="async" src="{{ asset('storage/' . $item->thumbnail) }}"
                                      alt="{{ $item->title }}"
                                      class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                      loading="lazy">

@@ -121,9 +121,17 @@ class News extends Model
 
     public function incrementViewCount(): void
     {
+        // Bot/crawler tidak membawa cookie sesi sehingga SETIAP kunjungannya
+        // dulu menambah hitungan (dan menulis ke database).
+        if (PageView::isBot(request()->userAgent())) {
+            return;
+        }
+
         $sessionKey = 'news_viewed_' . $this->id;
         if (!session()->has($sessionKey)) {
-            $this->increment('view_count');
+            // Tanpa menyentuh updated_at: dibaca sebagai "terakhir diubah"
+            // (mis. lastmod di sitemap), bukan "terakhir dibaca".
+            static::withoutTimestamps(fn () => $this->increment('view_count'));
             session()->put($sessionKey, true);
         }
     }

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -58,8 +59,43 @@ class PageView extends Model
         return static::count() + static::archivedTotal();
     }
 
+    /**
+     * Angka "Hari Ini" & "Total" untuk footer publik. Di-cache 5 menit agar
+     * setiap halaman tidak menghitung ulang (COUNT) seluruh tabel kunjungan.
+     *
+     * @return array{today: int, total: int}
+     */
+    public static function publicCounters(): array
+    {
+        return Cache::remember('page_views_public_counters', 300, fn () => [
+            'today' => static::todayCount(),
+            'total' => static::totalCount(),
+        ]);
+    }
+
+    /**
+     * Bot mesin pencari, pemantau uptime, dan skrip tidak dihitung sebagai
+     * pengunjung — statistik lebih akurat dan database tidak ditulisi setiap
+     * kali crawler lewat.
+     */
+    public static function isBot(?string $userAgent): bool
+    {
+        if (blank($userAgent)) {
+            return true;
+        }
+
+        return (bool) preg_match(
+            '/bot\b|bot\/|crawl|spider|slurp|scrap|facebookexternalhit|whatsapp|telegram|preview|curl|wget|python|go-http|httpclient|java\/|okhttp|axios|node-fetch|headless|phantom|lighthouse|pingdom|uptime|monitor|semrush|ahrefs|mj12|dotbot|petalbot|bytespider|gptbot|claudebot|ccbot/i',
+            $userAgent
+        );
+    }
+
     public static function record(string $page = '/'): void
     {
+        if (static::isBot(request()->userAgent())) {
+            return;
+        }
+
         // Statistik pengunjung tidak boleh membuat halaman gagal dibuka.
         try {
             $sessionId = session()->getId();
