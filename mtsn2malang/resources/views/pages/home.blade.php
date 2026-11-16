@@ -234,7 +234,7 @@
                     {{-- Foto kepala: rasio 1:1, tanpa border --}}
                     @if($welcomePhoto)
                     <div class="flex-shrink-0 mx-auto md:mx-0 w-72 h-72">
-                        <img src="{{ asset('storage/' . $welcomePhoto) }}" alt="{{ $welcomeName }}"
+                        <img loading="lazy" decoding="async" src="{{ asset('storage/' . $welcomePhoto) }}" alt="{{ $welcomeName }}"
                              class="w-full h-full object-cover rounded-2xl shadow-xl">
                     </div>
                     @endif
@@ -360,7 +360,7 @@
                         <div class="w-44 h-44 rounded-2xl bg-white dark:bg-gray-800
                                     border border-gray-100 dark:border-gray-700
                                     shadow-lg flex items-center justify-center p-4">
-                            <img src="{{ asset('storage/' . $logoIdentitas) }}"
+                            <img loading="lazy" decoding="async" src="{{ asset('storage/' . $logoIdentitas) }}"
                                  alt="Logo {{ $identityNomenklatur ?? 'Madrasah' }}"
                                  class="w-full h-full object-contain">
                         </div>
@@ -526,7 +526,7 @@
                         {{-- Gambar utama --}}
                         <div class="relative aspect-video overflow-hidden bg-gray-100 dark:bg-gray-700 flex-shrink-0">
                             @if($item->thumbnail)
-                                <img src="{{ $item->thumbnail_url }}"
+                                <img loading="lazy" decoding="async" src="{{ $item->thumbnail_url }}"
                                      alt="{{ $item->title }}"
                                      class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                      loading="lazy">
@@ -586,7 +586,7 @@
                         {{-- Gambar utama --}}
                         <div class="relative aspect-video overflow-hidden bg-gray-100 dark:bg-gray-700 flex-shrink-0">
                             @if($item->thumbnail)
-                                <img src="{{ $item->thumbnail_url }}"
+                                <img loading="lazy" decoding="async" src="{{ $item->thumbnail_url }}"
                                      alt="{{ $item->title }}"
                                      class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                      loading="lazy">
@@ -909,7 +909,7 @@
                         <p class="text-gray-600 dark:text-gray-300 text-sm leading-relaxed mb-4 italic">"{{ $testimonial->content }}"</p>
                         <div class="flex items-center gap-3">
                             @if($testimonial->photo)
-                            <img src="{{ $testimonial->photo_url }}" alt="{{ $testimonial->name }}" class="w-10 h-10 rounded-full object-cover">
+                            <img loading="lazy" decoding="async" src="{{ $testimonial->photo_url }}" alt="{{ $testimonial->name }}" class="w-10 h-10 rounded-full object-cover">
                             @else
                             <div class="w-10 h-10 rounded-full bg-school-green flex items-center justify-center text-white font-bold text-sm">{{ substr($testimonial->name, 0, 1) }}</div>
                             @endif
@@ -939,7 +939,7 @@
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
             @foreach($portalApps as $app)
             <a href="{{ $app->link }}" target="_blank" rel="noopener" class="flex flex-col items-center gap-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl hover:bg-green-50 dark:hover:bg-green-900/20 hover:shadow-card transition-all duration-300 hover:-translate-y-1 group" data-aos="fade-up">
-                <img src="{{ $app->logo_url }}" alt="{{ $app->name }}" class="w-12 h-12 object-contain group-hover:scale-110 transition-transform">
+                <img loading="lazy" decoding="async" src="{{ $app->logo_url }}" alt="{{ $app->name }}" class="w-12 h-12 object-contain group-hover:scale-110 transition-transform">
                 <span class="text-xs font-medium text-gray-700 dark:text-gray-300 text-center">{{ $app->name }}</span>
             </a>
             @endforeach

@@ -547,7 +547,7 @@
                 <div class="space-y-4">
                     @foreach($relatedNews as $related)
                     <a href="{{ route('berita.show', $related->slug) }}" class="flex gap-3 group">
-                        <img src="{{ $related->thumbnail_url }}" alt="{{ $related->title }}" class="w-16 h-16 rounded-lg object-cover flex-shrink-0">
+                        <img loading="lazy" decoding="async" src="{{ $related->thumbnail_url }}" alt="{{ $related->title }}" class="w-16 h-16 rounded-lg object-cover flex-shrink-0">
                         <div>
                             <h3 class="text-sm font-medium text-gray-900 dark:text-white group-hover:text-school-green transition-colors line-clamp-2">{{ $related->title }}</h3>
                             <span class="text-xs text-gray-400">{{ $related->published_at?->format('d M Y') }}</span>

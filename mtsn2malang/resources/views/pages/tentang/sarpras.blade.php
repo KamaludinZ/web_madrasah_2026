@@ -22,7 +22,7 @@
         @forelse($facilities as $item)
         <div class="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-card hover:shadow-card-hover transition-all duration-300 hover:-translate-y-1" data-aos="fade-up">
             @if($item->image)
-                <img src="{{ $item->image_url }}" alt="{{ $item->name }}" class="w-full h-52 object-cover">
+                <img loading="lazy" decoding="async" src="{{ $item->image_url }}" alt="{{ $item->name }}" class="w-full h-52 object-cover">
             @else
                 <div class="w-full h-52 bg-gradient-to-br from-school-green to-school-green-dark flex items-center justify-center text-white font-semibold">
                     {{ $item->name }}

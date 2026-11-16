@@ -9,6 +9,12 @@
     RewriteCond %{HTTPS} off
     RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
+    # Bot pemindai WordPress (situs lama): tolak tanpa menjalankan PHP.
+    # Link lain dari situs lama (/category/..., /2024/05/judul/) dialihkan
+    # oleh Laravel ke halaman barunya.
+    RewriteRule ^(?:wp-login\.php|xmlrpc\.php|wp-config\.php|wp-includes/|wp-json|wp-content/(?:plugins|themes)/) - [R=404,NC,L]
+    RewriteRule ^wp-admin(?:/.*)?$ /admin/login [R=301,NC,L]
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]

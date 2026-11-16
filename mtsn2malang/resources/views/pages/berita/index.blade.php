@@ -93,7 +93,7 @@
                 <div class="space-y-4">
                     @foreach($popularNews as $popular)
                     <a href="{{ route('berita.show', $popular->slug) }}" class="flex gap-3 group">
-                        <img src="{{ $popular->thumbnail_url }}" alt="{{ $popular->title }}" class="w-16 h-16 rounded-lg object-cover flex-shrink-0">
+                        <img loading="lazy" decoding="async" src="{{ $popular->thumbnail_url }}" alt="{{ $popular->title }}" class="w-16 h-16 rounded-lg object-cover flex-shrink-0">
                         <div>
                             <h4 class="text-sm font-medium text-gray-900 dark:text-white group-hover:text-school-green transition-colors line-clamp-2">{{ $popular->title }}</h4>
                             <span class="text-xs text-gray-400">{{ number_format($popular->view_count) }} pembaca</span>

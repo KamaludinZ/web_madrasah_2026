@@ -63,6 +63,16 @@ return Application::configure(basePath: dirname(__DIR__))
         });
 
         $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\NotFoundHttpException $e, $request) {
+            // Link lama website WordPress (/category/berita/, /2024/05/judul/,
+            // dst.) dialihkan permanen ke halaman barunya.
+            try {
+                if ($target = \App\Support\LegacyUrlRedirector::resolve($request)) {
+                    return redirect()->to($target, 301);
+                }
+            } catch (\Throwable $redirectError) {
+                report($redirectError);
+            }
+
             return response()->view('errors.404', [], 404);
         });
 

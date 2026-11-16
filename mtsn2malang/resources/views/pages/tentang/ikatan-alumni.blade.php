@@ -46,7 +46,7 @@
                         <div class="p-6">
                             <div class="flex items-center gap-4 mb-4">
                                 @if($coordinator->foto_url)
-                                    <img src="{{ $coordinator->foto_url }}" alt="{{ $coordinator->nama_koordinator }}" class="w-16 h-16 rounded-full object-cover">
+                                    <img loading="lazy" decoding="async" src="{{ $coordinator->foto_url }}" alt="{{ $coordinator->nama_koordinator }}" class="w-16 h-16 rounded-full object-cover">
                                 @else
                                     <div class="w-16 h-16 rounded-full bg-school-green/10 text-school-green font-bold flex items-center justify-center text-lg">
                                         {{ strtoupper(substr($coordinator->nama_koordinator, 0, 1)) }}
@@ -92,7 +92,7 @@
                     <article class="bg-white dark:bg-gray-800 rounded-2xl shadow-card overflow-hidden">
                         @if($item->featured_image_url)
                             <a href="{{ url('/berita/' . $item->slug) }}" class="block">
-                                <img src="{{ $item->featured_image_url }}" alt="{{ $item->title }}" class="w-full h-44 object-cover">
+                                <img loading="lazy" decoding="async" src="{{ $item->featured_image_url }}" alt="{{ $item->title }}" class="w-full h-44 object-cover">
                             </a>
                         @endif
                         <div class="p-5">

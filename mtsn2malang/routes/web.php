@@ -28,8 +28,10 @@ Route::get('/penulis/{username}', [NewsController::class, 'byAuthor'])->name('pe
 
 // ===== PENCARIAN =====
 Route::prefix('pencarian')->name('search.')->group(function () {
-    Route::get('/', [SearchController::class, 'index'])->name('index');
-    Route::get('/ajax', [SearchController::class, 'ajax'])->name('ajax');
+    // Pencarian teks = query terberat; dibatasi per IP (longgar karena satu
+    // jaringan sekolah bisa berbagi satu IP publik).
+    Route::get('/', [SearchController::class, 'index'])->name('index')->middleware('throttle:60,1');
+    Route::get('/ajax', [SearchController::class, 'ajax'])->name('ajax')->middleware('throttle:120,1');
 });
 
 // ===== TENTANG KAMI =====
