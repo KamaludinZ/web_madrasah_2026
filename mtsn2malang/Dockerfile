@@ -18,9 +18,10 @@
 
 # Versi PHP DIKUNCI ke rilis patch (bukan "8.4" saja) agar redeploy selalu
 # menarik image yang benar walau Docker masih menyimpan cache image lama.
-# 8.4.27 (22 Okt 2026) menambal PHP2Shell CVE-2026-109618 & CVE-2026-109619.
+# 8.4.28 (19 Nov 2026) menambal PHP2Shell (CVE-2026-109618 & CVE-2026-109619)
+# dan celah PHP-FPM / RCE zona waktu (CVE-2026-129289, -129291, -129496).
 # Naikkan angka ini saat ada rilis keamanan PHP baru.
-ARG PHP_VERSION=8.4.27
+ARG PHP_VERSION=8.4.28
 ARG NODE_VERSION=22
 # Rilis Debian untuk image dasar (ganti ke "trixie" bila tag bookworm tidak
 # lagi tersedia di Docker Hub).
@@ -85,8 +86,11 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 # Paket sistem: nginx, supervisor, client PostgreSQL (dari repo resmi PGDG
 # agar versinya bisa dipilih), dan pustaka untuk ekstensi PHP.
+# `apt-get upgrade` mengambil tambalan keamanan Debian terbaru yang mungkin
+# belum ada di image dasar (dipindai scanner keamanan Coolify).
 RUN set -eux; \
     apt-get update; \
+    apt-get upgrade -y --no-install-recommends; \
     apt-get install -y --no-install-recommends \
         ca-certificates curl gnupg nginx procps supervisor unzip util-linux; \
     install -d /usr/share/postgresql-common/pgdg; \

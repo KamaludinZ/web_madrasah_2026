@@ -12,7 +12,8 @@ Celah di **PHP itu sendiri** (bukan di kode aplikasi): server bisa diretas
 tanpa login. Di hosting cPanel:
 
 1. **Perbarui versi PHP** lewat cPanel → *MultiPHP Manager* / *Select PHP
-   Version* ke **8.4.27** (atau 8.3.36 / 8.2.35 / 8.5.12) atau lebih baru.
+   Version* ke **8.4.28** (atau 8.3.37 / 8.2.36 / 8.5.13) atau lebih baru —
+   rilis 19 Nov 2026 juga menambal celah PHP-FPM & RCE zona waktu.
    Bila versi itu belum tersedia, minta penyedia hosting segera memperbarui.
    PHP 8.1 ke bawah sudah tidak mendapat tambalan — wajib naik versi.
 2. Upload ulang `public/.user.ini` dan `public/.htaccess` versi terbaru —

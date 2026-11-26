@@ -11,21 +11,21 @@ class PhpSecurityTest extends TestCase
 {
     public function test_patched_versions_are_not_vulnerable(): void
     {
-        foreach (['8.2.35', '8.3.36', '8.4.27', '8.4.30', '8.5.12', '8.6.0'] as $version) {
+        foreach (['8.2.36', '8.3.37', '8.4.28', '8.4.30', '8.5.13', '8.6.0'] as $version) {
             $this->assertFalse(PhpSecurity::isVulnerable($version), "PHP {$version} seharusnya aman");
         }
     }
 
     public function test_unpatched_and_eol_versions_are_vulnerable(): void
     {
-        foreach (['8.4.26', '8.4.19', '8.3.35', '8.2.34', '8.5.11', '8.1.31', '7.4.33'] as $version) {
+        foreach (['8.4.27', '8.4.19', '8.3.36', '8.2.35', '8.5.12', '8.1.31', '7.4.33'] as $version) {
             $this->assertTrue(PhpSecurity::isVulnerable($version), "PHP {$version} seharusnya rentan");
         }
     }
 
     public function test_recommendation_points_to_patched_release(): void
     {
-        $this->assertStringContainsString('8.4.27', PhpSecurity::recommendation('8.4.19'));
+        $this->assertStringContainsString('8.4.28', PhpSecurity::recommendation('8.4.19'));
         $this->assertStringContainsString('EOL', PhpSecurity::recommendation('7.4.33'));
     }
 

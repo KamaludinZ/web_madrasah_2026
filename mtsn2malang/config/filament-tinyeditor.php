@@ -26,10 +26,15 @@ return [
         'content' => 'default'
     ],
 
+    // Plugin "media" TinyMCE SENGAJA tidak dipakai: TinyMCE 7.9.3 (versi
+    // terakhir yang didukung plugin Filament v3 ini) rentan XSS lewat
+    // serialisasi data-mce-object milik plugin media (CVE-2026-116675,
+    // GHSA-mf2p-h6hf-fcwm). Video YouTube tetap bisa disematkan dengan
+    // menempel kode <iframe> lewat tombol "Source code" (<>).
     'profiles' => [
         'default' => [
-            'plugins' => 'accordion autoresize codesample directionality advlist link image lists preview pagebreak searchreplace wordcount code fullscreen insertdatetime media table emoticons',
-            'toolbar' => 'undo redo removeformat | fontfamily fontsize fontsizeinput font_size_formats styles | bold italic underline | rtl ltr | alignjustify alignleft aligncenter alignright | numlist bullist outdent indent | forecolor backcolor | blockquote table toc hr | image link media codesample emoticons | wordcount fullscreen',
+            'plugins' => 'accordion autoresize codesample directionality advlist link image lists preview pagebreak searchreplace wordcount code fullscreen insertdatetime table emoticons',
+            'toolbar' => 'undo redo removeformat | fontfamily fontsize fontsizeinput font_size_formats styles | bold italic underline | rtl ltr | alignjustify alignleft aligncenter alignright | numlist bullist outdent indent | forecolor backcolor | blockquote table toc hr | image link codesample emoticons | wordcount fullscreen',
             'upload_directory' => null,
         ],
 
@@ -46,8 +51,8 @@ return [
         ],
 
         'full' => [
-            'plugins' => 'accordion autoresize codesample directionality advlist autolink link image lists charmap preview anchor pagebreak searchreplace wordcount visualblocks visualchars code fullscreen insertdatetime media table emoticons help',
-            'toolbar' => 'undo redo removeformat | fontfamily fontsize fontsizeinput font_size_formats styles | bold italic underline | rtl ltr | alignjustify alignright aligncenter alignleft | numlist bullist outdent indent accordion | forecolor backcolor | blockquote table toc hr | image link anchor media codesample emoticons | visualblocks print preview wordcount fullscreen help',
+            'plugins' => 'accordion autoresize codesample directionality advlist autolink link image lists charmap preview anchor pagebreak searchreplace wordcount visualblocks visualchars code fullscreen insertdatetime table emoticons help',
+            'toolbar' => 'undo redo removeformat | fontfamily fontsize fontsizeinput font_size_formats styles | bold italic underline | rtl ltr | alignjustify alignright aligncenter alignleft | numlist bullist outdent indent accordion | forecolor backcolor | blockquote table toc hr | image link anchor codesample emoticons | visualblocks print preview wordcount fullscreen help',
             'upload_directory' => null,
         ],
     ],
