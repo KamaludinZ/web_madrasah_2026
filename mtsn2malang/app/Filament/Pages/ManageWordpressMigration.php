@@ -161,8 +161,10 @@ class ManageWordpressMigration extends Page
                             ->label('Upload File WordPress XML (WXR)')
                             ->acceptedFileTypes(['text/xml', 'application/xml', 'application/octet-stream'])
                             ->directory('wordpress-imports')
-                            ->disk('public')
-                            ->visibility('public')
+                            // Ekspor WordPress berisi seluruh konten + email penulis —
+                            // simpan privat (tidak bisa diunduh lewat /storage).
+                            ->disk('local')
+                            ->visibility('private')
                             ->maxSize(512000)
                             ->downloadable()
                             ->preserveFilenames()

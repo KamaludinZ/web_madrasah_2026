@@ -167,7 +167,9 @@ class ImportWordPress extends Command
                 'category_id' => $categoryId,
                 'title' => $post->post_title,
                 'slug' => $post->post_name ?: Str::slug($post->post_title),
-                'excerpt' => $post->post_excerpt ?: Str::limit(strip_tags($post->post_content), 200),
+                // Kosongkan bila tidak ada ringkasan: dibuat otomatis dari konten
+                // (tanpa shortcode WordPress) oleh News::getExcerptAttribute.
+                'excerpt' => $post->post_excerpt ?: null,
                 'content' => $post->post_content,
                 'thumbnail' => $thumbnail,
                 'status' => 'published',

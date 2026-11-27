@@ -138,9 +138,21 @@ class News extends Model
 
     public function getExcerptAttribute($value): string
     {
-        if ($value) return $value;
-        // strip_tags dulu, lalu potong per karakter (bukan per byte) agar
-        // huruf multibyte tidak terpotong menjadi karakter rusak.
-        return \Illuminate\Support\Str::limit(trim(strip_tags((string) $this->content)), 200);
+        // Ringkasan tersimpan dipakai apa adanya kecuali berisi sisa shortcode
+        // WordPress (hasil impor lama) — dibersihkan juga.
+        if ($value && ! str_contains($value, '[')) {
+            return $value;
+        }
+
+        // Shortcode WordPress sisa migrasi ([gallery ...], [embed]...) tidak
+        // boleh ikut tampil di ringkasan / meta description. strip_tags dulu,
+        // lalu potong per karakter (bukan per byte) agar huruf multibyte aman.
+        $text = strip_tags(\App\Support\WordpressContent::normalize((string) ($value ?: $this->content)));
+        $text = preg_replace('/\[(?:\/?(?:embed|caption|gallery|video|audio|playlist)\b[^\]]*|[a-z][\w-]*\s[^\]]*=[^\]]*)\]/i', ' ', $text) ?? $text;
+
+        $text = trim(preg_replace('/\s+/u', ' ', html_entity_decode($text)) ?? '');
+
+        // Ringkasan tulisan admin tidak dipotong; hanya yang dibuat otomatis.
+        return $value ? $text : \Illuminate\Support\Str::limit($text, 200);
     }
 }

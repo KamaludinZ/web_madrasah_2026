@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Category;
 use App\Models\News;
 use App\Models\WordpressMigrationBatch;
+use App\Support\ContentSpamDetector;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -72,25 +73,31 @@ class WordpressMigrationService
      */
     private function resolveXmlPath(array $data): string
     {
-        // Prioritas 1: path manual
+        // Prioritas 1: path manual — hanya file .xml biasa, agar kolom ini
+        // tidak bisa dipakai membaca file lain di server (mis. .env).
         $manualPath = trim($data['wp_migration_offline_file_path'] ?? '');
-        if ($manualPath && file_exists($manualPath)) {
-            return $manualPath;
+        if ($manualPath !== '') {
+            $real = realpath($manualPath);
+            if ($real && is_file($real) && strtolower(pathinfo($real, PATHINFO_EXTENSION)) === 'xml') {
+                return $real;
+            }
         }
 
-        // Prioritas 2: file upload (Filament FileUpload simpan sebagai string path relatif)
+        // Prioritas 2: file upload — kini di disk privat (local); upload lama
+        // di disk public tetap dikenali.
         $uploadedFile = $data['wp_migration_offline_file'] ?? null;
         if ($uploadedFile) {
-            // Bisa berupa array (Filament v3) atau string
-            $relativePath = is_array($uploadedFile) ? (reset($uploadedFile) ?: '') : (string) $uploadedFile;
-            $fullPath = storage_path('app/public/' . ltrim($relativePath, '/'));
-            if (file_exists($fullPath)) {
-                return $fullPath;
+            $relativePath = ltrim(is_array($uploadedFile) ? (string) (reset($uploadedFile) ?: '') : (string) $uploadedFile, '/');
+
+            foreach (['local', 'public'] as $disk) {
+                if ($relativePath !== '' && ! str_contains($relativePath, '..') && Storage::disk($disk)->exists($relativePath)) {
+                    return Storage::disk($disk)->path($relativePath);
+                }
             }
         }
 
         throw new \RuntimeException(
-            'File XML tidak ditemukan. Upload file WXR atau isi path file di server.'
+            'File XML tidak ditemukan. Upload file WXR atau isi path file .xml di server.'
         );
     }
 
@@ -111,6 +118,78 @@ class WordpressMigrationService
     }
 
     /**
+     * Pola URL media WordPress milik situs sumber, termasuk varian www. dan
+     * proxy CDN Jetpack (i0.wp.com/…). Grup 1 = path /wp-content/uploads/….
+     * Sebelumnya hanya URL yang persis sama dengan Source URL yang cocok,
+     * sehingga sebagian besar gambar (www./i0.wp.com) tidak ikut dipindah.
+     */
+    private function mediaPattern(string $sourceUrl): string
+    {
+        $host = preg_replace('/^www\./i', '', (string) parse_url($sourceUrl, PHP_URL_HOST));
+
+        return '#(?:https?:)?//(?:i[0-3]\.wp\.com/)?(?:www\.)?' . preg_quote($host, '#') . '(/wp-content/uploads/[^"\'\s?<>]+)(?:\?[^"\'\s<>]*)?#i';
+    }
+
+    /**
+     * Unduh semua gambar konten (varian host apa pun) dari situs sumber.
+     *
+     * @param  array<string, string>  $downloadedMap  path → URL lokal
+     */
+    private function downloadContentImages(string $content, string $sourceUrl, array &$downloadedMap, int &$handledImages, bool $dryRun = false): void
+    {
+        preg_match_all($this->mediaPattern($sourceUrl), $content, $matches);
+
+        foreach (array_unique($matches[1] ?? []) as $path) {
+            if (isset($downloadedMap[$path])) {
+                continue;
+            }
+
+            // Dry-run hanya menghitung — tidak mengunduh/menyimpan apa pun.
+            if ($dryRun) {
+                $downloadedMap[$path] = '';
+                $handledImages++;
+
+                continue;
+            }
+
+            $localUrl = $this->downloadImage(rtrim($sourceUrl, '/') . $path, $sourceUrl);
+            if ($localUrl) {
+                $downloadedMap[$path] = $localUrl;
+                $handledImages++;
+            }
+        }
+    }
+
+    /**
+     * Parse satu <item> WXR tanpa akses jaringan/entitas eksternal (XXE).
+     * Entri yang tidak valid dilewati (null) alih-alih menggagalkan migrasi.
+     */
+    private function parseItem(string $xml): ?\SimpleXMLElement
+    {
+        $previous = libxml_use_internal_errors(true);
+
+        try {
+            return new \SimpleXMLElement($xml, LIBXML_NONET);
+        } catch (\Exception) {
+            return null;
+        } finally {
+            libxml_clear_errors();
+            libxml_use_internal_errors($previous);
+        }
+    }
+
+    private function isSpam(string $title, string $content, int &$spamPosts): bool
+    {
+        if (ContentSpamDetector::reasons($title, $content) === []) {
+            return false;
+        }
+
+        $spamPosts++;
+
+        return true;
+    }
+
+    /**
      * Rewrite URL gambar di konten dari domain WordPress lama ke storage lokal.
      */
     private function rewriteContentImages(string $content, string $sourceUrl, array &$downloadedMap): string
@@ -119,40 +198,59 @@ class WordpressMigrationService
             return $content;
         }
 
-        $sourceUrl = rtrim($sourceUrl, '/');
-
         return preg_replace_callback(
-            '/(src|href)=["\'](' . preg_quote($sourceUrl, '/') . '\/wp-content\/uploads\/[^"\']+)["\']/i',
-            function ($matches) use (&$downloadedMap) {
-                $originalUrl = $matches[2];
-                if (isset($downloadedMap[$originalUrl])) {
-                    return $matches[1] . '="' . $downloadedMap[$originalUrl] . '"';
-                }
-                return $matches[0];
-            },
+            $this->mediaPattern($sourceUrl),
+            fn (array $m) => ($downloadedMap[$m[1]] ?? '') !== '' ? $downloadedMap[$m[1]] : $m[0],
             $content
         ) ?? $content;
     }
 
     /**
-     * Download gambar dari URL dan simpan ke storage lokal.
-     * Return URL lokal atau null jika gagal.
+     * Download gambar dari situs WordPress sumber dan simpan ke storage lokal.
+     * Hanya host sumber (± www.) yang diizinkan — termasuk saat redirect —
+     * agar URL di konten/guid tidak bisa dipakai menjangkau server lain
+     * (SSRF). Return URL lokal atau null jika gagal.
      */
-    private function downloadImage(string $url): ?string
+    private function downloadImage(string $url, string $sourceUrl): ?string
     {
+        $allowedHost = strtolower(preg_replace('/^www\./i', '', (string) parse_url($sourceUrl, PHP_URL_HOST)));
+        $isAllowed = function (string $candidate) use ($allowedHost): bool {
+            $parts = parse_url($candidate);
+
+            return in_array(strtolower($parts['scheme'] ?? ''), ['http', 'https'], true)
+                && $allowedHost !== ''
+                && strtolower(preg_replace('/^www\./i', '', $parts['host'] ?? '')) === $allowedHost;
+        };
+
+        if (! $isAllowed($url)) {
+            return null;
+        }
+
         try {
-            $response = Http::timeout(15)->get($url);
-            if (! $response->successful()) {
+            $response = Http::timeout(15)->withOptions([
+                'allow_redirects' => [
+                    'max' => 3,
+                    'protocols' => ['http', 'https'],
+                    'on_redirect' => function ($request, $response, $uri) use ($isAllowed) {
+                        if (! $isAllowed((string) $uri)) {
+                            throw new \RuntimeException('Redirect ke host lain ditolak.');
+                        }
+                    },
+                ],
+            ])->get($url);
+
+            if (! $response->successful() || strlen($response->body()) > 25 * 1024 * 1024) {
                 return null;
             }
 
-            $ext      = pathinfo(parse_url($url, PHP_URL_PATH), PATHINFO_EXTENSION) ?: 'jpg';
-            // SVG sengaja tidak diizinkan (bisa berisi skrip).
-            if (strtolower($ext) === 'svg') {
+            // Pastikan benar-benar gambar (bukan HTML/skrip berekstensi .jpg).
+            $info = @getimagesizefromstring($response->body());
+            $types = [IMAGETYPE_JPEG => 'jpg', IMAGETYPE_PNG => 'png', IMAGETYPE_GIF => 'gif', IMAGETYPE_WEBP => 'webp'];
+            if ($info === false || ! isset($types[$info[2]])) {
                 return null;
             }
-            $safeExt  = in_array(strtolower($ext), ['jpg', 'jpeg', 'png', 'gif', 'webp'], true) ? $ext : 'jpg';
-            $filename = 'wordpress-migration/' . Str::uuid() . '.' . $safeExt;
+
+            $filename = 'wordpress-migration/' . Str::uuid() . '.' . $types[$info[2]];
 
             Storage::disk('public')->put($filename, $response->body());
 
@@ -323,6 +421,7 @@ class WordpressMigrationService
 
         $migratedPosts  = 0;
         $handledImages  = 0;
+        $spamPosts      = 0;
         $downloadedMap  = [];
 
         try {
@@ -360,20 +459,7 @@ class WordpressMigrationService
 
                     // Download & rewrite gambar di konten
                     if (($data['wp_migration_import_images'] ?? true) && $sourceUrl) {
-                        preg_match_all(
-                            '/src=["\'](' . preg_quote($sourceUrl, '/') . '\/wp-content\/uploads\/[^"\']+)["\']/i',
-                            $content,
-                            $imgMatches
-                        );
-                        foreach (array_unique($imgMatches[1] ?? []) as $imgUrl) {
-                            if (! isset($downloadedMap[$imgUrl])) {
-                                $localUrl = $this->downloadImage($imgUrl);
-                                if ($localUrl) {
-                                    $downloadedMap[$imgUrl] = $localUrl;
-                                    $handledImages++;
-                                }
-                            }
-                        }
+                        $this->downloadContentImages($content, $sourceUrl, $downloadedMap, $handledImages, $isDryRun);
                     }
 
                     if (($data['wp_migration_rewrite_content_images'] ?? true) && $sourceUrl) {
@@ -398,7 +484,7 @@ class WordpressMigrationService
                             $thumbUrl = $thumbUrlStmt->fetchColumn();
 
                             if ($thumbUrl) {
-                                $localThumb = $this->downloadImage($thumbUrl);
+                                $localThumb = $sourceUrl && ! $isDryRun ? $this->downloadImage($thumbUrl, $sourceUrl) : null;
                                 if ($localThumb) {
                                     // Simpan path relatif untuk storage
                                     $thumbnailPath = str_replace(
@@ -441,7 +527,8 @@ class WordpressMigrationService
                             'slug'                => $slug,
                             'content'             => $content,
                             'excerpt'             => strip_tags($post['post_excerpt'] ?? ''),
-                            'status'              => 'published',
+                            // Postingan spam (situs lama pernah disusupi) tidak ditayangkan.
+                            'status'              => $this->isSpam($post['post_title'] ?? '', $content, $spamPosts) ? 'archived' : 'published',
                             'published_at'        => $post['post_date'],
                             'category_id'         => $catId,
                             'thumbnail'           => $thumbnailPath,
@@ -469,7 +556,7 @@ class WordpressMigrationService
             $label = $isDryRun ? '[DRY RUN] ' : '';
             return [
                 'ok'      => true,
-                'message' => "{$label}Berhasil memproses {$migratedPosts} post dan {$handledImages} gambar.",
+                'message' => "{$label}Berhasil memproses {$migratedPosts} post dan {$handledImages} gambar." . ($spamPosts ? " {$spamPosts} post terindikasi spam diimpor sebagai Arsip (tidak tayang)." : ''),
             ];
         } catch (Throwable $e) {
             $batch?->update(['status' => 'failed', 'notes' => $e->getMessage(), 'finished_at' => now()]);
@@ -511,7 +598,7 @@ class WordpressMigrationService
 
         // Gunakan XMLReader untuk file besar (hemat memori)
         $reader = new \XMLReader();
-        if (! $reader->open($xmlPath)) {
+        if (! $reader->open($xmlPath, null, LIBXML_NONET | LIBXML_PARSEHUGE)) {
             throw new \RuntimeException('Gagal membuka file XML.');
         }
 
@@ -523,7 +610,10 @@ class WordpressMigrationService
         while ($reader->read()) {
             if ($reader->nodeType === \XMLReader::ELEMENT) {
                 if ($reader->localName === 'item') {
-                    $item = new \SimpleXMLElement($reader->readOuterXml());
+                    $item = $this->parseItem($reader->readOuterXml());
+                    if ($item === null) {
+                        continue;
+                    }
                     $ns   = $item->children('wp', true);
                     $type = (string) ($ns->post_type ?? '');
 
@@ -574,11 +664,12 @@ class WordpressMigrationService
 
         $migratedPosts = 0;
         $handledImages = 0;
+        $spamPosts = 0;
         $downloadedMap = [];
 
         try {
             $reader = new \XMLReader();
-            if (! $reader->open($xmlPath)) {
+            if (! $reader->open($xmlPath, null, LIBXML_NONET | LIBXML_PARSEHUGE)) {
                 throw new \RuntimeException('Gagal membuka file XML.');
             }
 
@@ -590,8 +681,10 @@ class WordpressMigrationService
                     continue;
                 }
 
-                $xml  = $reader->readOuterXml();
-                $item = new \SimpleXMLElement($xml);
+                $item = $this->parseItem($reader->readOuterXml());
+                if ($item === null) {
+                    continue; // entri rusak/mencurigakan dilewati, migrasi lanjut
+                }
                 $wp   = $item->children('wp', true);
                 $dc   = $item->children('dc', true);
 
@@ -633,20 +726,7 @@ class WordpressMigrationService
 
                 // Download gambar di konten
                 if (($data['wp_migration_import_images'] ?? true) && $sourceUrl) {
-                    preg_match_all(
-                        '/src=["\'](' . preg_quote($sourceUrl, '/') . '\/wp-content\/uploads\/[^"\']+)["\']/i',
-                        $content,
-                        $imgMatches
-                    );
-                    foreach (array_unique($imgMatches[1] ?? []) as $imgUrl) {
-                        if (! isset($downloadedMap[$imgUrl])) {
-                            $localUrl = $this->downloadImage($imgUrl);
-                            if ($localUrl) {
-                                $downloadedMap[$imgUrl] = $localUrl;
-                                $handledImages++;
-                            }
-                        }
-                    }
+                    $this->downloadContentImages($content, $sourceUrl, $downloadedMap, $handledImages, $isDryRun);
                 }
 
                 if (($data['wp_migration_rewrite_content_images'] ?? true) && $sourceUrl) {
@@ -666,7 +746,8 @@ class WordpressMigrationService
                         'slug'               => $slug,
                         'content'            => $content,
                         'excerpt'            => $excerpt,
-                        'status'             => 'published',
+                        // Postingan spam (situs lama pernah disusupi) tidak ditayangkan.
+                        'status'             => $this->isSpam($title, $content, $spamPosts) ? 'archived' : 'published',
                         'published_at'       => $date,
                         'category_id'        => $catId,
                         'user_id'            => 1,
@@ -690,7 +771,7 @@ class WordpressMigrationService
             $label = $isDryRun ? '[DRY RUN] ' : '';
             return [
                 'ok'      => true,
-                'message' => "{$label}Berhasil memproses {$migratedPosts} post dan {$handledImages} gambar dari XML.",
+                'message' => "{$label}Berhasil memproses {$migratedPosts} post dan {$handledImages} gambar dari XML." . ($spamPosts ? " {$spamPosts} post terindikasi spam diimpor sebagai Arsip (tidak tayang)." : ''),
             ];
         } catch (Throwable $e) {
             $batch?->update(['status' => 'failed', 'notes' => $e->getMessage(), 'finished_at' => now()]);
