@@ -2,11 +2,28 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Group;
+use Filament\Schemas\Components\Section;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
+use Filament\Tables\Columns\ImageColumn;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use App\Filament\Resources\FacilityResource\Pages\ListFacilities;
+use App\Filament\Resources\FacilityResource\Pages\CreateFacility;
+use App\Filament\Resources\FacilityResource\Pages\EditFacility;
 use App\Filament\Resources\FacilityResource\Pages;
 use App\Models\Facility;
 use App\Support\UploadImageHelper;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -22,33 +39,33 @@ class FacilityResource extends Resource
     }
 
     protected static ?string $model           = Facility::class;
-    protected static ?string $navigationIcon  = 'heroicon-o-building-office-2';
+    protected static string|\BackedEnum|null $navigationIcon  = 'heroicon-o-building-office-2';
     protected static ?string $navigationLabel = 'Sarana & Prasarana';
-    protected static ?string $navigationGroup = 'Profil Sekolah';
+    protected static string|\UnitEnum|null $navigationGroup = 'Profil Sekolah';
     protected static ?int    $navigationSort  = 3;
     protected static ?string $modelLabel      = 'Sarana Prasarana';
     protected static ?string $pluralModelLabel = 'Sarana & Prasarana';
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([
-            Forms\Components\Group::make()->schema([
+        return $schema->components([
+            Group::make()->schema([
 
-                Forms\Components\Section::make('Foto Fasilitas')
+                Section::make('Foto Fasilitas')
                     ->schema([
                         UploadImageHelper::webpFileUpload('image', 'Upload Foto', 'facilities', true)
                             ->imageEditor()
                             ->helperText('JPG, PNG · Maks 5MB · Otomatis dikonversi ke WebP'),
                     ]),
 
-                Forms\Components\Section::make('Pengaturan')
+                Section::make('Pengaturan')
                     ->schema([
-                        Forms\Components\TextInput::make('order')
+                        TextInput::make('order')
                             ->label('Urutan Tampil')
                             ->numeric()
                             ->default(0),
 
-                        Forms\Components\Toggle::make('is_active')
+                        Toggle::make('is_active')
                             ->label('Tampilkan')
                             ->default(true)
                             ->onColor('success')
@@ -58,17 +75,17 @@ class FacilityResource extends Resource
 
             ])->columnSpan(1),
 
-            Forms\Components\Group::make()->schema([
+            Group::make()->schema([
 
-                Forms\Components\Section::make('Informasi Fasilitas')
+                Section::make('Informasi Fasilitas')
                     ->schema([
-                        Forms\Components\TextInput::make('name')
+                        TextInput::make('name')
                             ->label('Nama Fasilitas')
                             ->required()
                             ->maxLength(150)
                             ->placeholder('Contoh: Laboratorium IPA, Perpustakaan, Masjid'),
 
-                        Forms\Components\Select::make('category')
+                        Select::make('category')
                             ->label('Kategori')
                             ->options([
                                 'akademik'   => 'Akademik',
@@ -81,7 +98,7 @@ class FacilityResource extends Resource
                             ->native(false)
                             ->placeholder('Pilih kategori'),
 
-                        Forms\Components\Textarea::make('description')
+                        Textarea::make('description')
                             ->label('Deskripsi')
                             ->rows(4)
                             ->maxLength(1000)
@@ -98,30 +115,30 @@ class FacilityResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\ImageColumn::make('image')->label('Foto')->width(80)->height(60),
-                Tables\Columns\TextColumn::make('name')->label('Nama')->searchable()->sortable()->weight('semibold'),
-                Tables\Columns\TextColumn::make('category')->label('Kategori')->badge()->color('info'),
-                Tables\Columns\IconColumn::make('is_active')->label('Tampil')->boolean(),
-                Tables\Columns\TextColumn::make('order')->label('Urutan')->sortable(),
+                ImageColumn::make('image')->label('Foto')->width(80)->height(60),
+                TextColumn::make('name')->label('Nama')->searchable()->sortable()->weight('semibold'),
+                TextColumn::make('category')->label('Kategori')->badge()->color('info'),
+                IconColumn::make('is_active')->label('Tampil')->boolean(),
+                TextColumn::make('order')->label('Urutan')->sortable(),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('category')->options([
+                SelectFilter::make('category')->options([
                     'akademik' => 'Akademik', 'olahraga' => 'Olahraga',
                     'ibadah' => 'Ibadah', 'mahad' => "Ma'had",
                     'penunjang' => 'Penunjang', 'lainnya' => 'Lainnya',
                 ]),
             ])
             ->reorderable('order')
-            ->actions([Tables\Actions\EditAction::make(), Tables\Actions\DeleteAction::make()])
-            ->bulkActions([Tables\Actions\BulkActionGroup::make([Tables\Actions\DeleteBulkAction::make()])]);
+            ->actions([EditAction::make(), DeleteAction::make()])
+            ->bulkActions([BulkActionGroup::make([DeleteBulkAction::make()])]);
     }
 
     public static function getPages(): array
     {
         return [
-            'index'  => Pages\ListFacilities::route('/'),
-            'create' => Pages\CreateFacility::route('/create'),
-            'edit'   => Pages\EditFacility::route('/{record}/edit'),
+            'index'  => ListFacilities::route('/'),
+            'create' => CreateFacility::route('/create'),
+            'edit'   => EditFacility::route('/{record}/edit'),
         ];
     }
 }

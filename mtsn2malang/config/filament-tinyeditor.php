@@ -2,15 +2,21 @@
 
 return [
     'version' => [
-        'tiny' => '7.3.0',
+        // Selalu sama dengan versi paket tinymce/tinymce di composer.lock
+        // (dipakai untuk URL CDN bila provider = cloud).
+        'tiny' => \Composer\InstalledVersions::getPrettyVersion('tinymce/tinymce') ?? '8.11.0',
         'language' => [
             // https://cdn.jsdelivr.net/npm/tinymce-i18n@latest/
-            'version' => '24.7.29',
-            'package' => 'langs7',
+            'version' => '25.8.4',
+            'package' => 'langs8',
         ],
         'licence_key' => env('TINY_LICENSE_KEY', 'no-api-key'),
     ],
-    'provider' => 'cloud', // cloud|vendor — cloud pakai TINY_LICENSE_KEY di .env (Tiny Cloud), otomatis fallback ke GPL/watermark kalau key kosong
+    // vendor = TinyMCE dimuat dari server sendiri (public/vendor/tinymce,
+    // versinya ikut composer.lock dan ikut dipindai keamanannya) — tanpa
+    // bergantung pada CDN pihak ketiga. Isi TINYMCE_PROVIDER=cloud untuk
+    // memakai Tiny Cloud (butuh TINY_LICENSE_KEY).
+    'provider' => env('TINYMCE_PROVIDER', 'vendor'),
     // 'direction' => 'rtl',
     /**
      * change darkMode: 'auto'|'force'|'class'|'media'|false|'custom'
@@ -26,29 +32,35 @@ return [
         'content' => 'default'
     ],
 
+    // Plugin "media" aman dipakai sejak TinyMCE 8.9.3 (XSS data-mce-object,
+    // GHSA-mf2p-h6hf-fcwm). Versi minimum dijaga DependencySecurityTest.
     'profiles' => [
         'default' => [
             'plugins' => 'accordion autoresize codesample directionality advlist link image lists preview pagebreak searchreplace wordcount code fullscreen insertdatetime media table emoticons',
             'toolbar' => 'undo redo removeformat | fontfamily fontsize fontsizeinput font_size_formats styles | bold italic underline | rtl ltr | alignjustify alignleft aligncenter alignright | numlist bullist outdent indent | forecolor backcolor | blockquote table toc hr | image link media codesample emoticons | wordcount fullscreen',
             'upload_directory' => null,
+            'custom_configs' => ['language_url' => '/js/amidesfahani/filament-tinyeditor/tinymce-lang-id.js'],
         ],
 
         'simple' => [
             'plugins' => 'autoresize directionality emoticons link wordcount',
             'toolbar' => 'removeformat | bold italic | rtl ltr | numlist bullist | link emoticons',
             'upload_directory' => null,
+            'custom_configs' => ['language_url' => '/js/amidesfahani/filament-tinyeditor/tinymce-lang-id.js'],
         ],
 
         'minimal' => [
             'plugins' => 'link wordcount',
             'toolbar' => 'bold italic link numlist bullist',
             'upload_directory' => null,
+            'custom_configs' => ['language_url' => '/js/amidesfahani/filament-tinyeditor/tinymce-lang-id.js'],
         ],
 
         'full' => [
             'plugins' => 'accordion autoresize codesample directionality advlist autolink link image lists charmap preview anchor pagebreak searchreplace wordcount visualblocks visualchars code fullscreen insertdatetime media table emoticons help',
             'toolbar' => 'undo redo removeformat | fontfamily fontsize fontsizeinput font_size_formats styles | bold italic underline | rtl ltr | alignjustify alignright aligncenter alignleft | numlist bullist outdent indent accordion | forecolor backcolor | blockquote table toc hr | image link anchor media codesample emoticons | visualblocks print preview wordcount fullscreen help',
             'upload_directory' => null,
+            'custom_configs' => ['language_url' => '/js/amidesfahani/filament-tinyeditor/tinymce-lang-id.js'],
         ],
     ],
 
@@ -61,7 +73,13 @@ return [
      *      'ja' => asset('assets/ja.min.js')
      * ]
      */
-    'languages' => [],
+    // Bahasa Indonesia disimpan di server sendiri (tinymce-i18n 25.8.4,
+    // lisensi MIT) — editor tidak gagal dimuat bila CDN jsDelivr terganggu.
+    // `language_url` tiap profil (custom_configs) menunjuk file yang sama
+    // agar TinyMCE tidak mengambil bahasa dari CDN.
+    'languages' => [
+        'id' => resource_path('js/vendor/tinymce-i18n/id.js'),
+    ],
 
     // Samakan tampilan di dalam editor dengan tampilan publik (.prose prose-lg
     // di resources/views/pages/berita/show.blade.php), supaya WYSIWYG-nya jujur.

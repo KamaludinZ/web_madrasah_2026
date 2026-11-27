@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Resources\MediaResource\Pages\ListMedia;
 use App\Filament\Resources\MediaResource\Pages;
 use App\Filament\Resources\Concerns\HasRoleAccess;
 use App\Models\GalleryPost;
@@ -18,9 +19,9 @@ class MediaResource extends Resource
 
     protected static ?string $model = GalleryPost::class;
 
-    protected static ?string $navigationIcon   = 'heroicon-o-photo';
+    protected static string|\BackedEnum|null $navigationIcon   = 'heroicon-o-photo';
     protected static ?string $navigationLabel  = 'Media';
-    protected static ?string $navigationGroup  = 'Konten';
+    protected static string|\UnitEnum|null $navigationGroup  = 'Konten';
     protected static ?int    $navigationSort   = 2;
     protected static ?string $modelLabel       = 'Media';
     protected static ?string $pluralModelLabel = 'Media';
@@ -28,7 +29,7 @@ class MediaResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListMedia::route('/'),
+            'index' => ListMedia::route('/'),
         ];
     }
 }

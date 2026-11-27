@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\BadgeAchievementResource\Pages;
 
+use Filament\Actions\DeleteAction;
 use App\Filament\Resources\BadgeAchievementResource;
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
@@ -12,6 +13,6 @@ class EditBadgeAchievement extends EditRecord
 
     protected function getHeaderActions(): array
     {
-        return [Actions\DeleteAction::make()];
+        return [DeleteAction::make()];
     }
 }

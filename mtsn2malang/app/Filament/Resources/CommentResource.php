@@ -2,12 +2,26 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Textarea;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TrashedFilter;
+use Filament\Actions\Action;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\RestoreAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\BulkAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\RestoreBulkAction;
+use App\Filament\Resources\CommentResource\Pages\ListComments;
+use Throwable;
 use App\Filament\Resources\CommentResource\Pages;
 use App\Filament\Resources\Concerns\HasRoleAccess;
 use App\Models\Comment;
 use App\Models\News;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -20,9 +34,9 @@ class CommentResource extends Resource
 
     protected static ?string $model = Comment::class;
 
-    protected static ?string $navigationIcon  = 'heroicon-o-chat-bubble-left-right';
+    protected static string|\BackedEnum|null $navigationIcon  = 'heroicon-o-chat-bubble-left-right';
     protected static ?string $navigationLabel = 'Moderasi Komentar';
-    protected static ?string $navigationGroup = 'Konten';
+    protected static string|\UnitEnum|null $navigationGroup = 'Konten';
     protected static ?int    $navigationSort  = 3;
     protected static ?string $modelLabel      = 'Komentar';
     protected static ?string $pluralModelLabel = 'Komentar';
@@ -33,18 +47,18 @@ class CommentResource extends Resource
     }
 
     // Tidak ada form Create — komentar hanya dibuat dari frontend
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([
-            Forms\Components\TextInput::make('guest_name')
+        return $schema->components([
+            TextInput::make('guest_name')
                 ->label('Nama Pengunjung')
                 ->disabled()
                 ->visible(fn ($record) => filled($record?->guest_name)),
-            Forms\Components\TextInput::make('guest_email')
+            TextInput::make('guest_email')
                 ->label('Email Pengunjung (tidak ditampilkan publik)')
                 ->disabled()
                 ->visible(fn ($record) => filled($record?->guest_email)),
-            Forms\Components\Textarea::make('content')
+            Textarea::make('content')
                 ->label('Isi Komentar')
                 ->disabled()
                 ->columnSpanFull(),
@@ -56,7 +70,7 @@ class CommentResource extends Resource
         return $table
             ->defaultSort('created_at', 'desc')
             ->columns([
-                Tables\Columns\TextColumn::make('status')
+                TextColumn::make('status')
                     ->label('Status')
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
@@ -73,14 +87,14 @@ class CommentResource extends Resource
                     })
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('content')
+                TextColumn::make('content')
                     ->label('Komentar')
                     ->limit(80)
                     ->tooltip(fn ($record) => $record->content)
                     ->searchable()
                     ->wrap(),
 
-                Tables\Columns\TextColumn::make('author_name')
+                TextColumn::make('author_name')
                     ->label('Penulis')
                     ->getStateUsing(fn ($record) =>
                         $record->user?->name ?? ($record->guest_name ?: 'Anonim')
@@ -94,7 +108,7 @@ class CommentResource extends Resource
                     ->icon('heroicon-m-user')
                     ->iconColor('gray'),
 
-                Tables\Columns\TextColumn::make('news.title')
+                TextColumn::make('news.title')
                     ->label('Berita')
                     ->limit(50)
                     ->tooltip(fn ($record) => $record->news?->title)
@@ -105,7 +119,7 @@ class CommentResource extends Resource
                     ->openUrlInNewTab()
                     ->searchable(),
 
-                Tables\Columns\TextColumn::make('created_at')
+                TextColumn::make('created_at')
                     ->label('Tanggal')
                     ->dateTime('d M Y, H:i')
                     ->sortable()
@@ -113,7 +127,7 @@ class CommentResource extends Resource
                     ->tooltip(fn ($record) => $record->created_at?->format('d M Y H:i')),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('status')
+                SelectFilter::make('status')
                     ->label('Status')
                     ->options([
                         'pending'  => 'Menunggu',
@@ -122,16 +136,16 @@ class CommentResource extends Resource
                     ])
                     ->placeholder('Semua Status'),
 
-                Tables\Filters\SelectFilter::make('news_id')
+                SelectFilter::make('news_id')
                     ->label('Berita')
                     ->options(fn () => News::orderBy('title')->pluck('title', 'id')->toArray())
                     ->searchable()
                     ->placeholder('Semua Berita'),
 
-                Tables\Filters\TrashedFilter::make(),
+                TrashedFilter::make(),
             ])
             ->actions([
-                Tables\Actions\Action::make('approve')
+                Action::make('approve')
                     ->label('Setujui')
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
@@ -147,7 +161,7 @@ class CommentResource extends Resource
                             ->send();
                     }),
 
-                Tables\Actions\Action::make('reject')
+                Action::make('reject')
                     ->label('Tolak')
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
@@ -163,15 +177,15 @@ class CommentResource extends Resource
                             ->send();
                     }),
 
-                Tables\Actions\DeleteAction::make()
+                DeleteAction::make()
                     ->label('Hapus'),
 
-                Tables\Actions\RestoreAction::make()
+                RestoreAction::make()
                     ->label('Pulihkan'),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\BulkAction::make('bulk_approve')
+                BulkActionGroup::make([
+                    BulkAction::make('bulk_approve')
                         ->label('Setujui Terpilih')
                         ->icon('heroicon-o-check-circle')
                         ->color('success')
@@ -184,7 +198,7 @@ class CommentResource extends Resource
                                 ->send();
                         }),
 
-                    Tables\Actions\BulkAction::make('bulk_reject')
+                    BulkAction::make('bulk_reject')
                         ->label('Tolak Terpilih')
                         ->icon('heroicon-o-x-circle')
                         ->color('danger')
@@ -197,10 +211,10 @@ class CommentResource extends Resource
                                 ->send();
                         }),
 
-                    Tables\Actions\DeleteBulkAction::make()
+                    DeleteBulkAction::make()
                         ->label('Hapus Terpilih'),
 
-                    Tables\Actions\RestoreBulkAction::make()
+                    RestoreBulkAction::make()
                         ->label('Pulihkan Terpilih'),
                 ]),
             ])
@@ -212,7 +226,7 @@ class CommentResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListComments::route('/'),
+            'index' => ListComments::route('/'),
         ];
     }
 
@@ -221,7 +235,7 @@ class CommentResource extends Resource
         try {
             $count = Comment::where('status', 'pending')->count();
             return $count > 0 ? (string) $count : null;
-        } catch (\Throwable) {
+        } catch (Throwable) {
             return null;
         }
     }

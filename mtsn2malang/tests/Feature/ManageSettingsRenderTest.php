@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use Illuminate\Support\Facades\File;
 use App\Filament\Pages\ManageSettings;
 use App\Jobs\ApplyManualUpdateJob;
 use App\Jobs\CreateBackupJob;
@@ -30,7 +31,7 @@ class ManageSettingsRenderTest extends TestCase
     {
         // Upload sementara (restoreFile/manualUpdateFile) tidak dihapus otomatis
         // di sini karena job pembersihnya di-fake (tidak benar-benar jalan).
-        \Illuminate\Support\Facades\File::deleteDirectory(storage_path('app/private/tmp-uploads'));
+        File::deleteDirectory(storage_path('app/private/tmp-uploads'));
 
         parent::tearDown();
     }

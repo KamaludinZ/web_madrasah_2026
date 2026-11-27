@@ -1,5 +1,5 @@
 /**
- * TinyMCE version 7.9.3 (2026-05-19)
+ * TinyMCE version 8.11.0 (2026-11-25)
  */
 
 (function () {
@@ -9,13 +9,12 @@
 
     /* eslint-disable @typescript-eslint/no-wrapper-object-types */
     const hasProto = (v, constructor, predicate) => {
-        var _a;
         if (predicate(v, constructor.prototype)) {
             return true;
         }
         else {
             // String-based fallback time
-            return ((_a = v.constructor) === null || _a === void 0 ? void 0 : _a.name) === constructor.name;
+            return v.constructor?.name === constructor.name;
         }
     };
     const typeOf = (x) => {
@@ -70,6 +69,11 @@
      * strict-null-checks
      */
     class Optional {
+        tag;
+        value;
+        // Sneaky optimisation: every instance of Optional.none is identical, so just
+        // reuse the same object
+        static singletonNone = new Optional(false);
         // The internal representation has a `tag` and a `value`, but both are
         // private: able to be console.logged, but not able to be accessed by code
         constructor(tag, value) {
@@ -237,7 +241,7 @@
          */
         getOrDie(message) {
             if (!this.tag) {
-                throw new Error(message !== null && message !== void 0 ? message : 'Called getOrDie on None');
+                throw new Error(message ?? 'Called getOrDie on None');
             }
             else {
                 return this.value;
@@ -301,12 +305,8 @@
             return this.tag ? `some(${this.value})` : 'none()';
         }
     }
-    // Sneaky optimisation: every instance of Optional.none is identical, so just
-    // reuse the same object
-    Optional.singletonNone = new Optional(false);
 
     const nativeIndexOf = Array.prototype.indexOf;
-    /* eslint-enable */
     const rawIndexOf = (ts, t) => nativeIndexOf.call(ts, t);
     const contains = (xs, x) => rawIndexOf(xs, x) > -1;
     const map = (xs, f) => {
@@ -344,6 +344,15 @@
             acc = f(acc, x, i);
         });
         return acc;
+    };
+    const forall = (xs, pred) => {
+        for (let i = 0, len = xs.length; i < len; ++i) {
+            const x = xs[i];
+            if (pred(x, i) !== true) {
+                return false;
+            }
+        }
+        return true;
     };
 
     // There are many variations of Object iteration that are faster than the 'for-in' style:
@@ -492,6 +501,26 @@
     const eq = (e1, e2) => e1.dom === e2.dom;
     const is = is$1;
 
+    /**
+     * Applies f repeatedly until it completes (by returning Optional.none()).
+     *
+     * Normally would just use recursion, but JavaScript lacks tail call optimisation.
+     *
+     * This is what recursion looks like when manually unravelled :)
+     */
+    const toArray = (target, f) => {
+        const r = [];
+        const recurse = (e) => {
+            r.push(e);
+            return f(e);
+        };
+        let cur = f(target);
+        do {
+            cur = cur.bind(recurse);
+        } while (cur.isSome());
+        return r;
+    };
+
     const name = (element) => {
         const r = element.dom.nodeName;
         return r.toLowerCase();
@@ -535,6 +564,7 @@
     };
     const prevSibling = (element) => Optional.from(element.dom.previousSibling).map(SugarElement.fromDom);
     const nextSibling = (element) => Optional.from(element.dom.nextSibling).map(SugarElement.fromDom);
+    const nextSiblings = (element) => toArray(element, nextSibling);
     const children = (element) => map(element.dom.childNodes, SugarElement.fromDom);
     const child = (element, index) => {
         const cs = element.dom.childNodes;
@@ -637,6 +667,11 @@
         return v === null ? undefined : v;
     };
     const getOpt = (element, key) => Optional.from(get$2(element, key));
+    const has = (element, key) => {
+        const dom = element.dom;
+        // return false for non-element nodes, no point in throwing an error
+        return dom && dom.hasAttribute ? dom.hasAttribute(key) : false;
+    };
     const remove$2 = (element, key) => {
         element.dom.removeAttribute(key);
     };
@@ -661,9 +696,7 @@
 
     // some elements, such as mathml, don't have style attributes
     // others, such as angular elements, have style attributes that aren't a CSSStyleDeclaration
-    const isSupported = (dom) => 
-    // eslint-disable-next-line @typescript-eslint/unbound-method
-    dom.style !== undefined && isFunction(dom.style.getPropertyValue);
+    const isSupported = (dom) => dom.style !== undefined && isFunction(dom.style.getPropertyValue);
 
     // Node.contains() is very, very, very good performance
     // http://jsperf.com/closest-vs-contains/5
@@ -1006,16 +1039,22 @@
     const fireToggleAccordionEvent = (editor, element, state) => editor.dispatch('ToggledAccordion', { element, state });
     const fireToggleAllAccordionsEvent = (editor, elements, state) => editor.dispatch('ToggledAllAccordions', { elements, state });
 
+    const option = (name) => (editor) => editor.options.get(name);
+    const isDisabled = option('disabled');
+    const getForcedRootBlock = option('forced_root_block');
+    const getForcedRootBlockAttrs = option('forced_root_block_attrs');
+
     const accordionTag = 'details';
     const accordionDetailsClass = 'mce-accordion';
     const accordionSummaryClass = 'mce-accordion-summary';
     const accordionBodyWrapperClass = 'mce-accordion-body';
     const accordionBodyWrapperTag = 'div';
+    const accordionReadonlyCompensationAttribute = 'data-mce-accordion-open';
 
     var global$3 = tinymce.util.Tools.resolve('tinymce.util.Tools');
 
-    const isSummary = (node) => (node === null || node === void 0 ? void 0 : node.nodeName) === 'SUMMARY';
-    const isDetails = (node) => (node === null || node === void 0 ? void 0 : node.nodeName) === 'DETAILS';
+    const isSummary = (node) => node?.nodeName === 'SUMMARY';
+    const isDetails = (node) => node?.nodeName === 'DETAILS';
     const isOpen = (details) => details.hasAttribute('open');
     const isInSummary = (editor) => {
         const node = editor.selection.getNode();
@@ -1042,14 +1081,14 @@
         editor.selection.setCursorLocation(paragraph, 0);
     };
     const normalizeContent = (editor, accordion) => {
-        if (isSummary(accordion === null || accordion === void 0 ? void 0 : accordion.lastChild)) {
+        if (isSummary(accordion?.lastChild)) {
             const paragraph = createParagraph(editor);
             accordion.appendChild(paragraph);
             editor.selection.setCursorLocation(paragraph, 0);
         }
     };
     const normalizeSummary = (editor, accordion) => {
-        if (!isSummary(accordion === null || accordion === void 0 ? void 0 : accordion.firstChild)) {
+        if (!isSummary(accordion?.firstChild)) {
             const summary = createSummary(editor);
             accordion.prepend(summary);
             editor.selection.setCursorLocation(summary, 0);
@@ -1063,6 +1102,17 @@
         global$3.each(global$3.grep(editor.dom.select('details', editor.getBody())), normalizeAccordion(editor));
     };
 
+    const isIgnoredSibling = (node) => isText(node) && /^[ \t\r\n]*$/.test(node.dom.data) || isElement(node) && has(node, 'data-mce-bogus');
+    // Add an empty block after an accordion that ends the document so the caret can be placed after it
+    const addTrailingBlockIfLast = (editor, details) => {
+        const body = SugarElement.fromDom(editor.getBody());
+        const isDirectChildOfBody = parent(details).exists((parent) => eq(parent, body));
+        const isLast = forall(nextSiblings(details), isIgnoredSibling);
+        if (isDirectChildOfBody && isLast) {
+            const block = editor.dom.create(getForcedRootBlock(editor), getForcedRootBlockAttrs(editor), '<br data-mce-bogus="1">');
+            after$1(details, SugarElement.fromDom(block));
+        }
+    };
     const insertAccordion = (editor) => {
         if (!isInsertAllowed(editor)) {
             return;
@@ -1082,6 +1132,7 @@
             ].join(''));
             descendant(editorBody, `[data-mce-id="${uid}"]`).each((detailsElm) => {
                 remove$2(detailsElm, 'data-mce-id');
+                addTrailingBlockIfLast(editor, detailsElm);
                 descendant(detailsElm, `summary`).each((summaryElm) => {
                     // Set the cursor location to be at the end of the summary text
                     const rng = editor.dom.createRng();
@@ -1093,8 +1144,11 @@
             });
         });
     };
-    const toggleDetailsElement = (details, state) => {
-        const shouldOpen = state !== null && state !== void 0 ? state : !isOpen(details);
+    const toggleDetailsElement = (isReadonly, details, state) => {
+        const shouldOpen = state ?? !isOpen(details);
+        if (!isReadonly) {
+            details.setAttribute(accordionReadonlyCompensationAttribute, shouldOpen ? 'open' : 'closed');
+        }
         if (shouldOpen) {
             details.setAttribute('open', 'open');
         }
@@ -1104,8 +1158,11 @@
         return shouldOpen;
     };
     const toggleAccordion = (editor, state) => {
+        if (isDisabled(editor)) {
+            return;
+        }
         getSelectedDetails(editor).each((details) => {
-            fireToggleAccordionEvent(editor, details, toggleDetailsElement(details, state));
+            fireToggleAccordionEvent(editor, details, toggleDetailsElement(editor.readonly, details, state));
         });
     };
     const removeAccordion = (editor) => {
@@ -1129,7 +1186,7 @@
         if (accordions.length === 0) {
             return;
         }
-        each$1(accordions, (accordion) => toggleDetailsElement(accordion, state !== null && state !== void 0 ? state : !isOpen(accordion)));
+        each$1(accordions, (accordion) => toggleDetailsElement(editor.readonly, accordion, state ?? !isOpen(accordion)));
         fireToggleAllAccordionsEvent(editor, accordions, state);
     };
 
@@ -1142,7 +1199,17 @@
 
     var global$2 = tinymce.util.Tools.resolve('tinymce.html.Node');
 
-    const getClassList = (node) => { var _a, _b; return (_b = (_a = node.attr('class')) === null || _a === void 0 ? void 0 : _a.split(' ')) !== null && _b !== void 0 ? _b : []; };
+    const normalizeOpenAttribute = (node) => {
+        if (hasAttribute(node, 'open')) {
+            setAttribute(node, 'open', 'open');
+        }
+    };
+    const hasAttribute = (node, attribute) => node.attr(attribute) !== undefined;
+    const setAttribute = (node, attribute, value) => {
+        node.attr(attribute, value);
+    };
+
+    const getClassList = (node) => node.attr('class')?.split(' ') ?? [];
     const addClasses = (node, classes) => {
         const classListSet = new Set([...getClassList(node), ...classes]);
         const newClassList = Array.from(classListSet);
@@ -1188,21 +1255,27 @@
         node.empty();
         node.append(br);
     };
-    const setup$2 = (editor) => {
+    const setup$3 = (editor) => {
         editor.on('PreInit', () => {
             const { serializer, parser } = editor;
             // Purpose:
             // - add mce-accordion-summary class to summary node
             // - wrap details body in div and add mce-accordion-body class (TINY-9959 assists with Chrome selection issue)
+            // - Normalize accordion 'open' attribute value to open="open"
             parser.addNodeFilter(accordionTag, (nodes) => {
                 // Using a traditional for loop here as we may have to iterate over many nodes and it is the most performant way of doing so
                 for (let i = 0; i < nodes.length; i++) {
                     const node = nodes[i];
+                    normalizeOpenAttribute(node);
                     if (isAccordionDetailsNode(node)) {
                         const accordionNode = node;
+                        accordionNode.attr(accordionReadonlyCompensationAttribute, accordionNode.attr('open') === 'open' ? 'open' : 'closed');
                         const { summaryNode, wrapperNode, otherNodes } = getAccordionChildren(accordionNode);
                         const hasSummaryNode = isNonNullable(summaryNode);
                         const newSummaryNode = hasSummaryNode ? summaryNode : new global$2('summary', 1);
+                        if (hasSummaryNode && accordionNode.firstChild && accordionNode.firstChild !== newSummaryNode) {
+                            accordionNode.insert(newSummaryNode, accordionNode.firstChild, true);
+                        }
                         // If there is nothing in the summary, pad it with a br
                         // so the cursor can be put inside the accordion summary
                         if (isNullable(newSummaryNode.firstChild)) {
@@ -1250,6 +1323,8 @@
                     const node = nodes[i];
                     if (isAccordionDetailsNode(node)) {
                         const accordionNode = node;
+                        accordionNode.attr('open', accordionNode.attr(accordionReadonlyCompensationAttribute) === 'open' ? 'open' : null);
+                        accordionNode.attr(accordionReadonlyCompensationAttribute, null);
                         const { summaryNode, wrapperNode } = getAccordionChildren(accordionNode);
                         if (isNonNullable(summaryNode)) {
                             removeClasses(summaryNode, summaryClassRemoveSet);
@@ -1274,13 +1349,32 @@
             }
         });
     };
-    const setup$1 = (editor) => {
+    const setup$2 = (editor) => {
         setupEnterKeyInSummary(editor);
         editor.on('ExecCommand', (e) => {
             const cmd = e.command.toLowerCase();
             if ((cmd === 'delete' || cmd === 'forwarddelete') && isDetailsSelected(editor)) {
                 normalizeDetails(editor);
             }
+        });
+    };
+
+    const isAccordion = (target) => {
+        const node = target;
+        return isDetails(node) && node.classList.contains(accordionDetailsClass);
+    };
+    const setup$1 = (editor) => {
+        const onToggle = (e) => {
+            const details = e.target;
+            if (isAccordion(details) && !editor.readonly && !isDisabled(editor)) {
+                details.setAttribute(accordionReadonlyCompensationAttribute, isOpen(details) ? 'open' : 'closed');
+            }
+        };
+        editor.on('init', () => {
+            const body = editor.getBody();
+            // toggle does not bubble, so it is caught in the capture phase
+            body.addEventListener('toggle', onToggle, true);
+            editor.on('remove', () => body.removeEventListener('toggle', onToggle, true));
         });
     };
 
@@ -1314,7 +1408,8 @@
         editor.ui.registry.addToggleButton('accordiontoggle', {
             icon: 'accordion-toggle',
             tooltip: 'Toggle accordion',
-            onAction: () => editor.execCommand('ToggleAccordion')
+            onAction: () => editor.execCommand('ToggleAccordion'),
+            context: 'any',
         });
         editor.ui.registry.addToggleButton('accordionremove', {
             icon: 'remove',
@@ -1329,13 +1424,18 @@
         });
     };
 
+    const PLUGIN_CODE = 'accordion';
     var Plugin = () => {
-        global$4.add('accordion', (editor) => {
+        global$4.add(PLUGIN_CODE, (editor) => {
             register(editor);
             register$1(editor);
-            setup$1(editor);
             setup$2(editor);
+            setup$3(editor);
             setup(editor);
+            setup$1(editor);
+            return {
+                getMetadata: () => ({ name: 'Accordion', type: 'opensource', slug: PLUGIN_CODE })
+            };
         });
     };
 

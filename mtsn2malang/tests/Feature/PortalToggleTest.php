@@ -2,6 +2,10 @@
 
 namespace Tests\Feature;
 
+use Livewire\Livewire;
+use App\Filament\Pages\ManagePortal;
+use Spatie\Activitylog\Models\Activity;
+use App\Models\Setting;
 use App\Models\PortalCategory;
 use App\Support\PortalSettings;
 use Tests\TestCase;
@@ -53,7 +57,7 @@ class PortalToggleTest extends TestCase
     {
         $this->actingAs($this->superAdmin());
 
-        \Livewire\Livewire::test(\App\Filament\Pages\ManagePortal::class)
+        Livewire::test(ManagePortal::class)
             ->fillForm([PortalSettings::KEY => false])
             ->call('save')
             ->assertHasNoFormErrors();
@@ -61,7 +65,7 @@ class PortalToggleTest extends TestCase
         $this->assertFalse(PortalSettings::enabled());
         $this->get('/')->assertSee('hero-slider', false)->assertDontSee('id="tab-portal"', false);
 
-        \Livewire\Livewire::test(\App\Filament\Pages\ManagePortal::class)
+        Livewire::test(ManagePortal::class)
             ->fillForm([PortalSettings::KEY => true])
             ->call('save');
 
@@ -73,13 +77,13 @@ class PortalToggleTest extends TestCase
     {
         $admin = $this->superAdmin();
         $this->actingAs($admin);
-        $log = fn () => \Spatie\Activitylog\Models\Activity::where('description', 'like', 'Halaman Portal %');
+        $log = fn () => Activity::where('description', 'like', 'Halaman Portal %');
 
         // Simpan tanpa mengubah status → tidak dicatat.
-        \Livewire\Livewire::test(\App\Filament\Pages\ManagePortal::class)->call('save');
+        Livewire::test(ManagePortal::class)->call('save');
         $this->assertSame(0, $log()->count());
 
-        \Livewire\Livewire::test(\App\Filament\Pages\ManagePortal::class)
+        Livewire::test(ManagePortal::class)
             ->fillForm([PortalSettings::KEY => false])->call('save');
 
         $entry = $log()->latest('id')->first();
@@ -90,9 +94,9 @@ class PortalToggleTest extends TestCase
     public function test_saving_switch_keeps_background_settings(): void
     {
         $this->actingAs($this->superAdmin());
-        \App\Models\Setting::set(PortalSettings::BACKGROUND_TRANSPARENCY_KEY, '60');
+        Setting::set(PortalSettings::BACKGROUND_TRANSPARENCY_KEY, '60');
 
-        \Livewire\Livewire::test(\App\Filament\Pages\ManagePortal::class)
+        Livewire::test(ManagePortal::class)
             ->fillForm([PortalSettings::KEY => false])
             ->call('save');
 
@@ -112,11 +116,11 @@ class PortalToggleTest extends TestCase
 
     public function test_sidebar_badge_only_when_portal_is_off(): void
     {
-        $this->assertNull(\App\Filament\Pages\ManagePortal::getNavigationBadge());
+        $this->assertNull(ManagePortal::getNavigationBadge());
 
         PortalSettings::setEnabled(false);
 
-        $this->assertSame('Mati', \App\Filament\Pages\ManagePortal::getNavigationBadge());
+        $this->assertSame('Mati', ManagePortal::getNavigationBadge());
     }
 
     public function test_sitemap_drops_duplicate_beranda_when_portal_is_off(): void

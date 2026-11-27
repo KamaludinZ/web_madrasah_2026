@@ -2,13 +2,25 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Group;
+use Filament\Schemas\Components\Section;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\KeyValue;
+use Filament\Forms\Components\RichEditor;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Actions\EditAction;
+use App\Filament\Resources\PageContentResource\Pages\ListPageContents;
+use App\Filament\Resources\PageContentResource\Pages\CreatePageContent;
+use App\Filament\Resources\PageContentResource\Pages\EditPageContent;
 use App\Filament\Resources\PageContentResource\Pages;
 use App\Models\PageContent;
 use App\Support\UploadImageHelper;
 use App\Filament\Resources\Concerns\HasRoleAccess;
 // TiptapEditor removed — using built-in RichEditor for compatibility
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -23,9 +35,9 @@ class PageContentResource extends Resource
     }
 
     protected static ?string $model           = PageContent::class;
-    protected static ?string $navigationIcon  = 'heroicon-o-document-text';
+    protected static string|\BackedEnum|null $navigationIcon  = 'heroicon-o-document-text';
     protected static ?string $navigationLabel = 'Konten Halaman';
-    protected static ?string $navigationGroup = 'Pengaturan';
+    protected static string|\UnitEnum|null $navigationGroup = 'Pengaturan';
     protected static ?int    $navigationSort  = 1;
     protected static ?string $modelLabel      = 'Konten Halaman';
     protected static ?string $pluralModelLabel = 'Konten Halaman';
@@ -57,14 +69,14 @@ class PageContentResource extends Resource
         'whistleblowing'    => 'Whistleblowing',
     ];
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([
-            Forms\Components\Group::make()->schema([
+        return $schema->components([
+            Group::make()->schema([
 
-                Forms\Components\Section::make('Identitas Halaman')
+                Section::make('Identitas Halaman')
                     ->schema([
-                        Forms\Components\Select::make('page_key')
+                        Select::make('page_key')
                             ->label('Halaman')
                             ->options(self::$pageOptions)
                             ->required()
@@ -73,23 +85,23 @@ class PageContentResource extends Resource
                             ->native(false)
                             ->helperText('Pilih halaman yang akan diisi kontennya.'),
 
-                        Forms\Components\TextInput::make('title')
+                        TextInput::make('title')
                             ->label('Judul Halaman')
                             ->maxLength(255)
                             ->placeholder('Judul yang ditampilkan di halaman'),
                     ]),
 
-                Forms\Components\Section::make('Gambar Utama')
+                Section::make('Gambar Utama')
                     ->schema([
                         UploadImageHelper::webpFileUpload('image', 'Upload Gambar', 'pages')
                             ->imageEditor()
                             ->helperText('Gambar header atau ilustrasi halaman · Maks 5MB · Otomatis WebP'),
                     ]),
 
-                Forms\Components\Section::make('Data Tambahan')
+                Section::make('Data Tambahan')
                     ->description('Data JSON opsional untuk kebutuhan khusus halaman.')
                     ->schema([
-                        Forms\Components\KeyValue::make('extra_data')
+                        KeyValue::make('extra_data')
                             ->label('')
                             ->keyLabel('Kunci')
                             ->valueLabel('Nilai')
@@ -99,12 +111,12 @@ class PageContentResource extends Resource
 
             ])->columnSpan(1),
 
-            Forms\Components\Group::make()->schema([
+            Group::make()->schema([
 
-                Forms\Components\Section::make('Konten Halaman')
+                Section::make('Konten Halaman')
                     ->description('Tulis konten lengkap halaman menggunakan editor di bawah.')
                     ->schema([
-                        Forms\Components\RichEditor::make('content')
+                        RichEditor::make('content')
                             ->label('')
                             ->toolbarButtons([
                                 'attachFiles', 'blockquote', 'bold', 'bulletList',
@@ -123,27 +135,27 @@ class PageContentResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('page_key')
+                TextColumn::make('page_key')
                     ->label('Halaman')
                     ->formatStateUsing(fn ($state) => self::$pageOptions[$state] ?? $state)
                     ->searchable()
                     ->weight('semibold'),
-                Tables\Columns\TextColumn::make('title')->label('Judul')->default('-'),
-                Tables\Columns\IconColumn::make('image')->label('Ada Gambar')
+                TextColumn::make('title')->label('Judul')->default('-'),
+                IconColumn::make('image')->label('Ada Gambar')
                     ->boolean()
                     ->getStateUsing(fn ($record) => (bool) $record->image),
-                Tables\Columns\TextColumn::make('updated_at')->label('Terakhir Diubah')->dateTime('d M Y H:i')->sortable(),
+                TextColumn::make('updated_at')->label('Terakhir Diubah')->dateTime('d M Y H:i')->sortable(),
             ])
-            ->actions([Tables\Actions\EditAction::make()])
+            ->actions([EditAction::make()])
             ->bulkActions([]);
     }
 
     public static function getPages(): array
     {
         return [
-            'index'  => Pages\ListPageContents::route('/'),
-            'create' => Pages\CreatePageContent::route('/create'),
-            'edit'   => Pages\EditPageContent::route('/{record}/edit'),
+            'index'  => ListPageContents::route('/'),
+            'create' => CreatePageContent::route('/create'),
+            'edit'   => EditPageContent::route('/{record}/edit'),
         ];
     }
 }

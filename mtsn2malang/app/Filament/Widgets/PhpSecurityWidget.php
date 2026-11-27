@@ -12,7 +12,7 @@ use Filament\Widgets\Widget;
  */
 class PhpSecurityWidget extends Widget
 {
-    protected static string $view = 'filament.widgets.php-security-widget';
+    protected string $view = 'filament.widgets.php-security-widget';
 
     protected static ?int $sort = -10;
 

@@ -38,10 +38,10 @@
 ═══════════════════════════════════════════════════════════════════════════ --}}
 @if($activeMainTab === 'settings')
 <div wire:key="tab-settings">
-    <x-filament-panels::form wire:submit="save">
+    <form wire:submit="save" class="fi-form grid gap-y-6">
         {{ $this->form }}
-        <x-filament-panels::form.actions :actions="$this->getFormActions()" />
-    </x-filament-panels::form>
+        <x-filament::actions :actions="$this->getFormActions()" />
+    </form>
 </div>
 @endif
 

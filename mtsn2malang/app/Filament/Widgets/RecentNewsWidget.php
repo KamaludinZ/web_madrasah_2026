@@ -2,6 +2,8 @@
 
 namespace App\Filament\Widgets;
 
+use Filament\Tables\Columns\TextColumn;
+use Filament\Actions\Action;
 use App\Models\News;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -18,28 +20,28 @@ class RecentNewsWidget extends BaseWidget
         return $table
             ->query(fn () => News::with(['category', 'author'])->latest()->limit(10))
             ->columns([
-                Tables\Columns\TextColumn::make('title')
+                TextColumn::make('title')
                     ->label('Judul')
                     ->limit(60)
                     ->searchable(),
-                Tables\Columns\TextColumn::make('category.name')
+                TextColumn::make('category.name')
                     ->label('Kategori')
                     ->badge()
                     ->color('success'),
-                Tables\Columns\TextColumn::make('author.name')
+                TextColumn::make('author.name')
                     ->label('Penulis'),
-                Tables\Columns\TextColumn::make('status')
+                TextColumn::make('status')
                     ->label('Status')
                     ->badge(),
-                Tables\Columns\TextColumn::make('view_count')
+                TextColumn::make('view_count')
                     ->label('Dibaca')
                     ->numeric(),
-                Tables\Columns\TextColumn::make('created_at')
+                TextColumn::make('created_at')
                     ->label('Dibuat')
                     ->dateTime('d M Y'),
             ])
             ->actions([
-                Tables\Actions\Action::make('edit')
+                Action::make('edit')
                     ->url(fn(News $record) => route('filament.admin.resources.news.edit', $record))
                     ->icon('heroicon-m-pencil'),
             ]);

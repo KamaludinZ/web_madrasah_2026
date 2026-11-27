@@ -8,7 +8,7 @@ use Illuminate\Support\Carbon;
 
 class PageViewsWidget extends ChartWidget
 {
-    protected static ?string $heading = 'Statistik Pengunjung (30 Hari Terakhir)';
+    protected ?string $heading = 'Statistik Pengunjung (30 Hari Terakhir)';
     protected static ?int $sort = 3;
     protected int | string | array $columnSpan = 'full';
 

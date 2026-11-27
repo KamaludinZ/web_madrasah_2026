@@ -12,7 +12,7 @@ class ListMedia extends Page
 {
     protected static string $resource = MediaResource::class;
 
-    protected static string $view = 'filament.resources.media-resource.pages.list-media';
+    protected string $view = 'filament.resources.media-resource.pages.list-media';
 
     public string $activeTab = 'gambar';
 

@@ -1,5 +1,5 @@
 /**
- * TinyMCE version 7.9.3 (2026-05-19)
+ * TinyMCE version 8.11.0 (2026-11-25)
  */
 
 (function () {
@@ -8,21 +8,13 @@
     var global$1 = tinymce.util.Tools.resolve('tinymce.PluginManager');
 
     /* eslint-disable @typescript-eslint/no-wrapper-object-types */
-    const isSimpleType = (type) => (value) => typeof value === type;
     const eq = (t) => (a) => t === a;
     const isNull = eq(null);
     const isUndefined = eq(undefined);
     const isNullable = (a) => a === null || a === undefined;
     const isNonNullable = (a) => !isNullable(a);
-    const isFunction = isSimpleType('function');
 
     const noop = () => { };
-    const constant = (value) => {
-        return () => {
-            return value;
-        };
-    };
-    const never = constant(false);
 
     /**
      * The `Optional` type represents a value (of any type) that potentially does
@@ -40,6 +32,11 @@
      * strict-null-checks
      */
     class Optional {
+        tag;
+        value;
+        // Sneaky optimisation: every instance of Optional.none is identical, so just
+        // reuse the same object
+        static singletonNone = new Optional(false);
         // The internal representation has a `tag` and a `value`, but both are
         // private: able to be console.logged, but not able to be accessed by code
         constructor(tag, value) {
@@ -207,7 +204,7 @@
          */
         getOrDie(message) {
             if (!this.tag) {
-                throw new Error(message !== null && message !== void 0 ? message : 'Called getOrDie on None');
+                throw new Error(message ?? 'Called getOrDie on None');
             }
             else {
                 return this.value;
@@ -271,12 +268,7 @@
             return this.tag ? `some(${this.value})` : 'none()';
         }
     }
-    // Sneaky optimisation: every instance of Optional.none is identical, so just
-    // reuse the same object
-    Optional.singletonNone = new Optional(false);
 
-    /* eslint-disable @typescript-eslint/unbound-method */
-    const nativeSlice = Array.prototype.slice;
     const exists = (xs, pred) => {
         for (let i = 0, len = xs.length; i < len; i++) {
             const x = xs[i];
@@ -306,14 +298,12 @@
             f(x, i);
         }
     };
-    isFunction(Array.from) ? Array.from : (x) => nativeSlice.call(x);
 
     // There are many variations of Object iteration that are faster than the 'for-in' style:
     // http://jsperf.com/object-keys-iteration/107
     //
     // Use the native keys if it is available (IE9+), otherwise fall back to manually filtering
     const keys = Object.keys;
-    // eslint-disable-next-line @typescript-eslint/unbound-method
     const hasOwnProperty = Object.hasOwnProperty;
     const each = (obj, f) => {
         const props = keys(obj);
@@ -596,7 +586,6 @@
     const emojisFrom = (list, pattern, maxResults) => {
         const matches = [];
         const lowerCasePattern = pattern.toLowerCase();
-        const reachedLimit = maxResults.fold(() => never, (max) => (size) => size >= max);
         for (let i = 0; i < list.length; i++) {
             // TODO: more intelligent search by showing title matches at the top, keyword matches after that (use two arrays and concat at the end)
             if (pattern.length === 0 || emojiMatches(list[i], lowerCasePattern)) {
@@ -605,7 +594,7 @@
                     text: list[i].title,
                     icon: list[i].char
                 });
-                if (reachedLimit(matches.length)) {
+                if (maxResults.exists((max) => matches.length >= max)) {
                     break;
                 }
             }
@@ -617,14 +606,14 @@
     const open = (editor, database) => {
         const initialState = {
             pattern: '',
-            results: emojisFrom(database.listAll(), '', Optional.some(300))
+            results: emojisFrom(database.listAll(), '', Optional.none())
         };
         const currentTab = Cell(ALL_CATEGORY);
         const scan = (dialogApi) => {
             const dialogData = dialogApi.getData();
             const category = currentTab.get();
             const candidates = database.listCategory(category);
-            const results = emojisFrom(candidates, dialogData[patternName], category === ALL_CATEGORY ? Optional.some(300) : Optional.none());
+            const results = emojisFrom(candidates, dialogData[patternName], Optional.none());
             dialogApi.setData({
                 results
             });
@@ -646,6 +635,7 @@
         const getInitialState = () => {
             const body = {
                 type: 'tabpanel',
+                dynamicHeight: true,
                 // All tabs have the same fields.
                 tabs: map$1(database.listCategories(), (cat) => ({
                     title: cat,
@@ -783,8 +773,9 @@
      * @class tinymce.emoticons.Plugin
      * @private
      */
+    const PLUGIN_CODE = 'emoticons';
     var Plugin = () => {
-        global$1.add('emoticons', (editor, pluginUrl) => {
+        global$1.add(PLUGIN_CODE, (editor, pluginUrl) => {
             register$2(editor, pluginUrl);
             const databaseUrl = getEmojiDatabaseUrl(editor);
             const databaseId = getEmojiDatabaseId(editor);
@@ -794,7 +785,8 @@
             init(editor, database);
             setup(editor);
             return {
-                getAllEmojis: () => database.waitForLoad().then(() => database.listAll())
+                getAllEmojis: () => database.waitForLoad().then(() => database.listAll()),
+                getMetadata: () => ({ name: 'Emoticons', type: 'opensource', slug: PLUGIN_CODE })
             };
         });
     };

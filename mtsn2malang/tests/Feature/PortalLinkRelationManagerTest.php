@@ -2,13 +2,14 @@
 
 namespace Tests\Feature;
 
+use Filament\Actions\CreateAction;
+use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
+use App\Support\PortalIcons;
 use App\Filament\Resources\PortalCategoryResource\Pages\EditPortalCategory;
 use App\Filament\Resources\PortalCategoryResource\RelationManagers\LinksRelationManager;
 use App\Models\PortalCategory;
 use App\Models\PortalLink;
-use Filament\Tables\Actions\CreateAction;
-use Filament\Tables\Actions\DeleteAction;
-use Filament\Tables\Actions\EditAction;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -107,7 +108,7 @@ class PortalLinkRelationManagerTest extends TestCase
 
         $this->manager()
             ->assertTableColumnExists('icon')
-            ->assertSee(\App\Support\PortalIcons::path('calendar'), false);
+            ->assertSee(PortalIcons::path('calendar'), false);
     }
 
     public function test_links_only_show_for_their_own_category(): void

@@ -1,5 +1,5 @@
 /**
- * TinyMCE version 7.9.3 (2026-05-19)
+ * TinyMCE version 8.11.0 (2026-11-25)
  */
 
 (function () {
@@ -9,13 +9,12 @@
 
     /* eslint-disable @typescript-eslint/no-wrapper-object-types */
     const hasProto = (v, constructor, predicate) => {
-        var _a;
         if (predicate(v, constructor.prototype)) {
             return true;
         }
         else {
             // String-based fallback time
-            return ((_a = v.constructor) === null || _a === void 0 ? void 0 : _a.name) === constructor.name;
+            return v.constructor?.name === constructor.name;
         }
     };
     const typeOf = (x) => {
@@ -67,7 +66,6 @@
     const tripleEquals = (a, b) => {
         return a === b;
     };
-    // eslint-disable-next-line prefer-arrow/prefer-arrow-functions
     function curry(fn, ...initialArgs) {
         return (...restArgs) => {
             const all = initialArgs.concat(restArgs);
@@ -102,6 +100,11 @@
      * strict-null-checks
      */
     class Optional {
+        tag;
+        value;
+        // Sneaky optimisation: every instance of Optional.none is identical, so just
+        // reuse the same object
+        static singletonNone = new Optional(false);
         // The internal representation has a `tag` and a `value`, but both are
         // private: able to be console.logged, but not able to be accessed by code
         constructor(tag, value) {
@@ -269,7 +272,7 @@
          */
         getOrDie(message) {
             if (!this.tag) {
-                throw new Error(message !== null && message !== void 0 ? message : 'Called getOrDie on None');
+                throw new Error(message ?? 'Called getOrDie on None');
             }
             else {
                 return this.value;
@@ -333,15 +336,10 @@
             return this.tag ? `some(${this.value})` : 'none()';
         }
     }
-    // Sneaky optimisation: every instance of Optional.none is identical, so just
-    // reuse the same object
-    Optional.singletonNone = new Optional(false);
 
-    /* eslint-disable @typescript-eslint/unbound-method */
     const nativeSlice = Array.prototype.slice;
     const nativeIndexOf = Array.prototype.indexOf;
     const nativePush = Array.prototype.push;
-    /* eslint-enable */
     const rawIndexOf = (ts, t) => nativeIndexOf.call(ts, t);
     const contains$2 = (xs, x) => rawIndexOf(xs, x) > -1;
     const exists = (xs, pred) => {
@@ -503,7 +501,6 @@
     //
     // Use the native keys if it is available (IE9+), otherwise fall back to manually filtering
     const keys = Object.keys;
-    // eslint-disable-next-line @typescript-eslint/unbound-method
     const hasOwnProperty = Object.hasOwnProperty;
     const each$1 = (obj, f) => {
         const props = keys(obj);
@@ -1295,7 +1292,7 @@
         const isiPad = os.isiOS() && /ipad/i.test(userAgent) === true;
         const isiPhone = os.isiOS() && !isiPad;
         const isMobile = os.isiOS() || os.isAndroid();
-        const isTouch = isMobile || mediaMatch('(pointer:coarse)');
+        const isTouch = isMobile || !mediaMatch('(any-pointer:fine)');
         const isTablet = isiPad || !isiPhone && isMobile && mediaMatch('(min-device-width:768px)');
         const isPhone = isiPhone || isMobile && !isTablet;
         const iOSwebview = browser.isSafari() && os.isiOS() && /safari/i.test(userAgent) === false;
@@ -1354,7 +1351,7 @@
     const detectBrowser$1 = (browsers, userAgentData) => {
         return findMap(userAgentData.brands, (uaBrand) => {
             const lcBrand = uaBrand.brand.toLowerCase();
-            return find$1(browsers, (browser) => { var _a; return lcBrand === ((_a = browser.brand) === null || _a === void 0 ? void 0 : _a.toLowerCase()); })
+            return find$1(browsers, (browser) => lcBrand === browser.brand?.toLowerCase())
                 .map((info) => ({
                 current: info.name,
                 version: Version.nu(parseInt(uaBrand.version, 10), 0)
@@ -1517,14 +1514,7 @@
     };
     const Browser = {
         unknown: unknown$1,
-        nu: nu$1,
-        edge: constant(edge),
-        chromium: constant(chromium),
-        ie: constant(ie),
-        opera: constant(opera),
-        firefox: constant(firefox),
-        safari: constant(safari)
-    };
+        nu: nu$1};
 
     const windows = 'Windows';
     const ios = 'iOS';
@@ -1562,16 +1552,7 @@
     };
     const OperatingSystem = {
         unknown,
-        nu,
-        windows: constant(windows),
-        ios: constant(ios),
-        android: constant(android),
-        linux: constant(linux),
-        macos: constant(macos),
-        solaris: constant(solaris),
-        freebsd: constant(freebsd),
-        chromeos: constant(chromeos)
-    };
+        nu};
 
     const detect$3 = (userAgent, userAgentDataOpt, mediaMatch) => {
         const browsers = PlatformInfo.browsers();
@@ -1955,7 +1936,7 @@
     };
 
     const fromHtml = (html, scope) => {
-        const doc = scope || document;
+        const doc = document;
         const div = doc.createElement('div');
         div.innerHTML = html;
         return children$2(SugarElement.fromDom(div));
@@ -1972,9 +1953,7 @@
 
     // some elements, such as mathml, don't have style attributes
     // others, such as angular elements, have style attributes that aren't a CSSStyleDeclaration
-    const isSupported = (dom) => 
-    // eslint-disable-next-line @typescript-eslint/unbound-method
-    dom.style !== undefined && isFunction(dom.style.getPropertyValue);
+    const isSupported = (dom) => dom.style !== undefined && isFunction(dom.style.getPropertyValue);
 
     // Node.contains() is very, very, very good performance
     // http://jsperf.com/closest-vs-contains/5
@@ -2170,11 +2149,11 @@
     const getCalculatedWidth = (element, boxSizing) => {
         const dom = element.dom;
         const width = dom.getBoundingClientRect().width || dom.offsetWidth;
-        return boxSizing === 'border-box' ? width : calcContentBoxSize(element, width, 'left', 'right');
+        return calcContentBoxSize(element, width, 'left', 'right');
     };
     const getHeight$1 = (element) => getProp(element, 'height', element.dom.offsetHeight);
     const getWidth = (element) => getProp(element, 'width', element.dom.offsetWidth);
-    const getInnerWidth = (element) => getCalculatedWidth(element, 'content-box');
+    const getInnerWidth = (element) => getCalculatedWidth(element);
 
     const api$2 = Dimension('height', (element) => {
         // getBoundingClientRect gives better results than offsetHeight for tables with captions on Firefox
@@ -2185,10 +2164,7 @@
     const getOuter$1 = (element) => api$2.getOuter(element);
     const getRuntime$1 = getHeight$1;
 
-    const api$1 = Dimension('width', (element) => 
-    // IMO passing this function is better than using dom['offset' + 'width']
-    element.dom.offsetWidth);
-    Dimension('width', (element) => {
+    const api$1 = Dimension('width', (element) => {
         const dom = element.dom;
         return inBody(element) ? dom.getBoundingClientRect().width : dom.offsetWidth;
     });
@@ -2229,8 +2205,8 @@
         if (body === element.dom) {
             return SugarPosition(body.offsetLeft, body.offsetTop);
         }
-        const scrollTop = firstDefinedOrZero(win === null || win === void 0 ? void 0 : win.pageYOffset, html.scrollTop);
-        const scrollLeft = firstDefinedOrZero(win === null || win === void 0 ? void 0 : win.pageXOffset, html.scrollLeft);
+        const scrollTop = firstDefinedOrZero(win?.pageYOffset, html.scrollTop);
+        const scrollLeft = firstDefinedOrZero(win?.pageXOffset, html.scrollLeft);
         const clientTop = firstDefinedOrZero(html.clientTop, body.clientTop);
         const clientLeft = firstDefinedOrZero(html.clientLeft, body.clientLeft);
         return viewport(element).translate(scrollLeft - clientLeft, scrollTop - clientTop);
@@ -2584,21 +2560,18 @@
         range
     };
 
-    const caretPositionFromPoint = (doc, x, y) => {
-        var _a;
-        return Optional.from((_a = doc.caretPositionFromPoint) === null || _a === void 0 ? void 0 : _a.call(doc, x, y))
-            .bind((pos) => {
-            // It turns out that Firefox can return null for pos.offsetNode
-            if (pos.offsetNode === null) {
-                return Optional.none();
-            }
-            const r = doc.createRange();
-            r.setStart(pos.offsetNode, pos.offset);
-            r.collapse();
-            return Optional.some(r);
-        });
-    };
-    const caretRangeFromPoint = (doc, x, y) => { var _a; return Optional.from((_a = doc.caretRangeFromPoint) === null || _a === void 0 ? void 0 : _a.call(doc, x, y)); };
+    const caretPositionFromPoint = (doc, x, y) => Optional.from(doc.caretPositionFromPoint?.(x, y))
+        .bind((pos) => {
+        // It turns out that Firefox can return null for pos.offsetNode
+        if (pos.offsetNode === null) {
+            return Optional.none();
+        }
+        const r = doc.createRange();
+        r.setStart(pos.offsetNode, pos.offset);
+        r.collapse();
+        return Optional.some(r);
+    });
+    const caretRangeFromPoint = (doc, x, y) => Optional.from(doc.caretRangeFromPoint?.(x, y));
     const availableSearch = (doc, x, y) => {
         if (doc.caretPositionFromPoint) {
             return caretPositionFromPoint(doc, x, y); // defined standard, firefox only
@@ -2672,7 +2645,7 @@
                     try {
                         setLegacyRtlRange(win, selection, start, soffset, finish, foffset);
                     }
-                    catch (_a) {
+                    catch {
                         // If it does fail, try again with ltr.
                         doSetRange(win, finish, foffset, start, soffset);
                     }
@@ -3467,7 +3440,7 @@
     const getPercentageWidth = (cell) => getPercentSize(cell, get$7, getInner);
     const getPixelWidth$1 = (cell) => 
     // For col elements use the computed width as col elements aren't affected by borders, padding, etc...
-    isCol$2(cell) ? get$7(cell) : getRuntime(cell);
+    isCol$2(cell) ? Math.round(get$7(cell)) : getRuntime(cell);
     const getHeight = (cell) => {
         return isRow$2(cell) ? get$8(cell) : get$2(cell, 'rowspan', getTotalHeight);
     };
@@ -3519,7 +3492,7 @@
                 else {
                     // Invalid column so fallback to trying to get the computed width from the cell
                     const cell = bindFrom(columnCells[c], identity);
-                    return getDimension(cell, c, backups, colFilter, (cell) => fallback(Optional.some(get$7(cell))), fallback);
+                    return getDimension(cell, c, backups, colFilter, (cell) => fallback(Optional.some(Math.round(get$7(cell)))), fallback);
                 }
             }, fallback);
         });
@@ -3550,7 +3523,7 @@
     const getHeightFrom = (warehouse, table, getHeight, fallback) => {
         const rowCells = rows(warehouse);
         const rows$1 = map$1(warehouse.all, (r) => Optional.some(r.element));
-        const backups = [Optional.some(height.edge(table))].concat(map$1(height.positions(rowCells, table), (pos) => pos.map((p) => p.y)));
+        const backups = [Optional.some(height.edge(table))].concat(map$1(height.positions(rowCells), (pos) => pos.map((p) => p.y)));
         return map$1(rows$1, (row, i) => getDimension(row, i, backups, always, getHeight, fallback));
     };
     const getPixelHeights = (warehouse, table) => {
@@ -3877,7 +3850,7 @@
     };
     const run = (operation, extract, adjustment, postAction, genWrappers, table, target, generators, behaviours) => {
         const warehouse = Warehouse.fromTable(table);
-        const tableSection = Optional.from(behaviours === null || behaviours === void 0 ? void 0 : behaviours.section).getOrThunk(TableSection.fallback);
+        const tableSection = Optional.from(behaviours?.section).getOrThunk(TableSection.fallback);
         const output = extract(warehouse, target).map((info) => {
             const model = fromWarehouse(warehouse, generators);
             const result = operation(model, info, eq$1, genWrappers(generators), tableSection);
@@ -3892,8 +3865,8 @@
         });
         return output.bind((out) => {
             const newElements = render$1(table, out.grid);
-            const tableSizing = Optional.from(behaviours === null || behaviours === void 0 ? void 0 : behaviours.sizing).getOrThunk(() => TableSize.getTableSize(table));
-            const resizing = Optional.from(behaviours === null || behaviours === void 0 ? void 0 : behaviours.resize).getOrThunk(preserveTable);
+            const tableSizing = Optional.from(behaviours?.sizing).getOrThunk(() => TableSize.getTableSize(table));
+            const resizing = Optional.from(behaviours?.resize).getOrThunk(preserveTable);
             adjustment(table, out.grid, out.info, { sizing: tableSizing, resize: resizing, section: tableSection });
             postAction(table);
             // Update locked cols attribute
@@ -4941,7 +4914,6 @@
     };
     const seekLeft$1 = left;
     const seekRight$1 = right;
-    go;
 
     const universe$2 = DomUniverse();
     const before = (element, isRoot) => {
@@ -5002,79 +4974,6 @@
         return contains$2(['br', 'img', 'hr', 'input'], universe.property().name(item));
     };
 
-    const leftRight = (left, right) => ({
-        left,
-        right
-    });
-    const brokenPath = (first, second, splits) => ({
-        first,
-        second,
-        splits
-    });
-    const bisect = (universe, parent, child) => {
-        const children = universe.property().children(parent);
-        const index = findIndex(children, curry(universe.eq, child));
-        return index.map((ind) => {
-            return {
-                before: children.slice(0, ind),
-                after: children.slice(ind + 1)
-            };
-        });
-    };
-    /**
-     * Clone parent to the RIGHT and move everything after child in the parent element into
-     * a clone of the parent (placed after parent).
-     */
-    const breakToRight = (universe, parent, child) => {
-        return bisect(universe, parent, child).map((parts) => {
-            const second = universe.create().clone(parent);
-            universe.insert().appendAll(second, parts.after);
-            universe.insert().after(parent, second);
-            return leftRight(parent, second);
-        });
-    };
-    /**
-     * Clone parent to the LEFT and move everything before and including child into
-     * the a clone of the parent (placed before parent)
-     */
-    const breakToLeft = (universe, parent, child) => {
-        return bisect(universe, parent, child).map((parts) => {
-            const prior = universe.create().clone(parent);
-            universe.insert().appendAll(prior, parts.before.concat([child]));
-            universe.insert().appendAll(parent, parts.after);
-            universe.insert().before(parent, prior);
-            return leftRight(prior, parent);
-        });
-    };
-    /*
-     * Using the breaker, break from the child up to the top element defined by the predicate.
-     * It returns three values:
-     *   first: the top level element that completed the break
-     *   second: the optional element representing second part of the top-level split if the breaking completed successfully to the top
-     *   splits: a list of (Element, Element) pairs that represent the splits that have occurred on the way to the top.
-     */
-    const breakPath = (universe, item, isTop, breaker) => {
-        const next = (child, group, splits) => {
-            const fallback = brokenPath(child, Optional.none(), splits);
-            // Found the top, so stop.
-            if (isTop(child)) {
-                return brokenPath(child, group, splits);
-            }
-            else {
-                // Split the child at parent, and keep going
-                return universe.property().parent(child).bind((parent) => {
-                    return breaker(universe, parent, child).map((breakage) => {
-                        const extra = [{ first: breakage.left, second: breakage.right }];
-                        // Our isTop is based on the left-side parent, so keep it regardless of split.
-                        const nextChild = isTop(parent) ? parent : breakage.left;
-                        return next(nextChild, Optional.some(breakage.right), splits.concat(extra));
-                    });
-                }).getOr(fallback);
-            }
-        };
-        return next(item, Optional.none(), []);
-    };
-
     const all = (universe, look, elements, f) => {
         const head = elements[0];
         const tail = elements.slice(1);
@@ -5133,9 +5032,6 @@
 
     const sharedOne$1 = oneAll;
     const ancestors$1 = ancestors$2;
-    breakToLeft;
-    breakToRight;
-    breakPath;
 
     const universe$1 = DomUniverse();
     const sharedOne = (look, elements) => {
@@ -5832,9 +5728,8 @@
         return someIf(isEditable(elem), elem);
     }));
     const elementFromGrid = (grid, row, column) => {
-        var _a, _b;
         const rows = extractGridDetails(grid).rows;
-        return Optional.from((_b = (_a = rows[row]) === null || _a === void 0 ? void 0 : _a.cells[column]) === null || _b === void 0 ? void 0 : _b.element)
+        return Optional.from(rows[row]?.cells[column]?.element)
             .filter(isEditable)
             // Fallback to the first valid position in the table
             .orThunk(() => findEditableCursorPosition(rows));
@@ -6440,6 +6335,7 @@
         };
         const div = SugarElement.fromTag('div');
         set$2(div, 'role', 'presentation');
+        set$2(div, 'data-mce-bogus', 'all');
         setAll(div, {
             position: 'fixed',
             left: '0px',
@@ -6503,8 +6399,7 @@
     });
 
     const transform = (mutation, settings = {}) => {
-        var _a;
-        const mode = (_a = settings.mode) !== null && _a !== void 0 ? _a : MouseDrag;
+        const mode = settings.mode ?? MouseDrag;
         return setup(mutation, mode, settings);
     };
 
@@ -6559,7 +6454,7 @@
             height: h + 'px',
             width: w + 'px'
         });
-        setAll$1(bar, { 'data-mce-bogus': 'all', 'data-column': column, 'role': 'presentation' });
+        setAll$1(bar, { 'data-mce-bogus': 'all', 'data-column': column, 'aria-hidden': 'true' });
         return bar;
     };
     const row = (r, x, y, w, h) => {
@@ -6571,7 +6466,7 @@
             height: h + 'px',
             width: w + 'px'
         });
-        setAll$1(bar, { 'data-mce-bogus': 'all', 'data-row': r, 'role': 'presentation' });
+        setAll$1(bar, { 'data-mce-bogus': 'all', 'data-row': r, 'aria-hidden': 'true' });
         return bar;
     };
 
@@ -6627,7 +6522,7 @@
     const refreshGrid = (warhouse, wire, table, rows, cols) => {
         const position = absolute(table);
         const isResizable = wire.isResizable;
-        const rowPositions = rows.length > 0 ? height.positions(rows, table) : [];
+        const rowPositions = rows.length > 0 ? height.positions(rows) : [];
         const resizableRowBars = rowPositions.length > 0 ? resizableRows(warhouse, isResizable) : [];
         const resizableRowPositions = filter$2(rowPositions, (_pos, i) => exists(resizableRowBars, (barIndex) => i === barIndex));
         refreshRow(wire, resizableRowPositions, position, getOuter(table));
@@ -6719,9 +6614,13 @@
         /* mousedown on resize bar: start dragging when the bar is clicked, storing the initial position. */
         const mousedown = bind(wire.parent(), 'mousedown', (event) => {
             if (isRowBar(event.target)) {
+                event.prevent();
+                event.stop();
                 handler(event.target, 'top');
             }
             if (isColBar(event.target)) {
+                event.prevent();
+                event.stop();
                 handler(event.target, 'left');
             }
         });
@@ -6787,7 +6686,7 @@
         manager.events.adjustHeight.bind((event) => {
             const table = event.table;
             events.trigger.beforeResize(table, 'row');
-            const delta = hdirection.delta(event.delta, table);
+            const delta = hdirection.delta(event.delta);
             // TODO: Use the resizing behaviour for heights as well
             adjustHeight(table, delta, event.row);
             events.trigger.afterResize(table, 'row');
@@ -6821,10 +6720,9 @@
     // Note: This is also contained in the table plugin Options.ts file
     const defaultWidth = '100%';
     const getPixelForcedWidth = (editor) => {
-        var _a;
         // Determine the inner size of the parent block element where the table will be inserted
         const dom = editor.dom;
-        const parentBlock = (_a = dom.getParent(editor.selection.getStart(), dom.isBlock)) !== null && _a !== void 0 ? _a : editor.getBody();
+        const parentBlock = dom.getParent(editor.selection.getStart(), dom.isBlock) ?? editor.getBody();
         return getInner(SugarElement.fromDom(parentBlock)) + 'px';
     };
     // Note: This is also contained in the table plugin Options.ts file
@@ -6902,6 +6800,14 @@
             processor: 'boolean',
             default: true
         });
+        registerOption('table_default_header_rows', {
+            processor: 'number',
+            default: 0
+        });
+        registerOption('table_default_header_cols', {
+            processor: 'number',
+            default: 0
+        });
     };
     const getTableCloneElements = (editor) => {
         return Optional.from(editor.options.get('table_clone_elements'));
@@ -6921,6 +6827,8 @@
     const hasTableResizeBars = option('table_resize_bars');
     const shouldStyleWithCss = option('table_style_by_css');
     const shouldMergeContentOnPaste = option('table_merge_content_on_paste');
+    const defaultHeaderRows = option('table_default_header_rows');
+    const defaultHeaderCols = option('table_default_header_cols');
     const getTableDefaultAttributes = (editor) => {
         // Note: The we don't rely on the default here as we need to dynamically lookup the widths based on the current editor state
         const options = editor.options;
@@ -6953,14 +6861,18 @@
     const getSelectionStart = (editor) => SugarElement.fromDom(editor.selection.getStart());
     const getPixelWidth = (elm) => elm.getBoundingClientRect().width;
     const getPixelHeight = (elm) => elm.getBoundingClientRect().height;
+    const addPxSuffix = (size) => /^\d+(\.\d+)?$/.test(size) ? size + 'px' : size;
     const getRawValue = (prop) => (editor, elm) => {
         const raw = editor.dom.getStyle(elm, prop) || editor.dom.getAttrib(elm, prop);
-        return Optional.from(raw).filter(isNotEmpty);
+        // If a value has no unit, assume it is a pixel value
+        return Optional.from(raw)
+            .filter(isNotEmpty)
+            .map(addPxSuffix);
     };
-    const getRawWidth = getRawValue('width');
-    const getRawHeight = getRawValue('height');
     const isPercentage$1 = (value) => /^(\d+(\.\d+)?)%$/.test(value);
     const isPixel = (value) => /^(\d+(\.\d+)?)px$/.test(value);
+    const getRawWidth = getRawValue('width');
+    const getRawHeight = getRawValue('height');
     const isInEditableContext$1 = (cell) => closest$2(cell, isTag('table')).exists(isEditable$1);
 
     const lookupTable = (container) => {
@@ -7892,7 +7804,7 @@
                     return Optional.none;
                 }
                 else if (isDown(keycode) && shiftKey) {
-                    return update$1([rc(+1, 0)]);
+                    return update$1([rc(1, 0)]);
                 }
                 else if (isUp(keycode) && shiftKey) {
                     return update$1([rc(-1, 0)]);
@@ -7901,7 +7813,7 @@
                     return update$1([rc(0, -1), rc(-1, 0)]);
                 }
                 else if (direction.isForward(keycode) && shiftKey) {
-                    return update$1([rc(0, +1), rc(+1, 0)]);
+                    return update$1([rc(0, 1), rc(1, 0)]);
                 }
                 else if (isNavigation(keycode) && !shiftKey) { // Clear the selection on normal arrow keys.
                     return clearToNavigate;
@@ -8367,8 +8279,8 @@
     const insertTable = (editor, rows, columns, options = {}) => {
         const checkInput = (val) => isNumber(val) && val > 0;
         if (checkInput(rows) && checkInput(columns)) {
-            const headerRows = options.headerRows || 0;
-            const headerColumns = options.headerColumns || 0;
+            const headerRows = options.headerRows ?? defaultHeaderRows(editor);
+            const headerColumns = options.headerColumns ?? defaultHeaderCols(editor);
             return insert(editor, columns, rows, headerColumns, headerRows);
         }
         else {
@@ -8393,8 +8305,7 @@
         global.write([fakeClipboardItem]);
     };
     const getData = (type) => {
-        var _a;
-        const items = (_a = global.read()) !== null && _a !== void 0 ? _a : [];
+        const items = global.read() ?? [];
         return findMap(items, (item) => Optional.from(item.getType(type)));
     };
     const clearData = (type) => {
@@ -8789,7 +8700,6 @@
     const isCornerResize = (origin) => startsWith(origin, 'corner-');
     const getCornerLocation = (origin) => removeLeading(origin, 'corner-');
     const TableResizeHandler = (editor) => {
-        const selectionRng = value();
         const tableResize = value();
         const resizeWire = value();
         let startW;
@@ -8859,9 +8769,6 @@
                 if (!editor.mode.isReadOnly()) {
                     sz.on();
                 }
-                sz.events.startDrag.bind((_event) => {
-                    selectionRng.set(editor.selection.getRng());
-                });
                 sz.events.beforeResize.bind((event) => {
                     const rawTable = event.table.dom;
                     fireObjectResizeStart(editor, rawTable, getPixelWidth(rawTable), getPixelHeight(rawTable), barResizerPrefix + event.type);
@@ -8870,10 +8777,6 @@
                     const table = event.table;
                     const rawTable = table.dom;
                     removeDataStyle(table);
-                    selectionRng.on((rng) => {
-                        editor.selection.setRng(rng);
-                        editor.focus();
-                    });
                     fireObjectResized(editor, rawTable, getPixelWidth(rawTable), getPixelHeight(rawTable), barResizerPrefix + event.type);
                     editor.undoManager.add();
                 });

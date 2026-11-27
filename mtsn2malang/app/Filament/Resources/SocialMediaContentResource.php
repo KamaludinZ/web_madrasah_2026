@@ -2,12 +2,30 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Section;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\CheckboxList;
+use Filament\Schemas\Components\Utilities\Set;
+use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Toggle;
+use Filament\Tables\Columns\ImageColumn;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use App\Filament\Resources\SocialMediaContentResource\Pages\ListSocialMediaContents;
+use App\Filament\Resources\SocialMediaContentResource\Pages\CreateSocialMediaContent;
+use App\Filament\Resources\SocialMediaContentResource\Pages\EditSocialMediaContent;
 use App\Filament\Resources\SocialMediaContentResource\Pages;
 use App\Models\Setting;
 use App\Models\SocialMediaContent;
 use App\Support\UploadImageHelper;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -23,17 +41,17 @@ class SocialMediaContentResource extends Resource
     }
 
     protected static ?string $model = SocialMediaContent::class;
-    protected static ?string $navigationIcon = 'heroicon-o-play-circle';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-play-circle';
     protected static ?string $navigationLabel = 'Konten Sosial Media';
-    protected static ?string $navigationGroup = 'Konten';
+    protected static string|\UnitEnum|null $navigationGroup = 'Konten';
     protected static ?int $navigationSort = 5;
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([
-            Forms\Components\Section::make('Konten Sosial Media')
+        return $schema->components([
+            Section::make('Konten Sosial Media')
                 ->schema([
-                    Forms\Components\Select::make('platform')
+                    Select::make('platform')
                         ->label('Platform')
                         ->options([
                             'youtube' => 'YouTube',
@@ -42,18 +60,18 @@ class SocialMediaContentResource extends Resource
                         ])
                         ->required(),
 
-                    Forms\Components\TextInput::make('title')
+                    TextInput::make('title')
                         ->label('Judul Konten')
                         ->required()
                         ->maxLength(255),
 
-                    Forms\Components\TextInput::make('post_url')
+                    TextInput::make('post_url')
                         ->label('Link Post')
                         ->url()
                         ->required()
                         ->maxLength(255),
 
-                    Forms\Components\TextInput::make('embed_url')
+                    TextInput::make('embed_url')
                         ->label('Link Embed (Opsional)')
                         ->url()
                         ->maxLength(255),
@@ -61,13 +79,13 @@ class SocialMediaContentResource extends Resource
                     UploadImageHelper::webpFileUpload('thumbnail', 'Thumbnail (Opsional)', 'social-media', false)
                         ->helperText('Jika thumbnail konten kosong, sistem akan menggunakan thumbnail default sesuai platform.'),
 
-                    Forms\Components\TextInput::make('order')
+                    TextInput::make('order')
                         ->label('Urutan')
                         ->numeric()
                         ->default(0)
                         ->required(),
 
-                    Forms\Components\CheckboxList::make('page_visibility')
+                    CheckboxList::make('page_visibility')
                         ->label('Tampilkan pada halaman')
                         ->options([
                             'madrasah' => 'Madrasah',
@@ -77,7 +95,7 @@ class SocialMediaContentResource extends Resource
                         ->default(['madrasah'])
                         ->required()
                         ->dehydrated(false)
-                        ->afterStateHydrated(function (Forms\Components\CheckboxList $component, ?SocialMediaContent $record) {
+                        ->afterStateHydrated(function (CheckboxList $component, ?SocialMediaContent $record) {
                             if (!$record) {
                                 return;
                             }
@@ -94,19 +112,19 @@ class SocialMediaContentResource extends Resource
 
                             $component->state($state);
                         })
-                        ->afterStateUpdated(function ($state, Forms\Set $set) {
+                        ->afterStateUpdated(function ($state, Set $set) {
                             $values = is_array($state) ? $state : [];
                             $set('show_on_madrasah', in_array('madrasah', $values, true));
                             $set('show_on_mahad', in_array('mahad', $values, true));
                         }),
 
-                    Forms\Components\Hidden::make('show_on_madrasah')
+                    Hidden::make('show_on_madrasah')
                         ->default(true),
 
-                    Forms\Components\Hidden::make('show_on_mahad')
+                    Hidden::make('show_on_mahad')
                         ->default(false),
 
-                    Forms\Components\Toggle::make('is_active')
+                    Toggle::make('is_active')
                         ->label('Aktif')
                         ->default(true),
                 ]),
@@ -120,7 +138,7 @@ class SocialMediaContentResource extends Resource
             ->defaultSort('order')
             ->reorderable('order')
             ->columns([
-                Tables\Columns\ImageColumn::make('thumbnail')
+                ImageColumn::make('thumbnail')
                     ->label('Thumbnail')
                     ->defaultImageUrl(fn($record) => match ($record->platform) {
                         'youtube' => Setting::get('default_social_thumbnail_youtube') ? asset('storage/' . Setting::get('default_social_thumbnail_youtube')) : asset('images/program-placeholder.jpg'),
@@ -130,12 +148,12 @@ class SocialMediaContentResource extends Resource
                     })
                     ->square(),
 
-                Tables\Columns\TextColumn::make('title')
+                TextColumn::make('title')
                     ->label('Judul')
                     ->searchable()
                     ->limit(40),
 
-                Tables\Columns\TextColumn::make('platform')
+                TextColumn::make('platform')
                     ->label('Platform')
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
@@ -151,7 +169,7 @@ class SocialMediaContentResource extends Resource
                         default     => ucfirst($state),
                     }),
 
-                Tables\Columns\TextColumn::make('page_target')
+                TextColumn::make('page_target')
                     ->label('Halaman')
                     ->getStateUsing(function (SocialMediaContent $record): string {
                         $targets = [];
@@ -167,16 +185,16 @@ class SocialMediaContentResource extends Resource
                         return empty($targets) ? '-' : implode(', ', $targets);
                     }),
 
-                Tables\Columns\TextColumn::make('order')
+                TextColumn::make('order')
                     ->label('Urutan')
                     ->sortable(),
 
-                Tables\Columns\IconColumn::make('is_active')
+                IconColumn::make('is_active')
                     ->label('Aktif')
                     ->boolean(),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('platform')
+                SelectFilter::make('platform')
                     ->options([
                         'youtube' => 'YouTube',
                         'instagram' => 'Instagram',
@@ -184,12 +202,12 @@ class SocialMediaContentResource extends Resource
                     ]),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                EditAction::make(),
+                DeleteAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ]);
     }
@@ -197,9 +215,9 @@ class SocialMediaContentResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListSocialMediaContents::route('/'),
-            'create' => Pages\CreateSocialMediaContent::route('/create'),
-            'edit' => Pages\EditSocialMediaContent::route('/{record}/edit'),
+            'index' => ListSocialMediaContents::route('/'),
+            'create' => CreateSocialMediaContent::route('/create'),
+            'edit' => EditSocialMediaContent::route('/{record}/edit'),
         ];
     }
 }

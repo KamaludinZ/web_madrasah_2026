@@ -2,11 +2,27 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Grid;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\Toggle;
+use Filament\Tables\Columns\ImageColumn;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use App\Filament\Resources\ProgramResource\Pages\ListPrograms;
+use App\Filament\Resources\ProgramResource\Pages\CreateProgram;
+use App\Filament\Resources\ProgramResource\Pages\EditProgram;
 use App\Filament\Resources\ProgramResource\Pages;
 use App\Models\Program;
 use App\Support\UploadImageHelper;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -22,20 +38,20 @@ class ProgramResource extends Resource
     }
 
     protected static ?string $model = Program::class;
-    protected static ?string $navigationIcon = 'heroicon-o-academic-cap';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-academic-cap';
     protected static ?string $navigationLabel = 'Program';
-    protected static ?string $navigationGroup = 'Program';
+    protected static string|\UnitEnum|null $navigationGroup = 'Program';
     protected static ?int $navigationSort = 1;
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([
-            Forms\Components\Section::make('Informasi Program')
+        return $schema->components([
+            Section::make('Informasi Program')
                 ->description('Atur konten yang akan ditampilkan pada halaman Program Madrasah atau Ma\'had.')
                 ->schema([
-                    Forms\Components\Grid::make(2)
+                    Grid::make(2)
                         ->schema([
-                            Forms\Components\Select::make('type')
+                            Select::make('type')
                                 ->label('Jenis Program')
                                 ->options([
                                     'unggulan' => 'Program Unggulan (Madrasah)',
@@ -44,7 +60,7 @@ class ProgramResource extends Resource
                                 ->required()
                                 ->native(false),
 
-                            Forms\Components\TextInput::make('order')
+                            TextInput::make('order')
                                 ->label('Urutan Tampil')
                                 ->numeric()
                                 ->default(0)
@@ -52,19 +68,19 @@ class ProgramResource extends Resource
                                 ->helperText('Angka lebih kecil akan tampil lebih dahulu.'),
                         ]),
 
-                    Forms\Components\TextInput::make('name')
+                    TextInput::make('name')
                         ->label('Nama Program')
                         ->required()
                         ->maxLength(255)
                         ->placeholder('Contoh: Tahfidz Intensif Ma\'had'),
 
-                    Forms\Components\Textarea::make('description')
+                    Textarea::make('description')
                         ->label('Deskripsi Singkat')
                         ->rows(4)
                         ->maxLength(1000)
                         ->placeholder('Tuliskan ringkasan manfaat dan fokus utama program ini.'),
 
-                    Forms\Components\TextInput::make('link')
+                    TextInput::make('link')
                         ->label('Tautan Detail (Opsional)')
                         ->url()
                         ->nullable()
@@ -74,12 +90,12 @@ class ProgramResource extends Resource
                 ])
                 ->columns(1),
 
-            Forms\Components\Section::make('Media & Status')
+            Section::make('Media & Status')
                 ->schema([
                     UploadImageHelper::webpFileUpload('cover', 'Gambar Cover', 'programs', false)
                         ->helperText('Opsional. Jika kosong, sistem menggunakan gambar default.'),
 
-                    Forms\Components\Toggle::make('is_active')
+                    Toggle::make('is_active')
                         ->label('Aktif ditampilkan')
                         ->default(true),
                 ])
@@ -93,16 +109,16 @@ class ProgramResource extends Resource
             ->defaultSort('order')
             ->reorderable('order')
             ->columns([
-                Tables\Columns\ImageColumn::make('cover')
+                ImageColumn::make('cover')
                     ->label('Cover')
                     ->square(),
 
-                Tables\Columns\TextColumn::make('name')
+                TextColumn::make('name')
                     ->label('Nama Program')
                     ->searchable()
                     ->limit(50),
 
-                Tables\Columns\TextColumn::make('type')
+                TextColumn::make('type')
                     ->label('Jenis')
                     ->formatStateUsing(fn(string $state): string => match ($state) {
                         'unggulan' => 'Madrasah',
@@ -116,21 +132,21 @@ class ProgramResource extends Resource
                         default    => 'gray',
                     }),
 
-                Tables\Columns\TextColumn::make('order')
+                TextColumn::make('order')
                     ->label('Urutan')
                     ->sortable(),
 
-                Tables\Columns\IconColumn::make('is_active')
+                IconColumn::make('is_active')
                     ->label('Aktif')
                     ->boolean(),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                EditAction::make(),
+                DeleteAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ]);
     }
@@ -138,9 +154,9 @@ class ProgramResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListPrograms::route('/'),
-            'create' => Pages\CreateProgram::route('/create'),
-            'edit' => Pages\EditProgram::route('/{record}/edit'),
+            'index' => ListPrograms::route('/'),
+            'create' => CreateProgram::route('/create'),
+            'edit' => EditProgram::route('/{record}/edit'),
         ];
     }
 }

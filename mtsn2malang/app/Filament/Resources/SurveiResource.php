@@ -2,10 +2,21 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Section;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\KeyValue;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Actions\ViewAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use App\Filament\Resources\SurveiResource\Pages\ListSurveis;
+use App\Filament\Resources\SurveiResource\Pages\ViewSurvei;
 use App\Filament\Resources\SurveiResource\Pages;
 use App\Models\SurveyResponse;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -21,34 +32,34 @@ class SurveiResource extends Resource
     }
 
     protected static ?string $model = SurveyResponse::class;
-    protected static ?string $navigationIcon = 'heroicon-o-chart-bar';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-chart-bar';
     protected static ?string $navigationLabel = 'Hasil Survei';
-    protected static ?string $navigationGroup = 'Pengaduan & Survei';
+    protected static string|\UnitEnum|null $navigationGroup = 'Pengaduan & Survei';
     protected static ?int $navigationSort = 2;
     protected static ?string $modelLabel = 'Respons Survei';
     protected static ?string $pluralModelLabel = 'Hasil Survei';
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([
-            Forms\Components\Section::make('Informasi Responden')->schema([
-                Forms\Components\Select::make('type')
+        return $schema->components([
+            Section::make('Informasi Responden')->schema([
+                Select::make('type')
                     ->label('Jenis Survei')
                     ->options(['skm' => 'SKM (Survei Kepuasan Masyarakat)', 'spk' => 'SPK (Survei Persepsi Korupsi)'])
                     ->disabled(),
-                Forms\Components\TextInput::make('respondent_name')
+                TextInput::make('respondent_name')
                     ->label('Nama Responden')
                     ->default('Anonim')
                     ->disabled(),
-                Forms\Components\TextInput::make('respondent_type')
+                TextInput::make('respondent_type')
                     ->label('Jenis Responden')
                     ->disabled(),
-                Forms\Components\TextInput::make('ip_address')
+                TextInput::make('ip_address')
                     ->label('IP Address')
                     ->disabled(),
             ])->columns(2),
-            Forms\Components\Section::make('Jawaban Survei')->schema([
-                Forms\Components\KeyValue::make('answers')
+            Section::make('Jawaban Survei')->schema([
+                KeyValue::make('answers')
                     ->label('Jawaban')
                     ->keyLabel('Pertanyaan')
                     ->valueLabel('Jawaban')
@@ -61,10 +72,10 @@ class SurveiResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('id')
+                TextColumn::make('id')
                     ->label('ID')
                     ->sortable(),
-                Tables\Columns\TextColumn::make('type')
+                TextColumn::make('type')
                     ->label('Jenis Survei')
                     ->badge()
                     ->formatStateUsing(fn($state) => match($state) {
@@ -72,33 +83,33 @@ class SurveiResource extends Resource
                         'spk' => 'SPK',
                         default => strtoupper($state),
                     }),
-                Tables\Columns\TextColumn::make('respondent_name')
+                TextColumn::make('respondent_name')
                     ->label('Responden')
                     ->default('Anonim')
                     ->searchable(),
-                Tables\Columns\TextColumn::make('respondent_type')
+                TextColumn::make('respondent_type')
                     ->label('Jenis Responden')
                     ->default('-'),
-                Tables\Columns\TextColumn::make('ip_address')
+                TextColumn::make('ip_address')
                     ->label('IP Address')
                     ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('created_at')
+                TextColumn::make('created_at')
                     ->label('Tanggal')
                     ->dateTime('d M Y H:i')
                     ->sortable(),
             ])
             ->defaultSort('created_at', 'desc')
             ->filters([
-                Tables\Filters\SelectFilter::make('type')
+                SelectFilter::make('type')
                     ->label('Jenis Survei')
                     ->options(['skm' => 'SKM', 'spk' => 'SPK']),
             ])
             ->actions([
-                Tables\Actions\ViewAction::make()->label('Lihat'),
+                ViewAction::make()->label('Lihat'),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ]);
     }
@@ -106,8 +117,8 @@ class SurveiResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListSurveis::route('/'),
-            'view'  => Pages\ViewSurvei::route('/{record}'),
+            'index' => ListSurveis::route('/'),
+            'view'  => ViewSurvei::route('/{record}'),
         ];
     }
 

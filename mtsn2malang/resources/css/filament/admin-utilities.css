@@ -1,0 +1,5 @@
+/* Utilitas Tailwind untuk tampilan kustom panel admin — lihat tailwind.admin.config.js */
+@config "../../../tailwind.admin.config.js";
+
+@tailwind components;
+@tailwind utilities;

@@ -2,24 +2,31 @@
 
 namespace App\Filament\Pages;
 
+use Illuminate\Contracts\Support\Htmlable;
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Group;
+use Filament\Schemas\Components\Section;
+use Filament\Forms\Components\FileUpload;
+use Filament\Schemas\Components\View;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Notifications\Notification;
-use Filament\Pages\Auth\EditProfile as BaseEditProfile;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Hash;
 
-class EditProfile extends BaseEditProfile
+class EditProfile extends \Filament\Auth\Pages\EditProfile
 {
-    protected static ?string $navigationIcon = 'heroicon-o-user-circle';
-    protected static string  $view           = 'filament.pages.edit-profile';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-user-circle';
+    protected string  $view           = 'filament.pages.edit-profile';
 
     public static function isSimple(): bool
     {
         return false;
     }
 
-    public function getTitle(): string|\Illuminate\Contracts\Support\Htmlable
+    public function getTitle(): string|Htmlable
     {
         return 'Profil Saya';
     }
@@ -29,20 +36,20 @@ class EditProfile extends BaseEditProfile
         return 'Profil Saya';
     }
 
-    public function form(Form $form): Form
+    public function form(Schema $schema): Schema
     {
-        return $form->schema([
+        return $schema->components([
 
             // ── Baris 1: Foto + Info Akun (sidebar kiri) & Data Diri (kanan) ──
-            Forms\Components\Grid::make(['default' => 1, 'md' => 3])
+            Grid::make(['default' => 1, 'md' => 3])
                 ->schema([
 
                     // Kolom kiri — foto profil + info read-only (custom view)
-                    Forms\Components\Group::make()
+                    Group::make()
                         ->schema([
-                            Forms\Components\Section::make('Foto Profil')
+                            Section::make('Foto Profil')
                                 ->schema([
-                                    Forms\Components\FileUpload::make('avatar')
+                                    FileUpload::make('avatar')
                                         ->label('')
                                         ->image()
                                         ->directory('avatars')
@@ -58,25 +65,25 @@ class EditProfile extends BaseEditProfile
                                         ->extraAttributes(['class' => 'flex justify-center']),
                                 ]),
 
-                            Forms\Components\View::make('filament.components.profile-info-card')
+                            View::make('filament.components.profile-info-card')
                                 ->viewData(['user' => $this->getUser()]),
                         ])
                         ->columnSpan(['default' => 1, 'md' => 1]),
 
                     // Kolom kanan — data yang bisa diubah
-                    Forms\Components\Group::make()
+                    Group::make()
                         ->schema([
-                            Forms\Components\Section::make('Data Diri')
+                            Section::make('Data Diri')
                                 ->description('Informasi yang ditampilkan di profil publik Anda.')
                                 ->icon('heroicon-o-user')
                                 ->schema([
-                                    Forms\Components\TextInput::make('name')
+                                    TextInput::make('name')
                                         ->label('Nama Lengkap')
                                         ->required()
                                         ->maxLength(255)
                                         ->columnSpanFull(),
 
-                                    Forms\Components\Textarea::make('bio')
+                                    Textarea::make('bio')
                                         ->label('Bio / Deskripsi Singkat')
                                         ->rows(4)
                                         ->maxLength(500)
@@ -85,11 +92,11 @@ class EditProfile extends BaseEditProfile
                                         ->columnSpanFull(),
                                 ]),
 
-                            Forms\Components\Section::make('Ubah Password')
+                            Section::make('Ubah Password')
                                 ->description('Kosongkan semua field jika tidak ingin mengubah password.')
                                 ->icon('heroicon-o-lock-closed')
                                 ->schema([
-                                    Forms\Components\TextInput::make('current_password')
+                                    TextInput::make('current_password')
                                         ->label('Password Saat Ini')
                                         ->password()
                                         ->revealable()
@@ -97,7 +104,7 @@ class EditProfile extends BaseEditProfile
                                         ->helperText('Wajib diisi jika ingin mengubah password.')
                                         ->columnSpanFull(),
 
-                                    Forms\Components\TextInput::make('new_password')
+                                    TextInput::make('new_password')
                                         ->label('Password Baru')
                                         ->password()
                                         ->revealable()
@@ -106,7 +113,7 @@ class EditProfile extends BaseEditProfile
                                         ->maxLength(255)
                                         ->placeholder('Minimal 8 karakter'),
 
-                                    Forms\Components\TextInput::make('new_password_confirmation')
+                                    TextInput::make('new_password_confirmation')
                                         ->label('Konfirmasi Password Baru')
                                         ->password()
                                         ->revealable()

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\PortalCategoryResource\Pages;
 
+use Filament\Actions\DeleteAction;
 use App\Filament\Resources\Concerns\RedirectsToResourceIndex;
 use App\Filament\Resources\PortalCategoryResource;
 use Filament\Actions;
@@ -15,6 +16,6 @@ class EditPortalCategory extends EditRecord
 
     protected function getHeaderActions(): array
     {
-        return [Actions\DeleteAction::make()];
+        return [DeleteAction::make()];
     }
 }

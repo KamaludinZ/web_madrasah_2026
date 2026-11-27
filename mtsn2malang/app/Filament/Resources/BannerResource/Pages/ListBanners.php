@@ -2,13 +2,17 @@
 
 namespace App\Filament\Resources\BannerResource\Pages;
 
+use Filament\Actions\CreateAction;
+use Filament\Actions\Action;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\RichEditor;
+use Filament\Schemas\Components\Tabs\Tab;
 use App\Filament\Resources\BannerResource;
 use App\Models\Setting;
 use App\Support\UploadImageHelper;
 use Filament\Actions;
 use Filament\Forms;
 use Filament\Notifications\Notification;
-use Filament\Resources\Components\Tab;
 use Filament\Resources\Pages\ListRecords;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -19,14 +23,14 @@ class ListBanners extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make(),
-            Actions\Action::make('slideDefault')
+            CreateAction::make(),
+            Action::make('slideDefault')
                 ->label('Slide Default')
                 ->icon('heroicon-o-photo')
                 ->color('warning')
                 ->modalWidth('4xl')
                 ->form([
-                    Forms\Components\TextInput::make('default_banner_name')
+                    TextInput::make('default_banner_name')
                         ->label('Nama Slide Default')
                         ->required()
                         ->default(fn () => Setting::get('default_banner_name', 'Slide Default'))
@@ -37,14 +41,14 @@ class ListBanners extends ListRecords
                         ->default(fn () => Setting::get('default_banner_image'))
                         ->columnSpanFull(),
 
-                    Forms\Components\TextInput::make('default_banner_subtitle')
+                    TextInput::make('default_banner_subtitle')
                         ->label('Badge / Sub Judul')
                         ->placeholder('Contoh: Madrasah Unggulan')
                         ->helperText('Teks kecil yang tampil di atas judul utama (opsional).')
                         ->default(fn () => Setting::get('default_banner_subtitle', ''))
                         ->columnSpanFull(),
 
-                    Forms\Components\RichEditor::make('default_banner_title')
+                    RichEditor::make('default_banner_title')
                         ->label('Judul Utama Hero')
                         ->required()
                         ->toolbarButtons(['bold', 'italic', 'underline', 'strike', 'link', 'redo', 'undo'])
@@ -53,7 +57,7 @@ class ListBanners extends ListRecords
                         ->default(fn () => Setting::get('default_banner_title', 'MTsN 2 Kota Malang'))
                         ->columnSpanFull(),
 
-                    Forms\Components\RichEditor::make('default_banner_description')
+                    RichEditor::make('default_banner_description')
                         ->label('Deskripsi / Sub Teks')
                         ->toolbarButtons(['bold', 'italic', 'underline', 'link', 'redo', 'undo'])
                         ->placeholder('Contoh: Unggul, Berkarakter, dan Berwawasan Global')
@@ -61,7 +65,7 @@ class ListBanners extends ListRecords
                         ->default(fn () => Setting::get('default_banner_description', 'Unggul, Berkarakter, dan Berwawasan Global'))
                         ->columnSpanFull(),
 
-                    Forms\Components\TextInput::make('default_banner_link')
+                    TextInput::make('default_banner_link')
                         ->label('Link Tombol')
                         ->url()
                         ->placeholder('https://...')

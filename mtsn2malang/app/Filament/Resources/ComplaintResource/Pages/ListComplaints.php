@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\ComplaintResource\Pages;
 
+use Filament\Actions\Action;
 use App\Filament\Resources\ComplaintResource;
 use App\Models\Complaint;
 use Filament\Actions;
@@ -15,7 +16,7 @@ class ListComplaints extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\Action::make('download_rekap_excel')
+            Action::make('download_rekap_excel')
                 ->label('Download Rekap Excel')
                 ->icon('heroicon-m-arrow-down-tray')
                 ->action(fn() => $this->downloadRekapExcel()),

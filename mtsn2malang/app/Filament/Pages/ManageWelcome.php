@@ -2,20 +2,28 @@
 
 namespace App\Filament\Pages;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Tabs;
+use Filament\Schemas\Components\Tabs\Tab;
+use Filament\Schemas\Components\Section;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\RichEditor;
+use Filament\Forms\Components\Textarea;
 use App\Models\Setting;
 use App\Support\UploadImageHelper;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 
 class ManageWelcome extends Page
 {
-    protected static ?string $navigationIcon  = 'heroicon-o-home';
+    protected static string|\BackedEnum|null $navigationIcon  = 'heroicon-o-home';
     protected static ?string $navigationLabel = 'Sambutan & Profil';
-    protected static ?string $navigationGroup = 'Konten';
+
+    protected static ?string $title = 'Sambutan & Profil';
+    protected static string|\UnitEnum|null $navigationGroup = 'Konten';
     protected static ?int    $navigationSort  = 10;
-    protected static string  $view            = 'filament.pages.manage-welcome';
+    protected string  $view            = 'filament.pages.manage-welcome';
 
     public static function canAccess(): bool
     {
@@ -64,34 +72,34 @@ class ManageWelcome extends Page
         ]);
     }
 
-    public function form(Form $form): Form
+    public function form(Schema $schema): Schema
     {
-        return $form->schema([
-            Forms\Components\Tabs::make('Sambutan & Profil')->tabs([
+        return $schema->components([
+            Tabs::make('Sambutan & Profil')->tabs([
 
                 // ── Tab 1: Data Akademika ─────────────────────────────────────
-                Forms\Components\Tabs\Tab::make('Data Akademika')
+                Tab::make('Data Akademika')
                     ->icon('heroicon-o-chart-bar')
                     ->schema([
-                        Forms\Components\Section::make('Statistik Akademika')
+                        Section::make('Statistik Akademika')
                             ->description('Data ini akan ditampilkan sebagai angka statistik di bawah hero section halaman utama.')
                             ->schema([
-                                Forms\Components\TextInput::make('stat_students')
+                                TextInput::make('stat_students')
                                     ->label('Jumlah Siswa')
                                     ->numeric()
                                     ->placeholder('1200')
                                     ->suffix('siswa'),
-                                Forms\Components\TextInput::make('stat_teachers')
+                                TextInput::make('stat_teachers')
                                     ->label('Jumlah Guru')
                                     ->numeric()
                                     ->placeholder('80')
                                     ->suffix('guru'),
-                                Forms\Components\TextInput::make('stat_staff')
+                                TextInput::make('stat_staff')
                                     ->label('Jumlah Tenaga Kependidikan')
                                     ->numeric()
                                     ->placeholder('40')
                                     ->suffix('orang'),
-                                Forms\Components\TextInput::make('stat_alumni')
+                                TextInput::make('stat_alumni')
                                     ->label('Jumlah Alumni')
                                     ->placeholder('5000+')
                                     ->helperText('Boleh menggunakan tanda + (contoh: 5000+)')
@@ -100,27 +108,27 @@ class ManageWelcome extends Page
                     ]),
 
                 // ── Tab 2: Sambutan Kepala ────────────────────────────────────
-                Forms\Components\Tabs\Tab::make('Sambutan Kepala')
+                Tab::make('Sambutan Kepala')
                     ->icon('heroicon-o-user-circle')
                     ->schema([
-                        Forms\Components\Section::make('Profil & Sambutan Kepala Madrasah')
+                        Section::make('Profil & Sambutan Kepala Madrasah')
                             ->schema([
                                 UploadImageHelper::webpFileUpload('welcome_headmaster_photo', 'Foto Kepala Madrasah', 'settings/welcome')
                                     ->imageEditor()
                                     ->helperText('Foto resmi kepala madrasah untuk halaman sambutan. Otomatis dikonversi ke WebP.')
                                     ->columnSpanFull(),
-                                Forms\Components\TextInput::make('welcome_headmaster_name')
+                                TextInput::make('welcome_headmaster_name')
                                     ->label('Nama Kepala Madrasah')
                                     ->placeholder('Nama lengkap dengan gelar'),
-                                Forms\Components\TextInput::make('welcome_headmaster_period')
+                                TextInput::make('welcome_headmaster_period')
                                     ->label('Periode Jabatan')
                                     ->placeholder('2023 – Sekarang'),
-                                Forms\Components\RichEditor::make('welcome_headmaster_message')
+                                RichEditor::make('welcome_headmaster_message')
                                     ->label('Kalimat Sambutan')
                                     ->toolbarButtons(['bold','italic','underline','bulletList','orderedList','undo','redo'])
                                     ->placeholder('Assalamu\'alaikum Wr. Wb. ...')
                                     ->columnSpanFull(),
-                                Forms\Components\TextInput::make('welcome_headmaster_motto')
+                                TextInput::make('welcome_headmaster_motto')
                                     ->label('Motto / Kutipan')
                                     ->placeholder('"Unggul dalam Prestasi, Mulia dalam Akhlak"')
                                     ->columnSpanFull(),
@@ -128,26 +136,26 @@ class ManageWelcome extends Page
                     ]),
 
                 // ── Tab 3: Visi – Misi – Tujuan ──────────────────────────────
-                Forms\Components\Tabs\Tab::make('Visi – Misi – Tujuan')
+                Tab::make('Visi – Misi – Tujuan')
                     ->icon('heroicon-o-light-bulb')
                     ->schema([
-                        Forms\Components\Section::make('Visi')->schema([
-                            Forms\Components\Textarea::make('visi')
+                        Section::make('Visi')->schema([
+                            Textarea::make('visi')
                                 ->label('Pernyataan Visi')
                                 ->rows(3)
                                 ->placeholder('Terwujudnya madrasah yang unggul, berkarakter, dan berwawasan global...')
                                 ->columnSpanFull(),
                         ]),
-                        Forms\Components\Section::make('Misi')->schema([
-                            Forms\Components\RichEditor::make('misi')
+                        Section::make('Misi')->schema([
+                            RichEditor::make('misi')
                                 ->label('Butir-butir Misi')
                                 ->toolbarButtons(['bold', 'italic', 'underline', 'bulletList', 'orderedList', 'undo', 'redo'])
                                 ->placeholder('Tuliskan butir-butir misi madrasah...')
                                 ->helperText('Gunakan Ordered List (1,2,3) atau Bullet List untuk menampilkan butir-butir misi.')
                                 ->columnSpanFull(),
                         ]),
-                        Forms\Components\Section::make('Tujuan')->schema([
-                            Forms\Components\RichEditor::make('tujuan')
+                        Section::make('Tujuan')->schema([
+                            RichEditor::make('tujuan')
                                 ->label('Butir-butir Tujuan')
                                 ->toolbarButtons(['bold', 'italic', 'underline', 'bulletList', 'orderedList', 'undo', 'redo'])
                                 ->placeholder('Tuliskan butir-butir tujuan madrasah...')
@@ -157,43 +165,43 @@ class ManageWelcome extends Page
                     ]),
 
                 // ── Tab 4: Identitas ──────────────────────────────────────────
-                Forms\Components\Tabs\Tab::make('Identitas')
+                Tab::make('Identitas')
                     ->icon('heroicon-o-identification')
                     ->schema([
-                        Forms\Components\Section::make('Identitas Madrasah')
+                        Section::make('Identitas Madrasah')
                             ->schema([
-                                Forms\Components\TextInput::make('identity_nomenklatur')
+                                TextInput::make('identity_nomenklatur')
                                     ->label('Nomenklatur Nama Madrasah')
                                     ->placeholder('Madrasah Tsanawiyah Negeri 2 Kota Malang')
                                     ->columnSpanFull(),
-                                Forms\Components\TextInput::make('identity_npsn')
+                                TextInput::make('identity_npsn')
                                     ->label('Nomor NPSN')
                                     ->placeholder('20584862'),
-                                Forms\Components\TextInput::make('identity_nsm')
+                                TextInput::make('identity_nsm')
                                     ->label('Nomor NSM')
                                     ->placeholder('121135730002'),
-                                Forms\Components\TextInput::make('identity_akreditasi')
+                                TextInput::make('identity_akreditasi')
                                     ->label('Akreditasi')
                                     ->placeholder('A (Unggul)'),
-                                Forms\Components\TextInput::make('identity_address')
+                                TextInput::make('identity_address')
                                     ->label('Alamat Lengkap')
                                     ->placeholder('Jl. Raya Cemorokandang No. 77, Kota Malang'),
-                                Forms\Components\TextInput::make('identity_website')
+                                TextInput::make('identity_website')
                                     ->label('Website Resmi')
                                     ->url()
                                     ->placeholder('https://mtsn2malang.sch.id'),
-                                Forms\Components\TextInput::make('identity_adiwiyata')
+                                TextInput::make('identity_adiwiyata')
                                     ->label('Predikat Adiwiyata')
                                     ->placeholder('Adiwiyata Nasional 2023'),
-                                Forms\Components\TextInput::make('identity_zona_integritas')
+                                TextInput::make('identity_zona_integritas')
                                     ->label('Predikat Zona Integritas')
                                     ->placeholder('Wilayah Bebas Korupsi (WBK) 2024'),
-                                Forms\Components\TextInput::make('identity_npsn_url')
+                                TextInput::make('identity_npsn_url')
                                     ->label('Link Profil NPSN')
                                     ->url()
                                     ->placeholder('https://referensi.data.kemdikbud.go.id/tabs.php?npsn=...')
                                     ->helperText('URL profil sekolah di referensi.data.kemdikbud.go.id'),
-                                Forms\Components\TextInput::make('identity_nsm_url')
+                                TextInput::make('identity_nsm_url')
                                     ->label('Link Profil NSM')
                                     ->url()
                                     ->placeholder('https://emispendis.kemenag.go.id/...')

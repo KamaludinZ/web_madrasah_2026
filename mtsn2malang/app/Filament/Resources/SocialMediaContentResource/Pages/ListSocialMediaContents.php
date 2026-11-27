@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\SocialMediaContentResource\Pages;
 
+use Filament\Actions\CreateAction;
+use Filament\Actions\Action;
 use App\Filament\Resources\SocialMediaContentResource;
 use App\Models\Setting;
 use App\Support\UploadImageHelper;
@@ -17,8 +19,8 @@ class ListSocialMediaContents extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make(),
-            Actions\Action::make('defaultThumbnail')
+            CreateAction::make(),
+            Action::make('defaultThumbnail')
                 ->label('Thumbnail Default Platform')
                 ->icon('heroicon-o-photo')
                 ->color('warning')

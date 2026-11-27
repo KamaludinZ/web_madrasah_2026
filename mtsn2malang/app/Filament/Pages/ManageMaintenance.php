@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use Filament\Actions\Action;
 use App\Models\Setting;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -12,11 +13,13 @@ use Illuminate\Support\Str;
 
 class ManageMaintenance extends Page
 {
-    protected static ?string $navigationIcon = 'heroicon-o-wrench-screwdriver';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-wrench-screwdriver';
     protected static ?string $navigationLabel = 'Mode Maintenance';
-    protected static ?string $navigationGroup = 'Pengaturan';
+
+    protected static ?string $title = 'Mode Maintenance';
+    protected static string|\UnitEnum|null $navigationGroup = 'Pengaturan';
     protected static ?int $navigationSort = 4;
-    protected static string $view = 'filament.pages.manage-maintenance';
+    protected string $view = 'filament.pages.manage-maintenance';
 
     public static function canAccess(): bool
     {
@@ -74,14 +77,14 @@ class ManageMaintenance extends Page
     protected function getFormActions(): array
     {
         return [
-            \Filament\Actions\Action::make('enableMaintenance')
+            Action::make('enableMaintenance')
                 ->label('Aktifkan Maintenance')
                 ->action('enableMaintenance')
                 ->color('danger')
                 ->icon('heroicon-o-exclamation-triangle')
                 ->visible(fn (): bool => ! $this->maintenanceMode),
 
-            \Filament\Actions\Action::make('disableMaintenance')
+            Action::make('disableMaintenance')
                 ->label('Nonaktifkan Maintenance')
                 ->action('disableMaintenance')
                 ->color('success')

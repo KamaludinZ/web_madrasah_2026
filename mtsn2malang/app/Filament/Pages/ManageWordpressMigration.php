@@ -2,12 +2,18 @@
 
 namespace App\Filament\Pages;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Section;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\FileUpload;
+use Throwable;
+use Illuminate\Database\Eloquent\Collection;
 use App\Jobs\WordpressMigrationJob;
 use App\Models\Setting;
 use App\Models\WordpressMigrationBatch;
 use App\Services\WordpressMigrationService;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Illuminate\Support\Facades\Crypt;
@@ -16,11 +22,13 @@ use Livewire\Attributes\Computed;
 
 class ManageWordpressMigration extends Page
 {
-    protected static ?string $navigationIcon  = 'heroicon-o-arrow-path';
+    protected static string|\BackedEnum|null $navigationIcon  = 'heroicon-o-arrow-path';
     protected static ?string $navigationLabel = 'Migrasi WordPress';
-    protected static ?string $navigationGroup = 'Pengaturan';
+
+    protected static ?string $title = 'Migrasi WordPress';
+    protected static string|\UnitEnum|null $navigationGroup = 'Pengaturan';
     protected static ?int    $navigationSort  = 5;
-    protected static string  $view            = 'filament.pages.manage-wordpress-migration';
+    protected string  $view            = 'filament.pages.manage-wordpress-migration';
 
     public static function canAccess(): bool
     {
@@ -94,44 +102,44 @@ class ManageWordpressMigration extends Page
         return ['onlineForm', 'offlineForm'];
     }
 
-    public function onlineForm(Form $form): Form
+    public function onlineForm(Schema $schema): Schema
     {
-        return $form
-            ->schema([
-                Forms\Components\Section::make('Koneksi Database WordPress')
+        return $schema
+            ->components([
+                Section::make('Koneksi Database WordPress')
                     ->schema([
-                        Forms\Components\TextInput::make('wp_migration_host')
+                        TextInput::make('wp_migration_host')
                             ->label('Host')->required()->default('127.0.0.1'),
-                        Forms\Components\TextInput::make('wp_migration_port')
+                        TextInput::make('wp_migration_port')
                             ->label('Port')->required()->default('3306'),
-                        Forms\Components\TextInput::make('wp_migration_database')
+                        TextInput::make('wp_migration_database')
                             ->label('Database Name')->required(),
-                        Forms\Components\TextInput::make('wp_migration_username')
+                        TextInput::make('wp_migration_username')
                             ->label('Username')->required(),
-                        Forms\Components\TextInput::make('wp_migration_db_password')
+                        TextInput::make('wp_migration_db_password')
                             ->label('Password')->password()->revealable(),
-                        Forms\Components\TextInput::make('wp_migration_prefix')
+                        TextInput::make('wp_migration_prefix')
                             ->label('Table Prefix')->default('wp_')->required(),
-                        Forms\Components\TextInput::make('wp_migration_source_url')
+                        TextInput::make('wp_migration_source_url')
                             ->label('Source URL WordPress')
                             ->placeholder('https://domain-wordpress.com')
                             ->url()
                             ->columnSpanFull(),
                     ])->columns(2),
 
-                Forms\Components\Section::make('Opsi Migrasi')
+                Section::make('Opsi Migrasi')
                     ->schema([
-                        Forms\Components\Toggle::make('wp_migration_import_posts')
+                        Toggle::make('wp_migration_import_posts')
                             ->label('Migrasi Posts')->default(true),
-                        Forms\Components\Toggle::make('wp_migration_import_categories')
+                        Toggle::make('wp_migration_import_categories')
                             ->label('Migrasi Kategori')->default(true),
-                        Forms\Components\Toggle::make('wp_migration_import_tags')
+                        Toggle::make('wp_migration_import_tags')
                             ->label('Migrasi Tags')->default(true),
-                        Forms\Components\Toggle::make('wp_migration_import_images')
+                        Toggle::make('wp_migration_import_images')
                             ->label('Download Featured Image / Attachment')->default(true),
-                        Forms\Components\Toggle::make('wp_migration_rewrite_content_images')
+                        Toggle::make('wp_migration_rewrite_content_images')
                             ->label('Rewrite URL gambar di konten')->default(true),
-                        Forms\Components\Toggle::make('wp_migration_dry_run')
+                        Toggle::make('wp_migration_dry_run')
                             ->label('Dry Run (simulasi tanpa simpan data)')
                             ->helperText('Aktifkan untuk simulasi. Nonaktifkan untuk migrasi nyata.')
                             ->default(true)
@@ -142,14 +150,14 @@ class ManageWordpressMigration extends Page
             ->statePath('onlineData');
     }
 
-    public function offlineForm(Form $form): Form
+    public function offlineForm(Schema $schema): Schema
     {
-        return $form
-            ->schema([
-                Forms\Components\Section::make('Sumber Data XML')
+        return $schema
+            ->components([
+                Section::make('Sumber Data XML')
                     ->description('Upload file WXR dari WordPress atau isi path file di server.')
                     ->schema([
-                        Forms\Components\FileUpload::make('wp_migration_offline_file')
+                        FileUpload::make('wp_migration_offline_file')
                             ->label('Upload File WordPress XML (WXR)')
                             ->acceptedFileTypes(['text/xml', 'application/xml', 'application/octet-stream'])
                             ->directory('wordpress-imports')
@@ -161,7 +169,7 @@ class ManageWordpressMigration extends Page
                             ->helperText('Upload file XML/WXR hingga 500MB.')
                             ->columnSpanFull(),
 
-                        Forms\Components\TextInput::make('wp_migration_offline_file_path')
+                        TextInput::make('wp_migration_offline_file_path')
                             ->label('Atau isi path file XML di server')
                             ->placeholder('/home/user/backup.WordPress.xml')
                             ->helperText('Jika upload gagal karena limit server, isi path file secara manual.')
@@ -169,18 +177,18 @@ class ManageWordpressMigration extends Page
                             ->columnSpanFull(),
                     ]),
 
-                Forms\Components\Section::make('Opsi Gambar & Konten')
+                Section::make('Opsi Gambar & Konten')
                     ->schema([
-                        Forms\Components\TextInput::make('wp_migration_source_url')
+                        TextInput::make('wp_migration_source_url')
                             ->label('Source URL WordPress (untuk rewrite gambar)')
                             ->placeholder('https://domain-wordpress.com')
                             ->url()
                             ->columnSpanFull(),
-                        Forms\Components\Toggle::make('wp_migration_import_images')
+                        Toggle::make('wp_migration_import_images')
                             ->label('Download gambar dari URL sumber')->default(true),
-                        Forms\Components\Toggle::make('wp_migration_rewrite_content_images')
+                        Toggle::make('wp_migration_rewrite_content_images')
                             ->label('Rewrite URL gambar di konten')->default(true),
-                        Forms\Components\Toggle::make('wp_migration_dry_run')
+                        Toggle::make('wp_migration_dry_run')
                             ->label('Dry Run (simulasi tanpa simpan data)')
                             ->helperText('Aktifkan untuk simulasi. Nonaktifkan untuk migrasi nyata.')
                             ->default(true)
@@ -267,7 +275,7 @@ class ManageWordpressMigration extends Page
             $this->onlineResultType = 'success';
             $this->onlineResult     = "[$time] Preview berhasil diperbarui.";
             Notification::make()->title('Preview Berhasil')->success()->send();
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             $this->onlineResultType = 'danger';
             $this->onlineResult     = '[' . now()->format('d-m-Y H:i:s') . '] Preview gagal: ' . $e->getMessage();
             $this->previewStats     = [];
@@ -288,7 +296,7 @@ class ManageWordpressMigration extends Page
                 $this->onlineResultType = 'success';
                 $this->onlineResult     = "[$time] " . ($result['message'] ?? 'Dry run selesai.');
                 Notification::make()->title('Dry Run Selesai')->body($result['message'] ?? '')->success()->send();
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 $this->onlineResultType = 'danger';
                 $this->onlineResult     = "[$time] Dry run gagal: " . $e->getMessage();
                 Notification::make()->title('Dry Run Gagal')->body($e->getMessage())->danger()->send();
@@ -322,7 +330,7 @@ class ManageWordpressMigration extends Page
                 ->body("Batch #{$batch->id} berhasil diproses. Cek tab Rollback untuk detail.")
                 ->success()
                 ->send();
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             $this->onlineResultType = 'danger';
             $this->onlineResult     = "[$time] Migrasi gagal: " . $e->getMessage();
             Notification::make()->title('Migrasi Gagal')->body($e->getMessage())->danger()->send();
@@ -363,7 +371,7 @@ class ManageWordpressMigration extends Page
             $this->offlineResultType = 'success';
             $this->offlineResult     = "[$time] Preview offline berhasil.";
             Notification::make()->title('Preview Offline Berhasil')->success()->send();
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             $this->offlineResultType = 'danger';
             $this->offlineResult     = '[' . now()->format('d-m-Y H:i:s') . '] Preview gagal: ' . $e->getMessage();
             $this->previewStats      = [];
@@ -384,7 +392,7 @@ class ManageWordpressMigration extends Page
                 $this->offlineResultType = 'success';
                 $this->offlineResult     = "[$time] " . ($result['message'] ?? 'Dry run offline selesai.');
                 Notification::make()->title('Dry Run Offline Selesai')->body($result['message'] ?? '')->success()->send();
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 $this->offlineResultType = 'danger';
                 $this->offlineResult     = "[$time] Dry run gagal: " . $e->getMessage();
                 Notification::make()->title('Dry Run Gagal')->body($e->getMessage())->danger()->send();
@@ -417,7 +425,7 @@ class ManageWordpressMigration extends Page
                 ->body("Batch #{$batch->id} berhasil diproses. Cek tab Rollback untuk detail.")
                 ->success()
                 ->send();
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             $this->offlineResultType = 'danger';
             $this->offlineResult     = "[$time] Migrasi gagal: " . $e->getMessage();
             Notification::make()->title('Migrasi Gagal')->body($e->getMessage())->danger()->send();
@@ -462,7 +470,7 @@ class ManageWordpressMigration extends Page
             DB::table('jobs')
                 ->where('payload', 'like', '%"batchId":' . $batchId . '%')
                 ->delete();
-        } catch (\Throwable) {
+        } catch (Throwable) {
             // Abaikan jika gagal hapus dari jobs
         }
 
@@ -568,12 +576,12 @@ class ManageWordpressMigration extends Page
                 $output = @shell_exec('pgrep -f "queue:work" 2>/dev/null') ?? '';
                 return trim($output) !== '';
             }
-        } catch (\Throwable) {
+        } catch (Throwable) {
             // fallback
         }
 
         // Fallback: cek apakah ada batch running yang baru diupdate (proxy indicator)
-        return \App\Models\WordpressMigrationBatch::where('status', 'running')
+        return WordpressMigrationBatch::where('status', 'running')
             ->where('updated_at', '>=', now()->subMinutes(2))
             ->exists();
     }
@@ -585,7 +593,7 @@ class ManageWordpressMigration extends Page
             $failed   = DB::table('failed_jobs')->count();
             $queued   = WordpressMigrationBatch::where('status', 'queued')->count();
             $running  = WordpressMigrationBatch::where('status', 'running')->count();
-        } catch (\Throwable) {
+        } catch (Throwable) {
             $pending = $failed = $queued = $running = 0;
         }
 
@@ -595,7 +603,7 @@ class ManageWordpressMigration extends Page
     // ─── Computed: riwayat batch ──────────────────────────────────────────────
 
     #[Computed]
-    public function batchHistory(): \Illuminate\Database\Eloquent\Collection
+    public function batchHistory(): Collection
     {
         return WordpressMigrationBatch::latest()->limit(20)->get();
     }
@@ -640,7 +648,7 @@ class ManageWordpressMigration extends Page
     {
         try {
             return Crypt::decryptString($value);
-        } catch (\Throwable) {
+        } catch (Throwable) {
             return '';
         }
     }

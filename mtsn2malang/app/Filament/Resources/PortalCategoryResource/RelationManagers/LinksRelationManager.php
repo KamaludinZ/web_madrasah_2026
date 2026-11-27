@@ -2,10 +2,24 @@
 
 namespace App\Filament\Resources\PortalCategoryResource\RelationManagers;
 
+use Filament\Schemas\Schema;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\Toggle;
+use Filament\Tables\Columns\TextColumn;
+use Illuminate\Support\HtmlString;
+use Illuminate\Support\Str;
+use Filament\Tables\Columns\ToggleColumn;
+use Filament\Tables\Filters\TernaryFilter;
+use Filament\Actions\CreateAction;
+use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
 use App\Rules\SafeLink;
 use App\Support\PortalIcons;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -24,15 +38,15 @@ class LinksRelationManager extends RelationManager
 
     protected static ?string $pluralModelLabel = 'Link';
 
-    public function form(Form $form): Form
+    public function form(Schema $schema): Schema
     {
-        return $form->schema([
-            Forms\Components\TextInput::make('name')
+        return $schema->components([
+            TextInput::make('name')
                 ->label('Nama Link')
                 ->required()
                 ->maxLength(100),
 
-            Forms\Components\Select::make('icon')
+            Select::make('icon')
                 ->label('Ikon')
                 ->options(PortalIcons::htmlOptions())
                 ->in(PortalIcons::names())
@@ -42,7 +56,7 @@ class LinksRelationManager extends RelationManager
                 ->native(false)
                 ->searchable(),
 
-            Forms\Components\TextInput::make('url')
+            TextInput::make('url')
                 ->label('Link Tujuan')
                 ->required()
                 ->maxLength(255)
@@ -50,20 +64,20 @@ class LinksRelationManager extends RelationManager
                 ->placeholder('https://... atau /ppid/profil')
                 ->columnSpanFull(),
 
-            Forms\Components\Textarea::make('description')
+            Textarea::make('description')
                 ->label('Deskripsi')
                 ->rows(2)
                 ->maxLength(300)
                 ->columnSpanFull(),
 
-            Forms\Components\TextInput::make('sort_order')
+            TextInput::make('sort_order')
                 ->label('Urutan Tampil')
                 ->numeric()
                 ->minValue(0)
                 ->default(0)
                 ->helperText('Angka kecil tampil lebih dulu di popup. Bisa juga diatur dengan menyeret baris.'),
 
-            Forms\Components\Toggle::make('is_active')
+            Toggle::make('is_active')
                 ->label('Aktif (tampil di popup)')
                 ->default(true)
                 ->onColor('success')
@@ -78,22 +92,22 @@ class LinksRelationManager extends RelationManager
             ->recordTitleAttribute('name')
             ->columns([
                 // HtmlString: SVG dari daftar ikon tetap (sanitizer ->html() membuang <svg>).
-                Tables\Columns\TextColumn::make('icon')->label('Ikon')
-                    ->formatStateUsing(fn (?string $state) => new \Illuminate\Support\HtmlString(PortalIcons::svg($state, 'w-5 h-5 text-primary-600'))),
-                Tables\Columns\TextColumn::make('name')->label('Nama')->searchable()->weight('semibold')
-                    ->description(fn ($record) => $record->description ? \Illuminate\Support\Str::limit($record->description, 60) : null),
-                Tables\Columns\TextColumn::make('url')->label('Tujuan')->limit(40)
+                TextColumn::make('icon')->label('Ikon')
+                    ->formatStateUsing(fn (?string $state) => new HtmlString(PortalIcons::svg($state, 'w-5 h-5 text-primary-600'))),
+                TextColumn::make('name')->label('Nama')->searchable()->weight('semibold')
+                    ->description(fn ($record) => $record->description ? Str::limit($record->description, 60) : null),
+                TextColumn::make('url')->label('Tujuan')->limit(40)
                     ->url(fn ($record) => $record->url)->openUrlInNewTab(),
-                Tables\Columns\TextColumn::make('sort_order')->label('Urutan')->sortable(),
-                Tables\Columns\ToggleColumn::make('is_active')->label('Aktif'),
+                TextColumn::make('sort_order')->label('Urutan')->sortable(),
+                ToggleColumn::make('is_active')->label('Aktif'),
             ])
             ->defaultSort('sort_order')
             ->reorderable('sort_order')
             ->filters([
-                Tables\Filters\TernaryFilter::make('is_active')->label('Status aktif'),
+                TernaryFilter::make('is_active')->label('Status aktif'),
             ])
-            ->headerActions([Tables\Actions\CreateAction::make()])
-            ->actions([Tables\Actions\EditAction::make(), Tables\Actions\DeleteAction::make()])
-            ->bulkActions([Tables\Actions\BulkActionGroup::make([Tables\Actions\DeleteBulkAction::make()])]);
+            ->headerActions([CreateAction::make()])
+            ->actions([EditAction::make(), DeleteAction::make()])
+            ->bulkActions([BulkActionGroup::make([DeleteBulkAction::make()])]);
     }
 }

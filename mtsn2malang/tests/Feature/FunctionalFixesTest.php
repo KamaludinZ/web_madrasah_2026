@@ -2,6 +2,10 @@
 
 namespace Tests\Feature;
 
+use ReflectionClass;
+use RuntimeException;
+use Illuminate\Support\Facades\DB;
+use App\Models\PageView;
 use App\Filament\Pages\ManageSettings;
 use App\Jobs\ApplyManualUpdateJob;
 use App\Jobs\RestoreBackupJob;
@@ -98,7 +102,7 @@ class FunctionalFixesTest extends TestCase
         $zip->close();
 
         try {
-            $method = (new \ReflectionClass(UpdateService::class))->getMethod('extractAndValidate');
+            $method = (new ReflectionClass(UpdateService::class))->getMethod('extractAndValidate');
             $root = $method->invoke(app(UpdateService::class), $zipPath, $tmp);
 
             $this->assertStringEndsWith('/mtsn2malang', $root);
@@ -222,7 +226,7 @@ class FunctionalFixesTest extends TestCase
         Setting::setSecret('gemini_api_key', null);
         config(['ai.gemini_key' => null]);
 
-        $this->expectException(\RuntimeException::class);
+        $this->expectException(RuntimeException::class);
         app(AiService::class)->generateSeo('Judul', 'Konten');
     }
 
@@ -278,7 +282,7 @@ class FunctionalFixesTest extends TestCase
     {
         // Jika tabel yang dikecualikan merujuk tabel lain (mis. users), psql
         // gagal menghapus & membuat ulang tabel itu dan SELURUH restore gagal.
-        $rows = \Illuminate\Support\Facades\DB::select(
+        $rows = DB::select(
             "SELECT conrelid::regclass::text AS source, confrelid::regclass::text AS target
              FROM pg_constraint WHERE contype = 'f'"
         );
@@ -308,14 +312,14 @@ class FunctionalFixesTest extends TestCase
 
     public function test_pruning_old_visits_keeps_total_visitor_count(): void
     {
-        \App\Models\PageView::create(['page' => '/', 'session_id' => 'lama', 'viewed_date' => now()->subDays(200)->toDateString()]);
-        \App\Models\PageView::create(['page' => '/', 'session_id' => 'baru', 'viewed_date' => now()->toDateString()]);
+        PageView::create(['page' => '/', 'session_id' => 'lama', 'viewed_date' => now()->subDays(200)->toDateString()]);
+        PageView::create(['page' => '/', 'session_id' => 'baru', 'viewed_date' => now()->toDateString()]);
 
-        $this->assertSame(2, \App\Models\PageView::totalCount());
-        $this->assertSame(1, \App\Models\PageView::pruneOld());
+        $this->assertSame(2, PageView::totalCount());
+        $this->assertSame(1, PageView::pruneOld());
 
-        $this->assertSame(1, \App\Models\PageView::count(), 'Detail kunjungan lama dihapus.');
-        $this->assertSame(2, \App\Models\PageView::totalCount(), 'Total pengunjung tidak boleh berkurang.');
+        $this->assertSame(1, PageView::count(), 'Detail kunjungan lama dihapus.');
+        $this->assertSame(2, PageView::totalCount(), 'Total pengunjung tidak boleh berkurang.');
     }
 
     // ─── Docker / Coolify ────────────────────────────────────────────────────
