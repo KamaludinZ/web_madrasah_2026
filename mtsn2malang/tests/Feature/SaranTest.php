@@ -30,6 +30,7 @@ class SaranTest extends TestCase
         $this->get(route('survei.saran'))->assertOk()->assertSee('name="phone"', false);
 
         $this->post(route('survei.saran.store'), [
+            'captcha' => \App\Support\NumericCaptcha::generate('saran'),
             'name'    => 'Siti',
             'phone'   => ' 0812-3456-7890 ',
             'subject' => 'Kantin',
@@ -44,12 +45,14 @@ class SaranTest extends TestCase
         Queue::fake();
 
         $this->post(route('survei.saran.store'), [
+            'captcha' => \App\Support\NumericCaptcha::generate('saran'),
             'subject' => 'Tanpa telepon',
             'content' => 'Saran tanpa nomor telepon tetap diterima.',
         ])->assertSessionHasNoErrors();
         $this->assertNull(Saran::where('type', 'saran')->latest('id')->value('phone'));
 
         $this->post(route('survei.saran.store'), [
+            'captcha' => \App\Support\NumericCaptcha::generate('saran'),
             'phone'   => 'bukan-nomor',
             'subject' => 'Telepon salah',
             'content' => 'Nomor telepon tidak valid harus ditolak.',

@@ -25,6 +25,7 @@ use App\Models\Setting;
 use App\Models\SocialMediaContent;
 use App\Models\SurveyLink;
 use App\Services\ComplaintNotifier;
+use App\Support\PublicFormGuard;
 use Illuminate\Http\Request;
 
 class PageController extends Controller
@@ -402,20 +403,34 @@ class PageController extends Controller
             'subject' => 'required|string|max:255',
             'content' => 'required|string|max:10000',
             'type' => 'required|in:whistleblowing,masyarakat',
+            'captcha' => 'required|string',
+        ], [
+            'captcha.required' => 'Kode keamanan wajib diisi.',
         ]);
 
-        $complaint = Complaint::create([
-            'type' => $request->type,
-            'name' => $request->name,
-            'email' => $request->email,
-            'phone' => $request->phone,
-            'subject' => $request->subject,
-            'content' => $request->input('content'),
-        ]);
+        // Bot (honeypot terisi): pura-pura berhasil tanpa menyimpan apa pun.
+        if (PublicFormGuard::isBot($request)) {
+            return back()->with('success', 'Pengaduan berhasil dikirim.');
+        }
 
-        SendComplaintNotificationJob::dispatch($complaint->id, ComplaintNotifier::EVENT_CREATED);
+        PublicFormGuard::assertCaptcha($request, 'pengaduan');
 
-        return back()->with('success', 'Pengaduan berhasil dikirim. Nomor tiket Anda: ' . $complaint->ticket_number);
+        $ticket = PublicFormGuard::once($request, 'pengaduan', [$request->type, $request->subject, $request->input('content')], function () use ($request) {
+            $complaint = Complaint::create([
+                'type' => $request->type,
+                'name' => $request->name,
+                'email' => $request->email,
+                'phone' => $request->phone,
+                'subject' => $request->subject,
+                'content' => $request->input('content'),
+            ]);
+
+            SendComplaintNotificationJob::dispatch($complaint->id, ComplaintNotifier::EVENT_CREATED);
+
+            return $complaint->ticket_number;
+        });
+
+        return back()->with('success', 'Pengaduan berhasil dikirim. Nomor tiket Anda: ' . $ticket);
     }
 
     public function pelacakanPengaduan(Request $request)
@@ -490,29 +505,41 @@ class PageController extends Controller
             'phone'   => ['nullable', 'string', 'max:20', 'regex:/^\+?[0-9\s\-().]{8,20}$/'],
             'subject' => 'required|string|max:255',
             'content' => 'required|string|min:10',
+            'captcha' => 'required|string',
         ], [
             'phone.regex'      => 'Nomor telepon hanya boleh berisi angka (boleh diawali +), minimal 8 digit.',
             'phone.max'        => 'Nomor telepon maksimal 20 karakter.',
             'subject.required' => 'Subjek saran wajib diisi.',
             'content.required' => 'Isi saran wajib diisi.',
             'content.min'      => 'Isi saran minimal 10 karakter.',
+            'captcha.required' => 'Kode keamanan wajib diisi.',
         ]);
 
-        $saran = Saran::create([
-            'name'    => $request->name ?: 'Anonim',
-            'email'   => $request->email,
-            'phone'   => filled($request->phone) ? trim((string) $request->phone) : null,
-            'subject' => $request->subject,
-            'content' => $request->input('content'),
-            'status'  => 'pending',
-        ]);
+        if (PublicFormGuard::isBot($request)) {
+            return redirect()->route('survei.saran')->with('success', 'Terima kasih! Saran Anda telah kami terima.');
+        }
 
-        SendComplaintNotificationJob::dispatch($saran->id, ComplaintNotifier::EVENT_CREATED);
+        PublicFormGuard::assertCaptcha($request, 'saran');
+
+        $ticket = PublicFormGuard::once($request, 'saran', [$request->subject, $request->input('content')], function () use ($request) {
+            $saran = Saran::create([
+                'name'    => $request->name ?: 'Anonim',
+                'email'   => $request->email,
+                'phone'   => filled($request->phone) ? trim((string) $request->phone) : null,
+                'subject' => $request->subject,
+                'content' => $request->input('content'),
+                'status'  => 'pending',
+            ]);
+
+            SendComplaintNotificationJob::dispatch($saran->id, ComplaintNotifier::EVENT_CREATED);
+
+            return $saran->ticket_number;
+        });
 
         return redirect()
             ->route('survei.saran')
             ->with('success', 'Terima kasih! Saran Anda telah kami terima.')
-            ->with('ticket', $saran->ticket_number);
+            ->with('ticket', $ticket);
     }
 
     // ===== ARCHIVE VIEWER =====

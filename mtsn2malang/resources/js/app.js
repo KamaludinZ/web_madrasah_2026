@@ -403,3 +403,34 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     counters.forEach(counter => observer.observe(counter));
 });
+
+// Formulir publik (pengaduan, saran, komentar): cegah kiriman ganda saat
+// tombol ditekan dua kali — di produksi pernah tercipta 2 pengaduan yang sama.
+document.addEventListener('submit', (event) => {
+    const form = event.target;
+    if (!(form instanceof HTMLFormElement) || !form.hasAttribute('data-submit-once')) return;
+
+    if (form.dataset.submitting === '1') {
+        event.preventDefault();
+        return;
+    }
+    form.dataset.submitting = '1';
+    // Ditunda sedikit agar nilai tombol (bila ada) tetap ikut terkirim.
+    setTimeout(() => {
+        form.querySelectorAll('button[type="submit"]').forEach((button) => {
+            button.disabled = true;
+            button.classList.add('opacity-60', 'cursor-wait');
+        });
+    }, 0);
+});
+
+// Kembali dengan tombol "Back" (bfcache): aktifkan lagi formulirnya.
+window.addEventListener('pageshow', () => {
+    document.querySelectorAll('form[data-submit-once]').forEach((form) => {
+        delete form.dataset.submitting;
+        form.querySelectorAll('button[type="submit"]').forEach((button) => {
+            button.disabled = false;
+            button.classList.remove('opacity-60', 'cursor-wait');
+        });
+    });
+});

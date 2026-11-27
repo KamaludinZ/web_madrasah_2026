@@ -178,6 +178,18 @@ class NewsResource extends Resource
                             ->fileAttachmentsDisk('public')
                             ->fileAttachmentsDirectory('news-content')
                             ->fileAttachmentsVisibility('public')
+                            // Gambar di isi berita diperkecil (≤1920px, WEBP); GIF
+                            // disimpan apa adanya agar animasinya tidak hilang.
+                            ->saveUploadedFileAttachmentUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file): string {
+                                if ($file->getMimeType() !== 'image/gif') {
+                                    $path = 'news-content/' . Str::uuid() . '.webp';
+                                    if (\App\Support\ImageOptimizer::toWebp($file->getRealPath(), Storage::disk('public')->path($path), \App\Support\ImageOptimizer::maxDimensionFor($path))) {
+                                        return $path;
+                                    }
+                                }
+
+                                return $file->store('news-content', 'public');
+                            })
                             ->minHeight(420)
                             ->resize(true)
                             ->toolbarMode('wrap')

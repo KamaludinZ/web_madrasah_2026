@@ -124,7 +124,8 @@ class ArchiveResource extends Resource
                         FileUpload::make('file_path')
                             ->label('Upload File (PDF / Gambar)')
                             ->directory('archives/files')
-                            ->acceptedFileTypes(['application/pdf', 'image/*'])
+                            // Daftar eksplisit: semua jenis gambar (image/ wildcard) juga menerima SVG yang bisa berisi skrip.
+                            ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'image/gif'])
                             ->maxSize(20480)
                             ->downloadable()
                             ->helperText('PDF atau gambar · Maks 20MB')

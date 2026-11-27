@@ -13,7 +13,7 @@ namespace App\Support;
 class NumericCaptcha
 {
     /** Formulir yang memakai CAPTCHA (dipakai juga untuk URL gambar). */
-    public const CONTEXTS = ['login', 'komentar'];
+    public const CONTEXTS = ['login', 'komentar', 'pengaduan', 'saran'];
 
     public const LENGTH = 5;
 

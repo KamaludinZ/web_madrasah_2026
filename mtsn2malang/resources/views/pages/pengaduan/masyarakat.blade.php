@@ -28,7 +28,7 @@
 
         <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-card p-8">
             <h2 class="text-xl font-bold font-heading text-gray-900 dark:text-white mb-6">Form Pengaduan</h2>
-            <form action="{{ route('pengaduan.masyarakat.store') }}" method="POST">
+            <form action="{{ route('pengaduan.masyarakat.store') }}" method="POST" data-submit-once>
                 @csrf
                 <input type="hidden" name="type" value="masyarakat">
                 <div class="space-y-4">
@@ -54,6 +54,7 @@
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Isi Pengaduan <span class="text-red-500">*</span></label>
                         <textarea name="content" required rows="5" class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:ring-2 focus:ring-green-200 focus:border-school-green dark:bg-gray-700 dark:text-white outline-none transition-all resize-none" placeholder="Deskripsikan pengaduan Anda secara detail...">{{ old('content') }}</textarea>
                     </div>
+                    <x-form-guard context="pengaduan" />
                     <button type="submit" class="w-full btn-primary justify-center">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
                         Kirim Pengaduan

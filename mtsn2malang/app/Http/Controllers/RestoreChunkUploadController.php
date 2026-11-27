@@ -15,7 +15,10 @@ class RestoreChunkUploadController extends Controller
 {
     public function __invoke(Request $request): JsonResponse
     {
-        abort_unless($request->user()?->hasRole('super_admin'), 403);
+        // Wajib super_admin yang masih aktif (akun nonaktif/ditangguhkan dengan
+        // sesi lama tidak boleh mengunduh/memulihkan backup).
+        $user = $request->user();
+        abort_unless($user?->hasRole('super_admin') && $user->is_active && ! $user->is_suspended, 403);
 
         $data = $request->validate([
             'token' => ['nullable', 'string'],

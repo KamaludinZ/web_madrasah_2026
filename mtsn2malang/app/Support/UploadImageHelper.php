@@ -5,10 +5,6 @@ namespace App\Support;
 use Filament\Forms\Components\FileUpload;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
-use Intervention\Image\Drivers\Gd\Driver as GdDriver;
-use Intervention\Image\Drivers\Imagick\Driver as ImagickDriver;
-use Intervention\Image\Encoders\WebpEncoder;
-use Intervention\Image\ImageManager;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Throwable;
 
@@ -56,22 +52,10 @@ class UploadImageHelper
                         ]);
                     }
 
-                    // Jika file sudah WEBP, simpan apa adanya tanpa konversi lagi
-                    if ($mimeType === 'image/webp' || $ext === 'webp') {
-                        $webpFileName = $safeName . '-' . now()->timestamp . '.webp';
-                        $webpRelativePath = $targetDirectory . '/' . $webpFileName;
-                        $webpFullPath = storage_path('app/public/' . $webpRelativePath);
-
-                        if (! is_dir(dirname($webpFullPath))) {
-                            mkdir(dirname($webpFullPath), 0755, true);
-                        }
-
-                        copy($file->getRealPath(), $webpFullPath);
-
-                        return $webpRelativePath;
-                    }
-
-                    // Raster (jpg/jpeg/png): coba konversi ke webp
+                    // Sisi terpanjang dibatasi sesuai folder (logo 512px, foto
+                    // berita 1600px, dst.) lalu disimpan sebagai WEBP — foto
+                    // kamera 4000+ px tidak lagi tersimpan utuh (1–1,5 MB).
+                    $maxDimension = ImageOptimizer::maxDimensionFor($targetDirectory . '/x');
                     $newFileName = $safeName . '-' . now()->timestamp . '.webp';
                     $relativePath = $targetDirectory . '/' . $newFileName;
                     $fullPath = storage_path('app/public/' . $relativePath);
@@ -80,30 +64,17 @@ class UploadImageHelper
                         mkdir(dirname($fullPath), 0755, true);
                     }
 
-                    $driver = null;
+                    // WEBP yang sudah kecil disimpan apa adanya (tanpa turun kualitas).
+                    $size = @getimagesize($file->getRealPath());
+                    if (($mimeType === 'image/webp' || $ext === 'webp') && $size
+                        && max($size[0], $size[1]) <= $maxDimension
+                        && $file->getSize() <= ImageOptimizer::SMALL_FILE_BYTES) {
+                        copy($file->getRealPath(), $fullPath);
 
-                    if (extension_loaded('gd')) {
-                        try {
-                            $driver = new GdDriver();
-                        } catch (Throwable) {
-                            $driver = null;
-                        }
+                        return $relativePath;
                     }
 
-                    if (! $driver && extension_loaded('imagick')) {
-                        try {
-                            $driver = new ImagickDriver();
-                        } catch (Throwable) {
-                            $driver = null;
-                        }
-                    }
-
-                    if ($driver) {
-                        $manager = new ImageManager($driver);
-                        $image = $manager->read($file->getRealPath());
-                        $encoded = $image->encode(new WebpEncoder(82));
-                        file_put_contents($fullPath, (string) $encoded);
-
+                    if (ImageOptimizer::toWebp($file->getRealPath(), $fullPath, $maxDimension)) {
                         return $relativePath;
                     }
 

@@ -12,10 +12,6 @@ use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Intervention\Image\Drivers\Gd\Driver as GdDriver;
-use Intervention\Image\Drivers\Imagick\Driver as ImagickDriver;
-use Intervention\Image\Encoders\WebpEncoder;
-use Intervention\Image\ImageManager;
 use Throwable;
 
 class EditNews extends EditRecord
@@ -197,24 +193,9 @@ class EditNews extends EditRecord
 
         $ext = strtolower(pathinfo($fullTemp, PATHINFO_EXTENSION));
 
-        if ($ext === 'webp') {
-            rename($fullTemp, $fullFinal);
-            return $finalPath;
-        }
-
-        $driver = null;
-        if (extension_loaded('gd')) {
-            try { $driver = new GdDriver(); } catch (Throwable) { $driver = null; }
-        }
-        if (! $driver && extension_loaded('imagick')) {
-            try { $driver = new ImagickDriver(); } catch (Throwable) { $driver = null; }
-        }
-
-        if ($driver) {
-            $manager = new ImageManager($driver);
-            $image   = $manager->read($fullTemp);
-            $encoded = $image->encode(new WebpEncoder(82));
-            file_put_contents($fullFinal, (string) $encoded);
+        // Foto galeri: sisi terpanjang dibatasi & disimpan sebagai WEBP
+        // (sebelumnya foto kamera 4000+ px tersimpan utuh).
+        if (\App\Support\ImageOptimizer::toWebp($fullTemp, $fullFinal, \App\Support\ImageOptimizer::maxDimensionFor($finalPath))) {
             @unlink($fullTemp);
             return $finalPath;
         }

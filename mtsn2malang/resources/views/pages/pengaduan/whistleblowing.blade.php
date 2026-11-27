@@ -34,7 +34,7 @@
 
         <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-card p-6">
             <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-4">Form Laporan Whistleblowing</h2>
-            <form action="{{ route('pengaduan.whistleblowing.store') }}" method="POST" class="space-y-4">
+            <form action="{{ route('pengaduan.whistleblowing.store') }}" method="POST" data-submit-once class="space-y-4">
                 @csrf
                 <input type="hidden" name="type" value="whistleblowing">
 
@@ -63,6 +63,8 @@
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Isi Laporan</label>
                     <textarea name="content" rows="6" required class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:ring-2 focus:ring-green-200 focus:border-school-green dark:bg-gray-700 dark:text-white outline-none">{{ old('content') }}</textarea>
                 </div>
+
+                <x-form-guard context="pengaduan" />
 
                 <div class="flex flex-wrap gap-3 pt-2">
                     <button type="submit" class="btn-primary">Kirim Laporan</button>
