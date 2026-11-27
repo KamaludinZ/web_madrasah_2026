@@ -58,7 +58,7 @@
 
             {{-- Content --}}
             <div class="prose prose-lg dark:prose-invert max-w-none prose-headings:font-heading prose-a:text-school-green prose-img:rounded-xl">
-                {!! \App\Support\SafeHtml::clean($news->content) !!}
+                {!! \App\Support\SafeHtml::clean(\App\Support\WordpressContent::normalize($news->content)) !!}
             </div>
 
             {{-- ===== GALERI FOTO ===== --}}

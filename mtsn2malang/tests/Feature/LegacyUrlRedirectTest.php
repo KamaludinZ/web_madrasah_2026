@@ -45,6 +45,20 @@ class LegacyUrlRedirectTest extends TestCase
         $this->get('/juara-lomba-robotik/')->assertRedirect(route('berita.show', 'juara-lomba-robotik'));
     }
 
+    public function test_links_with_public_folder_or_dated_berita_path_redirect(): void
+    {
+        // Kasus log produksi: /public/berita/{slug} & /berita/04/2018/{slug}/ → 404
+        $this->makeNews('mading-pajang-komik');
+
+        $this->get('/public/berita/mading-pajang-komik')->assertRedirect(url('berita/mading-pajang-komik'))->assertStatus(301);
+        $this->get('/public/tentang/sambutan')->assertRedirect(url('tentang/sambutan'));
+        $this->get('/public/2024/05/mading-pajang-komik/')->assertRedirect(route('berita.show', 'mading-pajang-komik'));
+        $this->get('/berita/04/2018/mading-pajang-komik/')->assertRedirect(route('berita.show', 'mading-pajang-komik'))->assertStatus(301);
+        $this->get('/berita/2018/04/10/mading-pajang-komik/')->assertRedirect(route('berita.show', 'mading-pajang-komik'));
+        $this->get('/berita/04/2018/tidak-ada/')->assertRedirect(route('search.index', ['q' => 'tidak ada']));
+        $this->get('/public/tidak/dikenal/sama/sekali')->assertNotFound();
+    }
+
     public function test_draft_news_is_not_revealed_by_old_permalink(): void
     {
         $this->makeNews('berita-rahasia', 'draft');
