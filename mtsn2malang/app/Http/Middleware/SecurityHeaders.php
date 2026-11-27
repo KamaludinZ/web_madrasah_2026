@@ -18,8 +18,22 @@ class SecurityHeaders
         // Cegah MIME-type sniffing
         $response->headers->set('X-Content-Type-Options', 'nosniff');
 
-        // Aktifkan XSS filter browser lama
-        $response->headers->set('X-XSS-Protection', '1; mode=block');
+        // Filter XSS bawaan browser lama sudah dihapus dan justru bisa
+        // disalahgunakan; rekomendasi saat ini: matikan ("0"), andalkan CSP.
+        $response->headers->set('X-XSS-Protection', '0');
+
+        // Content-Security-Policy dasar yang tidak membatasi skrip/gambar
+        // (konten berita lama memuat embed YouTube/Instagram & gambar luar),
+        // tetapi menutup celah umum: <base> palsu yang membelokkan semua link,
+        // plugin <object>/<embed>, form yang dikirim ke situs lain, dan
+        // halaman yang dibingkai situs lain (clickjacking).
+        if (! $response->headers->has('Content-Security-Policy')) {
+            $csp = "base-uri 'self'; object-src 'none'; form-action 'self'; frame-ancestors 'self'";
+            if (config('app.env') === 'production') {
+                $csp .= '; upgrade-insecure-requests';
+            }
+            $response->headers->set('Content-Security-Policy', $csp);
+        }
 
         // Paksa HTTPS (aktifkan jika production sudah full HTTPS)
         if (config('app.env') === 'production') {

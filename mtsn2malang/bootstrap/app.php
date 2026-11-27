@@ -24,6 +24,10 @@ return Application::configure(basePath: dirname(__DIR__))
             );
         }
 
+        // IP pengunjung asli dari header Cloudflare (hanya bila permintaan
+        // memang datang dari Cloudflare) — dipakai pembatas percobaan & statistik.
+        $middleware->append(\App\Http\Middleware\UseCloudflareClientIp::class);
+
         // Saat maintenance, panel admin tetap bisa dibuka (untuk menonaktifkan
         // maintenance tanpa URL bypass). livewire/* dibutuhkan panel admin.
         $middleware->preventRequestsDuringMaintenance(except: [

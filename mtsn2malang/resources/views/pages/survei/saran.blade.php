@@ -70,7 +70,7 @@
                 Form Saran & Masukan
             </h2>
 
-            <form action="{{ route('survei.saran.store') }}" method="POST" class="space-y-5">
+            <form action="{{ route('survei.saran.store') }}" method="POST" data-submit-once class="space-y-5">
                 @csrf
 
                 {{-- Nama & Email --}}
@@ -157,6 +157,8 @@
                     @enderror
                     <p class="mt-1 text-xs text-gray-400">Minimal 10 karakter</p>
                 </div>
+
+                <x-form-guard context="saran" />
 
                 {{-- Submit --}}
                 <div class="flex items-center justify-between pt-2">

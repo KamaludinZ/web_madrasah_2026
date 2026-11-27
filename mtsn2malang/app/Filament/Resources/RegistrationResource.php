@@ -106,7 +106,8 @@ class RegistrationResource extends Resource
                     FileUpload::make('brochure_file')
                         ->label('Upload Brosur (PDF / Gambar)')
                         ->directory('registrations')
-                        ->acceptedFileTypes(['application/pdf', 'image/*'])
+                        // Daftar eksplisit: semua jenis gambar (image/ wildcard) juga menerima SVG yang bisa berisi skrip.
+                            ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'image/gif'])
                         ->maxSize(10240)
                         ->downloadable()
                         ->helperText('PDF atau gambar · Maks 10MB'),

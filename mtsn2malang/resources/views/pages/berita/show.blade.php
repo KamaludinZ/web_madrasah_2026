@@ -467,7 +467,7 @@
 
                 {{-- Form komentar: staf yang login langsung tampil; pengunjung perlu moderasi --}}
                 @if($news->allow_comments)
-                <form action="{{ route('komentar.store', $news->id) }}" method="POST" class="mb-8 p-5 bg-gray-50 dark:bg-gray-800/60 border border-gray-100 dark:border-gray-700 rounded-2xl space-y-3">
+                <form action="{{ route('komentar.store', $news->id) }}" method="POST" data-submit-once class="mb-8 p-5 bg-gray-50 dark:bg-gray-800/60 border border-gray-100 dark:border-gray-700 rounded-2xl space-y-3">
                     @csrf
 
                     @if($errors->hasAny(['guest_name', 'guest_email', 'content', 'captcha']))

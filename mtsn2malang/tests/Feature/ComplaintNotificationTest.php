@@ -58,10 +58,12 @@ class ComplaintNotificationTest extends TestCase
         Queue::fake();
 
         $this->post(route('pengaduan.masyarakat.store'), [
+            'captcha' => \App\Support\NumericCaptcha::generate('pengaduan'),
             'type' => 'masyarakat', 'subject' => 'Tes', 'content' => 'Isi pengaduan tes',
         ])->assertSessionHas('success');
 
         $this->post(route('survei.saran.store'), [
+            'captcha' => \App\Support\NumericCaptcha::generate('saran'),
             'subject' => 'Tes saran', 'content' => 'Isi saran yang cukup panjang',
         ])->assertRedirect();
 

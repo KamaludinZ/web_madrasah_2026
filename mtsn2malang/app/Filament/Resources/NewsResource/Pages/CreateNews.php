@@ -10,10 +10,6 @@ use App\Models\GalleryPost;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Intervention\Image\Drivers\Gd\Driver as GdDriver;
-use Intervention\Image\Drivers\Imagick\Driver as ImagickDriver;
-use Intervention\Image\Encoders\WebpEncoder;
-use Intervention\Image\ImageManager;
 use Throwable;
 
 class CreateNews extends CreateRecord
@@ -113,27 +109,9 @@ class CreateNews extends CreateRecord
 
         $ext = strtolower(pathinfo($fullTemp, PATHINFO_EXTENSION));
 
-        // Jika sudah webp, pindahkan saja
-        if ($ext === 'webp') {
-            rename($fullTemp, $fullFinal);
-            return $finalPath;
-        }
-
-        // Konversi ke WebP
-        $driver = null;
-        if (extension_loaded('gd')) {
-            try { $driver = new GdDriver(); } catch (Throwable) { $driver = null; }
-        }
-        if (! $driver && extension_loaded('imagick')) {
-            try { $driver = new ImagickDriver(); } catch (Throwable) { $driver = null; }
-        }
-
-        if ($driver) {
-            $manager = new ImageManager($driver);
-            $image   = $manager->read($fullTemp);
-            $encoded = $image->encode(new WebpEncoder(82));
-            file_put_contents($fullFinal, (string) $encoded);
-            // Hapus file temp
+        // Foto galeri: sisi terpanjang dibatasi & disimpan sebagai WEBP
+        // (sebelumnya foto kamera 4000+ px tersimpan utuh).
+        if (\App\Support\ImageOptimizer::toWebp($fullTemp, $fullFinal, \App\Support\ImageOptimizer::maxDimensionFor($finalPath))) {
             @unlink($fullTemp);
             return $finalPath;
         }

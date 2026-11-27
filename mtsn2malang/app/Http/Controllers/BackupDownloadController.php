@@ -16,7 +16,10 @@ class BackupDownloadController extends Controller
 {
     public function __invoke(AppBackup $backup, BackupService $service)
     {
-        abort_unless(auth()->user()?->hasRole('super_admin'), 403);
+        // Wajib super_admin yang masih aktif (akun nonaktif/ditangguhkan dengan
+        // sesi lama tidak boleh mengunduh/memulihkan backup).
+        $user = auth()->user();
+        abort_unless($user?->hasRole('super_admin') && $user->is_active && ! $user->is_suspended, 403);
         abort_if($backup->status !== 'completed' || blank($backup->filename), 404);
 
         $service->assertSafeFilename($backup->filename);
