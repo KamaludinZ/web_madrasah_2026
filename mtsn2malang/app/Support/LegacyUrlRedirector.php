@@ -47,6 +47,18 @@ final class LegacyUrlRedirector
 
     private static function resolvePath(string $path): ?string
     {
+        // Link lama yang menyertakan folder /public/ (situs dulu diakses lewat
+        // /public/berita/judul) → alamat yang sama tanpa /public/.
+        if (preg_match('#^public/(.+)$#', $path, $m)) {
+            return self::resolvePath($m[1]) ?? self::existingRoute($m[1]);
+        }
+
+        // Variasi permalink bertanggal di bawah /berita/: /berita/04/2018/judul/,
+        // /berita/2018/04/judul/, /berita/2018/04/10/judul/
+        if (preg_match('#^berita/\d{2,4}/\d{2,4}(?:/\d{2})?/([^/]+)$#', $path, $m)) {
+            return self::newsBySlug($m[1]) ?? route('search.index', ['q' => str_replace('-', ' ', $m[1])]);
+        }
+
         // Panel admin WordPress lama
         if (preg_match('#^wp-admin(?:/.*)?$#', $path)) {
             return url('/admin/login');
@@ -115,6 +127,18 @@ final class LegacyUrlRedirector
         return News::published()->where('slug', $slug)->exists()
             ? route('berita.show', ['slug' => $slug])
             : null;
+    }
+
+    /** URL di situs ini bila jalurnya cocok dengan salah satu rute GET (selain fallback). */
+    private static function existingRoute(string $path): ?string
+    {
+        try {
+            $route = Route::getRoutes()->match(Request::create('/' . $path, 'GET'));
+        } catch (\Throwable) {
+            return null;
+        }
+
+        return $route->isFallback ? null : url($path);
     }
 
     /** /visi-misi/ → /tentang/visi-misi bila halaman baru dengan nama itu ada. */
