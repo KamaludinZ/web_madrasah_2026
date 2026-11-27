@@ -2,11 +2,23 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Group;
+use Filament\Schemas\Components\Section;
+use Filament\Forms\Components\TextInput;
+use Filament\Tables\Columns\ImageColumn;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use App\Filament\Resources\HeadmasterHistoryResource\Pages\ListHeadmasterHistories;
+use App\Filament\Resources\HeadmasterHistoryResource\Pages\CreateHeadmasterHistory;
+use App\Filament\Resources\HeadmasterHistoryResource\Pages\EditHeadmasterHistory;
 use App\Filament\Resources\HeadmasterHistoryResource\Pages;
 use App\Models\HeadmasterHistory;
 use App\Support\UploadImageHelper;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -22,19 +34,19 @@ class HeadmasterHistoryResource extends Resource
     }
 
     protected static ?string $model           = HeadmasterHistory::class;
-    protected static ?string $navigationIcon  = 'heroicon-o-clock';
+    protected static string|\BackedEnum|null $navigationIcon  = 'heroicon-o-clock';
     protected static ?string $navigationLabel = 'Riwayat Kepala';
-    protected static ?string $navigationGroup = 'Profil Sekolah';
+    protected static string|\UnitEnum|null $navigationGroup = 'Profil Sekolah';
     protected static ?int    $navigationSort  = 2;
     protected static ?string $modelLabel      = 'Riwayat Kepala Madrasah';
     protected static ?string $pluralModelLabel = 'Riwayat Kepala Madrasah';
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([
-            Forms\Components\Group::make()->schema([
+        return $schema->components([
+            Group::make()->schema([
 
-                Forms\Components\Section::make('Foto')
+                Section::make('Foto')
                     ->description('Foto resmi kepala madrasah.')
                     ->schema([
                         UploadImageHelper::webpFileUpload('photo', 'Upload Foto', 'headmaster-history')
@@ -42,9 +54,9 @@ class HeadmasterHistoryResource extends Resource
                             ->helperText('JPG, PNG · Maks 5MB · Otomatis dikonversi ke WebP'),
                     ]),
 
-                Forms\Components\Section::make('Urutan')
+                Section::make('Urutan')
                     ->schema([
-                        Forms\Components\TextInput::make('order')
+                        TextInput::make('order')
                             ->label('Urutan Tampil')
                             ->numeric()
                             ->default(0)
@@ -53,22 +65,22 @@ class HeadmasterHistoryResource extends Resource
 
             ])->columnSpan(1),
 
-            Forms\Components\Group::make()->schema([
+            Group::make()->schema([
 
-                Forms\Components\Section::make('Data Kepala Madrasah')
+                Section::make('Data Kepala Madrasah')
                     ->schema([
-                        Forms\Components\TextInput::make('name')
+                        TextInput::make('name')
                             ->label('Nama Lengkap')
                             ->required()
                             ->maxLength(255)
                             ->placeholder('Nama lengkap beserta gelar'),
 
-                        Forms\Components\TextInput::make('nip')
+                        TextInput::make('nip')
                             ->label('NIP')
                             ->maxLength(30)
                             ->placeholder('Nomor Induk Pegawai'),
 
-                        Forms\Components\TextInput::make('period')
+                        TextInput::make('period')
                             ->label('Periode Jabatan')
                             ->required()
                             ->maxLength(50)
@@ -85,25 +97,25 @@ class HeadmasterHistoryResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\ImageColumn::make('photo')->label('Foto')->circular()
+                ImageColumn::make('photo')->label('Foto')->circular()
                     ->defaultImageUrl(asset('images/news-placeholder.png')),
-                Tables\Columns\TextColumn::make('name')->label('Nama Lengkap')->searchable()->sortable()->weight('semibold'),
-                Tables\Columns\TextColumn::make('nip')->label('NIP')->default('-'),
-                Tables\Columns\TextColumn::make('period')->label('Periode')->badge()->color('success'),
-                Tables\Columns\TextColumn::make('order')->label('Urutan')->sortable(),
+                TextColumn::make('name')->label('Nama Lengkap')->searchable()->sortable()->weight('semibold'),
+                TextColumn::make('nip')->label('NIP')->default('-'),
+                TextColumn::make('period')->label('Periode')->badge()->color('success'),
+                TextColumn::make('order')->label('Urutan')->sortable(),
             ])
             ->defaultSort('order', 'asc')
             ->reorderable('order')
-            ->actions([Tables\Actions\EditAction::make(), Tables\Actions\DeleteAction::make()])
-            ->bulkActions([Tables\Actions\BulkActionGroup::make([Tables\Actions\DeleteBulkAction::make()])]);
+            ->actions([EditAction::make(), DeleteAction::make()])
+            ->bulkActions([BulkActionGroup::make([DeleteBulkAction::make()])]);
     }
 
     public static function getPages(): array
     {
         return [
-            'index'  => Pages\ListHeadmasterHistories::route('/'),
-            'create' => Pages\CreateHeadmasterHistory::route('/create'),
-            'edit'   => Pages\EditHeadmasterHistory::route('/{record}/edit'),
+            'index'  => ListHeadmasterHistories::route('/'),
+            'create' => CreateHeadmasterHistory::route('/create'),
+            'edit'   => EditHeadmasterHistory::route('/{record}/edit'),
         ];
     }
 }

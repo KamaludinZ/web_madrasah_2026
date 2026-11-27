@@ -2,6 +2,10 @@
 
 namespace App\Filament\Resources\AchievementResource\Pages;
 
+use Filament\Actions\Action;
+use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\FileUpload;
+use Filament\Actions\CreateAction;
 use App\Filament\Resources\AchievementResource;
 use App\Models\Setting;
 use App\Services\AchievementImportService;
@@ -19,12 +23,12 @@ class ListAchievements extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\Action::make('publicDisplaySetting')
+            Action::make('publicDisplaySetting')
                 ->label('Pengaturan Tampilan Publik')
                 ->icon('heroicon-o-eye')
                 ->color('warning')
                 ->form([
-                    Forms\Components\Toggle::make('show_achievements_section')
+                    Toggle::make('show_achievements_section')
                         ->label('Tampilkan section "Ringkasan Prestasi" di halaman Beranda')
                         ->helperText('Bila dimatikan, ringkasan & daftar prestasi tidak tampil di Beranda. Data prestasi tetap tersimpan.')
                         ->default(fn () => (bool) Setting::get('show_achievements_section', true)),
@@ -38,18 +42,18 @@ class ListAchievements extends ListRecords
                         ->send();
                 }),
 
-            Actions\Action::make('download_template_excel')
+            Action::make('download_template_excel')
                 ->label('Download Template Excel')
                 ->icon('heroicon-o-arrow-down-tray')
                 ->color('gray')
                 ->action(fn () => $this->downloadTemplateExcel()),
 
-            Actions\Action::make('import_excel')
+            Action::make('import_excel')
                 ->label('Import dari Excel')
                 ->icon('heroicon-o-arrow-up-tray')
                 ->color('success')
                 ->form([
-                    Forms\Components\FileUpload::make('file')
+                    FileUpload::make('file')
                         ->label('File Excel (.xlsx)')
                         ->required()
                         ->disk('local')
@@ -65,7 +69,7 @@ class ListAchievements extends ListRecords
                 ->modalSubmitActionLabel('Import')
                 ->action(fn (array $data) => $this->importExcel($data)),
 
-            Actions\CreateAction::make(),
+            CreateAction::make(),
         ];
     }
 

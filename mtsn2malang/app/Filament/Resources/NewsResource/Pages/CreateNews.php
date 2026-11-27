@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\NewsResource\Pages;
 
+use App\Services\SubscriptionMailerService;
 use App\Filament\Resources\Concerns\RedirectsToResourceIndex;
 use App\Filament\Resources\NewsResource;
 use App\Models\GalleryPhoto;
@@ -32,7 +33,7 @@ class CreateNews extends CreateRecord
     {
         $this->saveGalleryPost($this->record->id);
         $this->syncTags();
-        app(\App\Services\SubscriptionMailerService::class)->queueIfPublished($this->record);
+        app(SubscriptionMailerService::class)->queueIfPublished($this->record);
     }
 
     protected function syncTags(): void

@@ -2,6 +2,9 @@
 
 namespace App\Filament\Resources\NewsResource\Pages;
 
+use Filament\Actions\ViewAction;
+use Filament\Actions\DeleteAction;
+use App\Services\SubscriptionMailerService;
 use App\Filament\Resources\NewsResource;
 use App\Models\GalleryPhoto;
 use App\Models\GalleryPost;
@@ -22,8 +25,8 @@ class EditNews extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            Actions\ViewAction::make(),
-            Actions\DeleteAction::make(),
+            ViewAction::make(),
+            DeleteAction::make(),
         ];
     }
 
@@ -39,7 +42,7 @@ class EditNews extends EditRecord
         // Prefill tags dari Spatie HasTags (nama tag sebagai array string)
         try {
             $data['tags'] = $this->record->tags->pluck('name')->toArray();
-        } catch (\Throwable) {
+        } catch (Throwable) {
             $data['tags'] = [];
         }
 
@@ -64,7 +67,7 @@ class EditNews extends EditRecord
         $this->deleteMarkedPhotos();
         $this->saveOrUpdateGalleryPost($this->record->id);
         $this->syncTags();
-        app(\App\Services\SubscriptionMailerService::class)->queueIfPublished($this->record);
+        app(SubscriptionMailerService::class)->queueIfPublished($this->record);
     }
 
     protected function deleteMarkedPhotos(): void

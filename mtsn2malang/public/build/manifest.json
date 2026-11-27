@@ -18,12 +18,21 @@
     ]
   },
   "resources/css/app.css": {
-    "file": "assets/app-C0wF1n1G.css",
+    "file": "assets/app-CvAyasoE.css",
     "name": "app",
     "names": [
       "app.css"
     ],
     "src": "resources/css/app.css",
+    "isEntry": true
+  },
+  "resources/css/filament/admin-utilities.css": {
+    "file": "assets/admin-utilities-CnmG7a82.css",
+    "name": "admin-utilities",
+    "names": [
+      "admin-utilities.css"
+    ],
+    "src": "resources/css/filament/admin-utilities.css",
     "isEntry": true
   },
   "resources/js/app.js": {

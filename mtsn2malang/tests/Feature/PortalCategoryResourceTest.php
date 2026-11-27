@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Support\PortalIcons;
 use App\Filament\Resources\PortalCategoryResource\Pages\CreatePortalCategory;
 use App\Filament\Resources\PortalCategoryResource\Pages\EditPortalCategory;
 use App\Filament\Resources\PortalCategoryResource\Pages\ListPortalCategories;
@@ -145,9 +146,9 @@ class PortalCategoryResourceTest extends TestCase
 
     public function test_icon_options_show_preview_and_escape_labels(): void
     {
-        $options = \App\Support\PortalIcons::htmlOptions();
+        $options = PortalIcons::htmlOptions();
 
-        $this->assertCount(count(\App\Support\PortalIcons::names()), $options);
+        $this->assertCount(count(PortalIcons::names()), $options);
         $this->assertStringContainsString('<svg', $options['shield']);
         $this->assertStringContainsString('Keamanan / Perlindungan', $options['shield']);
     }
@@ -159,7 +160,7 @@ class PortalCategoryResourceTest extends TestCase
 
         Livewire::test(ListPortalCategories::class)
             ->assertTableColumnExists('icon')
-            ->assertSee(\App\Support\PortalIcons::path('star'), false);
+            ->assertSee(PortalIcons::path('star'), false);
     }
 
     public function test_list_page_shows_categories_in_sort_order(): void

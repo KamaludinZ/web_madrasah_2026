@@ -38,7 +38,7 @@ COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
 
 # Tailwind memindai view, JS, dan kelas di app/**/*.php
-COPY vite.config.js tailwind.config.js postcss.config.js ./
+COPY vite.config.js tailwind.config.js tailwind.admin.config.js postcss.config.js ./
 COPY resources ./resources
 COPY app ./app
 RUN npm run build

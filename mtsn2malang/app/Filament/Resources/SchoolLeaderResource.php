@@ -2,12 +2,26 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Group;
+use Filament\Schemas\Components\Section;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
+use Filament\Tables\Columns\ImageColumn;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use App\Filament\Resources\SchoolLeaderResource\Pages\ListSchoolLeaders;
+use App\Filament\Resources\SchoolLeaderResource\Pages\CreateSchoolLeader;
+use App\Filament\Resources\SchoolLeaderResource\Pages\EditSchoolLeader;
 use App\Filament\Resources\Concerns\HasRoleAccess;
 use App\Filament\Resources\SchoolLeaderResource\Pages;
 use App\Models\SchoolLeader;
 use App\Support\UploadImageHelper;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -22,20 +36,20 @@ class SchoolLeaderResource extends Resource
     }
 
     protected static ?string $model            = SchoolLeader::class;
-    protected static ?string $navigationIcon   = 'heroicon-o-identification';
+    protected static string|\BackedEnum|null $navigationIcon   = 'heroicon-o-identification';
     protected static ?string $navigationLabel  = 'Unsur Pimpinan';
-    protected static ?string $navigationGroup  = 'Profil Sekolah';
+    protected static string|\UnitEnum|null $navigationGroup  = 'Profil Sekolah';
     protected static ?int    $navigationSort   = 0;
     protected static ?string $modelLabel       = 'Unsur Pimpinan';
     protected static ?string $pluralModelLabel = 'Unsur Pimpinan';
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([
+        return $schema->components([
 
-            Forms\Components\Group::make()->schema([
+            Group::make()->schema([
 
-                Forms\Components\Section::make('Foto')
+                Section::make('Foto')
                     ->description('Foto resmi pimpinan. Rasio 2:3 (portrait).')
                     ->schema([
                         UploadImageHelper::webpFileUpload('photo', 'Upload Foto', 'school-leaders')
@@ -43,15 +57,15 @@ class SchoolLeaderResource extends Resource
                             ->helperText('JPG, PNG · Maks 5MB · Otomatis dikonversi ke WebP'),
                     ]),
 
-                Forms\Components\Section::make('Pengaturan')
+                Section::make('Pengaturan')
                     ->schema([
-                        Forms\Components\TextInput::make('order')
+                        TextInput::make('order')
                             ->label('Urutan Tampil')
                             ->numeric()
                             ->default(0)
                             ->helperText('Angka lebih kecil tampil lebih awal.'),
 
-                        Forms\Components\Toggle::make('is_active')
+                        Toggle::make('is_active')
                             ->label('Tampilkan')
                             ->default(true)
                             ->onColor('success')
@@ -61,29 +75,29 @@ class SchoolLeaderResource extends Resource
 
             ])->columnSpan(1),
 
-            Forms\Components\Group::make()->schema([
+            Group::make()->schema([
 
-                Forms\Components\Section::make('Data Pimpinan')
+                Section::make('Data Pimpinan')
                     ->schema([
-                        Forms\Components\TextInput::make('name')
+                        TextInput::make('name')
                             ->label('Nama Lengkap')
                             ->required()
                             ->maxLength(255)
                             ->placeholder('Nama lengkap beserta gelar'),
 
-                        Forms\Components\TextInput::make('position')
+                        TextInput::make('position')
                             ->label('Jabatan')
                             ->required()
                             ->maxLength(255)
                             ->placeholder('Contoh: Kepala Madrasah, Wakil Kepala Bidang Kurikulum'),
 
-                        Forms\Components\TextInput::make('nip')
+                        TextInput::make('nip')
                             ->label('NIP')
                             ->nullable()
                             ->maxLength(30)
                             ->placeholder('Nomor Induk Pegawai (opsional)'),
 
-                        Forms\Components\TextInput::make('period')
+                        TextInput::make('period')
                             ->label('Periode')
                             ->nullable()
                             ->maxLength(100)
@@ -100,48 +114,48 @@ class SchoolLeaderResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\ImageColumn::make('photo')
+                ImageColumn::make('photo')
                     ->label('Foto')
                     ->circular()
                     ->defaultImageUrl(asset('images/news-placeholder.png')),
 
-                Tables\Columns\TextColumn::make('name')
+                TextColumn::make('name')
                     ->label('Nama Lengkap')
                     ->searchable()
                     ->sortable()
                     ->weight('semibold'),
 
-                Tables\Columns\TextColumn::make('position')
+                TextColumn::make('position')
                     ->label('Jabatan')
                     ->searchable(),
 
-                Tables\Columns\TextColumn::make('nip')
+                TextColumn::make('nip')
                     ->label('NIP')
                     ->default('-'),
 
-                Tables\Columns\TextColumn::make('period')
+                TextColumn::make('period')
                     ->label('Periode')
                     ->badge()
                     ->color('success')
                     ->default('-'),
 
-                Tables\Columns\IconColumn::make('is_active')
+                IconColumn::make('is_active')
                     ->label('Tampil')
                     ->boolean(),
 
-                Tables\Columns\TextColumn::make('order')
+                TextColumn::make('order')
                     ->label('Urutan')
                     ->sortable(),
             ])
             ->defaultSort('order', 'asc')
             ->reorderable('order')
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                EditAction::make(),
+                DeleteAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ]);
     }
@@ -149,9 +163,9 @@ class SchoolLeaderResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index'  => Pages\ListSchoolLeaders::route('/'),
-            'create' => Pages\CreateSchoolLeader::route('/create'),
-            'edit'   => Pages\EditSchoolLeader::route('/{record}/edit'),
+            'index'  => ListSchoolLeaders::route('/'),
+            'create' => CreateSchoolLeader::route('/create'),
+            'edit'   => EditSchoolLeader::route('/{record}/edit'),
         ];
     }
 }

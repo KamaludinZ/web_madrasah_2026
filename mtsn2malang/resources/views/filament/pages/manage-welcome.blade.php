@@ -1,5 +1,5 @@
 <x-filament-panels::page>
-    <x-filament-panels::form id="form" wire:submit="save">
+    <form id="form" wire:submit="save" class="fi-form grid gap-y-6">
         {{ $this->form }}
 
         <div class="fi-form-actions flex flex-wrap items-center gap-3 mt-6">
@@ -7,5 +7,5 @@
                 Simpan Data
             </x-filament::button>
         </div>
-    </x-filament-panels::form>
+    </form>
 </x-filament-panels::page>

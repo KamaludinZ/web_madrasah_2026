@@ -2,11 +2,15 @@
 
 namespace App\Filament\Pages;
 
+use Filament\Schemas\Components\Section;
+use Filament\Forms\Components\Placeholder;
+use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\TextInput;
+use Throwable;
 use App\Models\Setting;
 use App\Support\PortalSettings;
 use App\Support\UploadImageHelper;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Illuminate\Support\Facades\Log;
@@ -19,12 +23,12 @@ use Illuminate\Support\HtmlString;
  */
 class ManagePortal extends Page
 {
-    protected static ?string $navigationIcon  = 'heroicon-o-paint-brush';
+    protected static string|\BackedEnum|null $navigationIcon  = 'heroicon-o-paint-brush';
     protected static ?string $navigationLabel = 'Pengaturan Portal';
-    protected static ?string $navigationGroup = 'Portal';
+    protected static string|\UnitEnum|null $navigationGroup = 'Portal';
     protected static ?int    $navigationSort  = 3;
     protected static ?string $title           = 'Pengaturan Portal';
-    protected static string  $view            = 'filament.pages.manage-portal';
+    protected string  $view            = 'filament.pages.manage-portal';
 
     public static function canAccess(): bool
     {
@@ -67,19 +71,19 @@ class ManagePortal extends Page
         ]);
     }
 
-    public function form(Form $form): Form
+    public function form(\Filament\Schemas\Schema $schema): \Filament\Schemas\Schema
     {
-        return $form->schema([
-            Forms\Components\Section::make('Status Portal')
+        return $schema->components([
+            Section::make('Status Portal')
                 ->description('Saat Portal dimatikan, alamat utama situs langsung menampilkan Beranda. Data Portal (kategori, link, Akses Cepat) tetap tersimpan.')
                 ->icon('heroicon-o-power')
                 ->schema([
                     // Status TERSIMPAN (bukan posisi saklar yang belum disimpan).
-                    Forms\Components\Placeholder::make('portal_status')
+                    Placeholder::make('portal_status')
                         ->label('Status saat ini')
                         ->content(fn () => static::statusBadge()),
 
-                    Forms\Components\Toggle::make(PortalSettings::KEY)
+                    Toggle::make(PortalSettings::KEY)
                         ->label('Aktifkan Halaman Portal di alamat utama ( / )')
                         ->onColor('success')
                         ->offColor('danger')
@@ -87,14 +91,14 @@ class ManagePortal extends Page
                         ->offIcon('heroicon-m-x-mark'),
                 ]),
 
-            Forms\Components\Section::make('Gambar Latar Halaman Portal')
+            Section::make('Gambar Latar Halaman Portal')
                 ->description('Gambar dipasang penuh di belakang seluruh isi Halaman Portal. Kosongkan untuk latar polos.')
                 ->schema([
                     UploadImageHelper::webpFileUpload(PortalSettings::BACKGROUND_IMAGE_KEY, 'Gambar Latar', 'settings/portal')
                         ->helperText('Disarankan gambar lanskap minimal 1920×1080 px. JPG/PNG/WEBP, maks 5MB — otomatis dikonversi ke WEBP.')
                         ->columnSpanFull(),
 
-                    Forms\Components\TextInput::make(PortalSettings::BACKGROUND_TRANSPARENCY_KEY)
+                    TextInput::make(PortalSettings::BACKGROUND_TRANSPARENCY_KEY)
                         ->label('Transparansi Gambar')
                         ->numeric()
                         ->integer()
@@ -133,7 +137,7 @@ class ManagePortal extends Page
                 return;
             }
             activity()->causedBy(auth()->user())->withProperties($properties)->log($description);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::warning('Activity log error: ' . $e->getMessage());
         }
     }

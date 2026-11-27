@@ -2,13 +2,31 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Section;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\Toggle;
+use Filament\Tables\Columns\TextColumn;
+use Illuminate\Support\HtmlString;
+use Illuminate\Support\Str;
+use Filament\Tables\Columns\ToggleColumn;
+use Filament\Tables\Filters\TernaryFilter;
+use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use App\Filament\Resources\PortalCategoryResource\RelationManagers\LinksRelationManager;
+use App\Filament\Resources\PortalCategoryResource\Pages\ListPortalCategories;
+use App\Filament\Resources\PortalCategoryResource\Pages\CreatePortalCategory;
+use App\Filament\Resources\PortalCategoryResource\Pages\EditPortalCategory;
 use App\Filament\Resources\Concerns\HasRoleAccess;
 use App\Filament\Resources\PortalCategoryResource\Pages;
 use App\Models\PortalCategory;
 use App\Rules\SafeLink;
 use App\Support\PortalIcons;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -27,25 +45,25 @@ class PortalCategoryResource extends Resource
     }
 
     protected static ?string $model            = PortalCategory::class;
-    protected static ?string $navigationIcon   = 'heroicon-o-rectangle-group';
+    protected static string|\BackedEnum|null $navigationIcon   = 'heroicon-o-rectangle-group';
     protected static ?string $navigationLabel  = 'Kategori Portal';
-    protected static ?string $navigationGroup  = 'Portal';
+    protected static string|\UnitEnum|null $navigationGroup  = 'Portal';
     protected static ?int    $navigationSort   = 2;
     protected static ?string $modelLabel       = 'Kategori Portal';
     protected static ?string $pluralModelLabel = 'Kategori Portal';
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([
-            Forms\Components\Section::make('Informasi Kategori')
+        return $schema->components([
+            Section::make('Informasi Kategori')
                 ->schema([
-                    Forms\Components\TextInput::make('name')
+                    TextInput::make('name')
                         ->label('Nama Kategori')
                         ->required()
                         ->maxLength(100)
                         ->placeholder('Contoh: Layanan Akademik'),
 
-                    Forms\Components\Select::make('icon')
+                    Select::make('icon')
                         ->label('Ikon')
                         ->options(PortalIcons::htmlOptions())
                         ->in(PortalIcons::names())
@@ -55,13 +73,13 @@ class PortalCategoryResource extends Resource
                         ->native(false)
                         ->searchable(),
 
-                    Forms\Components\Textarea::make('description')
+                    Textarea::make('description')
                         ->label('Deskripsi')
                         ->rows(3)
                         ->maxLength(300)
                         ->columnSpanFull(),
 
-                    Forms\Components\TextInput::make('main_link')
+                    TextInput::make('main_link')
                         ->label('Link Utama (opsional)')
                         ->maxLength(255)
                         ->rule(new SafeLink())
@@ -70,16 +88,16 @@ class PortalCategoryResource extends Resource
                         ->columnSpanFull(),
                 ])->columns(2),
 
-            Forms\Components\Section::make('Tampilan')
+            Section::make('Tampilan')
                 ->schema([
-                    Forms\Components\TextInput::make('sort_order')
+                    TextInput::make('sort_order')
                         ->label('Urutan Tampil')
                         ->numeric()
                         ->minValue(0)
                         ->default(0)
                         ->helperText('Angka kecil tampil lebih dulu. Urutan juga bisa diatur dengan menyeret baris di daftar kategori.'),
 
-                    Forms\Components\Toggle::make('is_active')
+                    Toggle::make('is_active')
                         ->label('Aktif (tampil di Portal)')
                         ->default(true)
                         ->onColor('success')
@@ -95,37 +113,37 @@ class PortalCategoryResource extends Resource
             ->columns([
                 // HtmlString (bukan ->html()) karena sanitizer Filament membuang <svg>;
                 // SVG berasal dari daftar ikon tetap PortalIcons, bukan input pengguna.
-                Tables\Columns\TextColumn::make('icon')->label('Ikon')
-                    ->formatStateUsing(fn (?string $state) => new \Illuminate\Support\HtmlString(PortalIcons::svg($state, 'w-6 h-6 text-primary-600'))),
-                Tables\Columns\TextColumn::make('name')->label('Nama')->searchable()->weight('semibold')
-                    ->description(fn (PortalCategory $record) => \Illuminate\Support\Str::limit((string) $record->description, 60) ?: null),
-                Tables\Columns\TextColumn::make('links_count')->label('Link Anak')->counts('links')->badge(),
-                Tables\Columns\TextColumn::make('main_link')->label('Link Utama')->limit(35)->placeholder('—'),
-                Tables\Columns\TextColumn::make('sort_order')->label('Urutan')->sortable(),
-                Tables\Columns\ToggleColumn::make('is_active')->label('Aktif'),
+                TextColumn::make('icon')->label('Ikon')
+                    ->formatStateUsing(fn (?string $state) => new HtmlString(PortalIcons::svg($state, 'w-6 h-6 text-primary-600'))),
+                TextColumn::make('name')->label('Nama')->searchable()->weight('semibold')
+                    ->description(fn (PortalCategory $record) => Str::limit((string) $record->description, 60) ?: null),
+                TextColumn::make('links_count')->label('Link Anak')->counts('links')->badge(),
+                TextColumn::make('main_link')->label('Link Utama')->limit(35)->placeholder('—'),
+                TextColumn::make('sort_order')->label('Urutan')->sortable(),
+                ToggleColumn::make('is_active')->label('Aktif'),
             ])
             ->defaultSort('sort_order')
             ->reorderable('sort_order')
             ->filters([
-                Tables\Filters\TernaryFilter::make('is_active')->label('Status aktif'),
+                TernaryFilter::make('is_active')->label('Status aktif'),
             ])
-            ->actions([Tables\Actions\EditAction::make(), Tables\Actions\DeleteAction::make()])
-            ->bulkActions([Tables\Actions\BulkActionGroup::make([Tables\Actions\DeleteBulkAction::make()])]);
+            ->actions([EditAction::make(), DeleteAction::make()])
+            ->bulkActions([BulkActionGroup::make([DeleteBulkAction::make()])]);
     }
 
     public static function getRelations(): array
     {
         return [
-            PortalCategoryResource\RelationManagers\LinksRelationManager::class,
+            LinksRelationManager::class,
         ];
     }
 
     public static function getPages(): array
     {
         return [
-            'index'  => Pages\ListPortalCategories::route('/'),
-            'create' => Pages\CreatePortalCategory::route('/create'),
-            'edit'   => Pages\EditPortalCategory::route('/{record}/edit'),
+            'index'  => ListPortalCategories::route('/'),
+            'create' => CreatePortalCategory::route('/create'),
+            'edit'   => EditPortalCategory::route('/{record}/edit'),
         ];
     }
 }

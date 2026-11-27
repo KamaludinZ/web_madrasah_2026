@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Support\PortalIcons;
 use App\Filament\Resources\PortalQuickAccessResource\Pages\CreatePortalQuickAccess;
 use App\Filament\Resources\PortalQuickAccessResource\Pages\EditPortalQuickAccess;
 use App\Filament\Resources\PortalQuickAccessResource\Pages\ListPortalQuickAccesses;
@@ -92,7 +93,7 @@ class PortalQuickAccessResourceTest extends TestCase
 
         Livewire::test(ListPortalQuickAccesses::class)
             ->assertTableColumnExists('icon')
-            ->assertSee(\App\Support\PortalIcons::path('academic-cap'), false);
+            ->assertSee(PortalIcons::path('academic-cap'), false);
     }
 
     public function test_list_is_sorted_by_sort_order(): void

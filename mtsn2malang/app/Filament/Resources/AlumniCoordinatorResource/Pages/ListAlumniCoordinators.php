@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\AlumniCoordinatorResource\Pages;
 
+use Filament\Actions\CreateAction;
 use App\Filament\Resources\AlumniCoordinatorResource;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
@@ -13,7 +14,7 @@ class ListAlumniCoordinators extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make(),
+            CreateAction::make(),
         ];
     }
 }

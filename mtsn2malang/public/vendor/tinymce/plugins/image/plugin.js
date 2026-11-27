@@ -1,5 +1,5 @@
 /**
- * TinyMCE version 7.9.3 (2026-05-19)
+ * TinyMCE version 8.11.0 (2026-11-25)
  */
 
 (function () {
@@ -10,13 +10,12 @@
     /* eslint-disable @typescript-eslint/no-wrapper-object-types */
     const getPrototypeOf = Object.getPrototypeOf;
     const hasProto = (v, constructor, predicate) => {
-        var _a;
         if (predicate(v, constructor.prototype)) {
             return true;
         }
         else {
             // String-based fallback time
-            return ((_a = v.constructor) === null || _a === void 0 ? void 0 : _a.name) === constructor.name;
+            return v.constructor?.name === constructor.name;
         }
     };
     const typeOf = (x) => {
@@ -78,6 +77,11 @@
      * strict-null-checks
      */
     class Optional {
+        tag;
+        value;
+        // Sneaky optimisation: every instance of Optional.none is identical, so just
+        // reuse the same object
+        static singletonNone = new Optional(false);
         // The internal representation has a `tag` and a `value`, but both are
         // private: able to be console.logged, but not able to be accessed by code
         constructor(tag, value) {
@@ -245,7 +249,7 @@
          */
         getOrDie(message) {
             if (!this.tag) {
-                throw new Error(message !== null && message !== void 0 ? message : 'Called getOrDie on None');
+                throw new Error(message ?? 'Called getOrDie on None');
             }
             else {
                 return this.value;
@@ -309,12 +313,7 @@
             return this.tag ? `some(${this.value})` : 'none()';
         }
     }
-    // Sneaky optimisation: every instance of Optional.none is identical, so just
-    // reuse the same object
-    Optional.singletonNone = new Optional(false);
 
-    /* eslint-disable @typescript-eslint/unbound-method */
-    const nativeSlice = Array.prototype.slice;
     const nativePush = Array.prototype.push;
     const flatten = (xs) => {
         // Note, this is possible because push supports multiple arguments:
@@ -333,7 +332,6 @@
     };
     const get = (xs, i) => i >= 0 && i < xs.length ? Optional.some(xs[i]) : Optional.none();
     const head = (xs) => get(xs, 0);
-    isFunction(Array.from) ? Array.from : (x) => nativeSlice.call(x);
     const findMap = (arr, f) => {
         for (let i = 0; i < arr.length; i++) {
             const r = f(arr[i], i);
@@ -349,7 +347,6 @@
     //
     // Use the native keys if it is available (IE9+), otherwise fall back to manually filtering
     const keys = Object.keys;
-    // eslint-disable-next-line @typescript-eslint/unbound-method
     const hasOwnProperty = Object.hasOwnProperty;
     const each = (obj, f) => {
         const props = keys(obj);
@@ -463,6 +460,37 @@
         element.dom.removeAttribute(key);
     };
 
+    const getNaturalSize = (img) => ({
+        width: img.naturalWidth,
+        height: img.naturalHeight
+    });
+    const waitForImageSize = (img, errorMessage) => new Promise((resolve, reject) => {
+        const resolveSize = () => {
+            resolve(getNaturalSize(img));
+        };
+        if (img.complete) {
+            resolveSize();
+        }
+        else {
+            const onLoad = () => {
+                img.removeEventListener('error', onError);
+                resolveSize();
+            };
+            const onError = () => {
+                img.removeEventListener('load', onLoad);
+                reject(new Error(errorMessage));
+            };
+            img.addEventListener('load', onLoad, { once: true });
+            img.addEventListener('error', onError, { once: true });
+        }
+    });
+    const getImageSizeFromImg = (img) => waitForImageSize(img, `Failed to get image dimensions for: ${img.src}`);
+    const getImageSizeFromUrl = (url) => {
+        const img = document.createElement('img');
+        img.src = url;
+        return getImageSizeFromImg(img);
+    };
+
     var global$3 = tinymce.util.Tools.resolve('tinymce.dom.DOMUtils');
 
     var global$2 = tinymce.util.Tools.resolve('tinymce.util.URI');
@@ -523,33 +551,6 @@
     const hasUploadUrl = (editor) => isNotEmpty(editor.options.get('images_upload_url'));
     const hasUploadHandler = (editor) => isNonNullable(editor.options.get('images_upload_handler'));
 
-    // TODO: Figure out if these would ever be something other than numbers. This was added in: #TINY-1350
-    const parseIntAndGetMax = (val1, val2) => Math.max(parseInt(val1, 10), parseInt(val2, 10));
-    const getImageSize = (url) => new Promise((callback) => {
-        const img = document.createElement('img');
-        const done = (dimensions) => {
-            if (img.parentNode) {
-                img.parentNode.removeChild(img);
-            }
-            callback(dimensions);
-        };
-        img.addEventListener('load', () => {
-            const width = parseIntAndGetMax(img.width, img.clientWidth);
-            const height = parseIntAndGetMax(img.height, img.clientHeight);
-            const dimensions = { width, height };
-            done(Promise.resolve(dimensions));
-        });
-        img.addEventListener('error', () => {
-            done(Promise.reject(`Failed to get image dimensions for: ${url}`));
-        });
-        const style = img.style;
-        style.visibility = 'hidden';
-        style.position = 'fixed';
-        style.bottom = style.left = '0px';
-        style.width = style.height = 'auto';
-        document.body.appendChild(img);
-        img.src = url;
-    });
     const removePixelSuffix = (value) => {
         if (value) {
             value = value.replace(/px$/, '');
@@ -639,8 +640,7 @@
             resolve(reader.result);
         };
         reader.onerror = () => {
-            var _a;
-            reject((_a = reader.error) === null || _a === void 0 ? void 0 : _a.message);
+            reject(reader.error?.message);
         };
         reader.readAsDataURL(blob);
     });
@@ -680,9 +680,8 @@
         }
     };
     const getAttrib = (image, name) => {
-        var _a;
         if (image.hasAttribute(name)) {
-            return (_a = image.getAttribute(name)) !== null && _a !== void 0 ? _a : '';
+            return image.getAttribute(name) ?? '';
         }
         else {
             return '';
@@ -765,10 +764,21 @@
     const setBorderStyle = (image, value) => {
         image.style.borderStyle = value;
     };
-    const getBorderStyle = (image) => { var _a; return (_a = image.style.borderStyle) !== null && _a !== void 0 ? _a : ''; };
+    const getBorderStyle = (image) => image.style.borderStyle ?? '';
     const isFigure = (elm) => isNonNullable(elm) && elm.nodeName === 'FIGURE';
     const isImage = (elm) => elm.nodeName === 'IMG';
-    const getIsDecorative = (image) => DOM.getAttrib(image, 'alt').length === 0 && DOM.getAttrib(image, 'role') === 'presentation';
+    const getIsDecorative = (image) => {
+        const alt = DOM.getAttrib(image, 'alt');
+        const role = DOM.getAttrib(image, 'role');
+        // WCAG Technique H67: Using null alt text and no title attribute on img elements for images that AT should ignore
+        // Source: https://www.w3.org/TR/WCAG20-TECHS/H67.html
+        // Key point: Decorative images should have alt="" and either no title or empty title (title="")
+        // ARIA 1.2 Specification: Defines role="presentation" and role="none" as synonymous roles
+        // Source: https://www.w3.org/TR/wai-aria-1.2/
+        // Key point: These roles remove semantic meaning and prohibit aria-label and aria-labelledby
+        const hasAlt = image.hasAttribute('alt');
+        return (hasAlt && alt.length === 0) || (role === 'presentation') || (role === 'none');
+    };
     const getAlt = (image) => {
         if (getIsDecorative(image)) {
             return '';
@@ -793,7 +803,6 @@
         isDecorative: false
     });
     const getStyleValue = (normalizeCss, data) => {
-        var _a;
         const image = document.createElement('img');
         updateAttrib(image, 'style', data.style);
         if (getHspace(image) || data.hspace !== '') {
@@ -808,7 +817,7 @@
         if (getBorderStyle(image) || data.borderStyle !== '') {
             setBorderStyle(image, data.borderStyle);
         }
-        return normalizeCss((_a = image.getAttribute('style')) !== null && _a !== void 0 ? _a : '');
+        return normalizeCss(image.getAttribute('style') ?? '');
     };
     const create = (normalizeCss, data) => {
         const image = document.createElement('img');
@@ -911,12 +920,11 @@
         return imgElm;
     };
     const splitTextBlock = (editor, figure) => {
-        var _a;
         const dom = editor.dom;
         const textBlockElements = filter(editor.schema.getTextBlockElements(), (_, parentElm) => !editor.schema.isValidChild(parentElm, 'figure'));
         const textBlock = dom.getParent(figure.parentNode, (node) => hasNonNullableKey(textBlockElements, node.nodeName), editor.getBody());
         if (textBlock) {
-            return (_a = dom.split(textBlock, figure)) !== null && _a !== void 0 ? _a : figure;
+            return dom.split(textBlock, figure) ?? figure;
         }
         else {
             return figure;
@@ -930,7 +938,7 @@
         const elm = create((css) => normalizeCss$1(editor, css), data);
         editor.dom.setAttrib(elm, 'data-mce-id', '__mcenew');
         editor.focus();
-        editor.selection.setContent(elm.outerHTML);
+        editor.insertContent(elm.outerHTML);
         const insertedElm = editor.dom.select('*[data-mce-id="__mcenew"]')[0];
         editor.dom.setAttrib(insertedElm, 'data-mce-id', null);
         if (isFigure(insertedElm)) {
@@ -1120,6 +1128,9 @@
                 ])));
             });
         });
+        const alertErr = (message, callback) => {
+            editor.windowManager.alert(message, callback);
+        };
         const classList = ListUtils.sanitize(getClassList(editor));
         const hasAdvTab$1 = hasAdvTab(editor);
         const hasUploadTab$1 = hasUploadTab(editor);
@@ -1134,6 +1145,7 @@
         const automaticUploads = isAutomaticUploadsEnabled(editor);
         const prependURL = Optional.some(getPrependUrl(editor)).filter((preUrl) => isString(preUrl) && preUrl.length > 0);
         return futureImageList.then((imageList) => ({
+            alertErr,
             image,
             imageList,
             classList,
@@ -1234,11 +1246,12 @@
         makeItems
     };
 
-    const makeTab = (_info) => {
+    const makeTab = (_info, onInvalidFiles) => {
         const items = [
             {
                 type: 'dropzone',
-                name: 'fileinput'
+                name: 'fileinput',
+                onInvalidFiles
             }
         ];
         return {
@@ -1436,26 +1449,28 @@
                 changeSrc(helpers, info, state, api);
                 api.focus('src');
             };
-            // eslint-disable-next-line @typescript-eslint/no-floating-promises
-            blobToDataUri(file).then((dataUrl) => {
-                const blobInfo = helpers.createBlobCache(file, blobUri, dataUrl);
+            const handleError = (err) => {
+                finalize();
+                info.alertErr(err, () => {
+                    api.focus('fileinput');
+                });
+            };
+            blobToDataUri(file)
+                .then((dataUrl) => helpers.createBlobCache(file, blobUri, dataUrl))
+                .then((blobInfo) => {
                 if (info.automaticUploads) {
                     helpers.uploadImage(blobInfo).then((result) => {
                         updateSrcAndSwitchTab(result.url);
                         finalize();
-                    }).catch((err) => {
-                        finalize();
-                        helpers.alertErr(err, () => {
-                            api.focus('fileinput');
-                        });
-                    });
+                    }).catch(handleError);
                 }
                 else {
                     helpers.addToBlobCache(blobInfo);
                     updateSrcAndSwitchTab(blobInfo.blobUri());
                     api.unblock();
                 }
-            });
+            })
+                .catch(() => handleError('Failed to upload image'));
         });
     };
     const changeHandler = (helpers, info, state) => (api, evt) => {
@@ -1484,8 +1499,8 @@
                 type: 'tabpanel',
                 tabs: flatten([
                     [MainTab.makeTab(info)],
-                    info.hasAdvTab ? [AdvTab.makeTab(info)] : [],
-                    info.hasUploadTab && (info.hasUploadUrl || info.hasUploadHandler) ? [UploadTab.makeTab(info)] : []
+                    info.hasAdvTab ? [AdvTab.makeTab()] : [],
+                    info.hasUploadTab && (info.hasUploadUrl || info.hasUploadHandler) ? [UploadTab.makeTab(info, () => new Promise((r) => info.alertErr('Selected images do not have allowed extensions', r)))] : []
                 ])
             };
             return tabPanel;
@@ -1504,6 +1519,7 @@
         // Since the style field was removed that process must be simulated on submit.
         const finalData = {
             ...data,
+            isDecorative: info.hasAccessibilityOptions && data.isDecorative,
             style: getStyleValue(helpers.normalizeCss, toImageData(data, false))
         };
         editor.execCommand('mceUpdateImage', false, toImageData(finalData, info.hasAccessibilityOptions));
@@ -1517,38 +1533,31 @@
             return Promise.resolve({ width: '', height: '' });
         }
         else {
-            return getImageSize(editor.documentBaseURI.toAbsolute(url)).then((dimensions) => ({
+            return getImageSizeFromUrl(editor.documentBaseURI.toAbsolute(url)).then((dimensions) => ({
                 width: String(dimensions.width),
                 height: String(dimensions.height)
             }));
         }
     };
-    const createBlobCache = (editor) => (file, blobUri, dataUrl) => {
-        var _a;
-        return editor.editorUpload.blobCache.create({
-            blob: file,
-            blobUri,
-            name: (_a = file.name) === null || _a === void 0 ? void 0 : _a.replace(/\.[^\.]+$/, ''),
-            filename: file.name,
-            base64: dataUrl.split(',')[1]
-        });
-    };
+    const createBlobCache = (editor) => (file, blobUri, dataUrl) => editor.editorUpload.blobCache.create({
+        blob: file,
+        blobUri,
+        name: file.name?.replace(/\.[^\.]+$/, ''),
+        filename: file.name,
+        base64: dataUrl.split(',')[1]
+    });
     const addToBlobCache = (editor) => (blobInfo) => {
         editor.editorUpload.blobCache.add(blobInfo);
-    };
-    const alertErr = (editor) => (message, callback) => {
-        editor.windowManager.alert(message, callback);
     };
     const normalizeCss = (editor) => (cssText) => normalizeCss$1(editor, cssText);
     const parseStyle = (editor) => (cssText) => editor.dom.parseStyle(cssText);
     const serializeStyle = (editor) => (stylesArg, name) => editor.dom.serializeStyle(stylesArg, name);
     const uploadImage = (editor) => (blobInfo) => global$1(editor).upload([blobInfo], false).then((results) => {
-        var _a;
         if (results.length === 0) {
             return Promise.reject('Failed to upload image');
         }
         else if (results[0].status === false) {
-            return Promise.reject((_a = results[0].error) === null || _a === void 0 ? void 0 : _a.message);
+            return Promise.reject(results[0].error?.message);
         }
         else {
             return results[0];
@@ -1559,7 +1568,6 @@
             imageSize: imageSize(editor),
             addToBlobCache: addToBlobCache(editor),
             createBlobCache: createBlobCache(editor),
-            alertErr: alertErr(editor),
             normalizeCss: normalizeCss(editor),
             parseStyle: parseStyle(editor),
             serializeStyle: serializeStyle(editor),
@@ -1670,12 +1678,16 @@
         });
     };
 
+    const PLUGIN_CODE = 'image';
     var Plugin = () => {
-        global$4.add('image', (editor) => {
+        global$4.add(PLUGIN_CODE, (editor) => {
             register$2(editor);
             setup(editor);
             register(editor);
             register$1(editor);
+            return {
+                getMetadata: () => ({ name: 'Image', type: 'opensource', slug: PLUGIN_CODE })
+            };
         });
     };
 

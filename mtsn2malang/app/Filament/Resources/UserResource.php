@@ -2,10 +2,31 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Group;
+use Filament\Schemas\Components\Section;
+use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Select;
+use App\Support\RoleDisplay;
+use Throwable;
+use Filament\Forms\Components\Textarea;
+use Filament\Tables\Columns\ImageColumn;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TernaryFilter;
+use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use App\Filament\Resources\UserResource\Pages\ListUsers;
+use App\Filament\Resources\UserResource\Pages\CreateUser;
+use App\Filament\Resources\UserResource\Pages\EditUser;
 use App\Filament\Resources\UserResource\Pages;
 use App\Models\User;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -23,26 +44,26 @@ class UserResource extends Resource
     }
 
     protected static ?string $model          = User::class;
-    protected static ?string $navigationIcon  = 'heroicon-o-users';
+    protected static string|\BackedEnum|null $navigationIcon  = 'heroicon-o-users';
     protected static ?string $navigationLabel = 'Pengguna';
-    protected static ?string $navigationGroup = 'Pengaturan';
+    protected static string|\UnitEnum|null $navigationGroup = 'Pengaturan';
     protected static ?int    $navigationSort  = 2;
     protected static ?string $modelLabel      = 'Pengguna';
     protected static ?string $pluralModelLabel = 'Pengguna';
 
     // ─── Form ────────────────────────────────────────────────────────────────
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([
+        return $schema->components([
 
             // ── Kolom kiri: Foto Profil ──────────────────────────────────────
-            Forms\Components\Group::make()->schema([
+            Group::make()->schema([
 
-                Forms\Components\Section::make('Foto Profil')
+                Section::make('Foto Profil')
                     ->description('Upload foto profil pengguna. Disarankan foto persegi.')
                     ->schema([
-                        Forms\Components\FileUpload::make('avatar')
+                        FileUpload::make('avatar')
                             ->label('')
                             ->image()
                             ->directory('avatars')
@@ -55,9 +76,9 @@ class UserResource extends Resource
                             ->helperText('JPG, PNG, WebP · Maks 2MB · Rasio 1:1'),
                     ]),
 
-                Forms\Components\Section::make('Status Akun')
+                Section::make('Status Akun')
                     ->schema([
-                        Forms\Components\Toggle::make('is_active')
+                        Toggle::make('is_active')
                             ->label('Akun Aktif')
                             ->helperText('Nonaktifkan untuk mencegah pengguna login.')
                             ->default(true)
@@ -65,7 +86,7 @@ class UserResource extends Resource
                             ->offColor('danger')
                             ->inline(false),
 
-                        Forms\Components\Toggle::make('is_suspended')
+                        Toggle::make('is_suspended')
                             ->label('Akun Ditangguhkan')
                             ->helperText('Aktifkan untuk menangguhkan akun sementara.')
                             ->default(false)
@@ -77,17 +98,17 @@ class UserResource extends Resource
             ])->columnSpan(1),
 
             // ── Kolom kanan: Data Pengguna ───────────────────────────────────
-            Forms\Components\Group::make()->schema([
+            Group::make()->schema([
 
-                Forms\Components\Section::make('Informasi Akun')
+                Section::make('Informasi Akun')
                     ->schema([
-                        Forms\Components\TextInput::make('name')
+                        TextInput::make('name')
                             ->label('Nama Lengkap')
                             ->required()
                             ->maxLength(255)
                             ->placeholder('Nama lengkap pengguna'),
 
-                        Forms\Components\TextInput::make('email')
+                        TextInput::make('email')
                             ->label('Alamat Email')
                             ->email()
                             ->required()
@@ -95,7 +116,7 @@ class UserResource extends Resource
                             ->maxLength(255)
                             ->placeholder('email@domain.com'),
 
-                        Forms\Components\TextInput::make('password')
+                        TextInput::make('password')
                             ->label('Password')
                             ->password()
                             ->revealable()
@@ -108,10 +129,10 @@ class UserResource extends Resource
                             ->helperText(fn (string $context) => $context === 'edit' ? 'Kosongkan jika tidak ingin mengubah password.' : null),
                     ]),
 
-                Forms\Components\Section::make('Role & Akses')
+                Section::make('Role & Akses')
                     ->description('Tentukan peran pengguna dalam sistem.')
                     ->schema([
-                        Forms\Components\Select::make('roles')
+                        Select::make('roles')
                             ->label('Role')
                             ->multiple()
                             ->relationship('roles', 'name')
@@ -121,9 +142,9 @@ class UserResource extends Resource
                                     return Role::orderBy('name')
                                         ->pluck('name', 'id')
                                         ->mapWithKeys(fn ($name, $id) => [
-                                            $id => \App\Support\RoleDisplay::label($name),
+                                            $id => RoleDisplay::label($name),
                                         ]);
-                                } catch (\Throwable) {
+                                } catch (Throwable) {
                                     return [];
                                 }
                             })
@@ -132,9 +153,9 @@ class UserResource extends Resource
                             ->helperText('Pengguna dapat memiliki lebih dari satu role.'),
                     ]),
 
-                Forms\Components\Section::make('Bio')
+                Section::make('Bio')
                     ->schema([
-                        Forms\Components\Textarea::make('bio')
+                        Textarea::make('bio')
                             ->label('Bio / Deskripsi Singkat')
                             ->rows(3)
                             ->maxLength(500)
@@ -153,70 +174,70 @@ class UserResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\ImageColumn::make('avatar')
+                ImageColumn::make('avatar')
                     ->label('Foto')
                     ->rounded()
                     ->defaultImageUrl(fn ($record) => 'https://ui-avatars.com/api/?name=' . urlencode($record->name ?? 'U') . '&background=1a7a3c&color=fff&size=80'),
 
-                Tables\Columns\TextColumn::make('name')
+                TextColumn::make('name')
                     ->label('Nama')
                     ->searchable()
                     ->sortable()
                     ->weight('semibold'),
 
-                Tables\Columns\TextColumn::make('email')
+                TextColumn::make('email')
                     ->label('Email')
                     ->searchable()
                     ->copyable()
                     ->copyMessage('Email disalin'),
 
-                Tables\Columns\TextColumn::make('roles.name')
+                TextColumn::make('roles.name')
                     ->label('Role')
                     ->badge()
-                    ->color(fn (?string $state) => \App\Support\RoleDisplay::color($state))
-                    ->formatStateUsing(fn (?string $state) => \App\Support\RoleDisplay::label($state)),
+                    ->color(fn (?string $state) => RoleDisplay::color($state))
+                    ->formatStateUsing(fn (?string $state) => RoleDisplay::label($state)),
 
-                Tables\Columns\IconColumn::make('is_active')
+                IconColumn::make('is_active')
                     ->label('Aktif')
                     ->boolean()
                     ->trueColor('success')
                     ->falseColor('danger'),
 
-                Tables\Columns\IconColumn::make('is_suspended')
+                IconColumn::make('is_suspended')
                     ->label('Ditangguhkan')
                     ->boolean()
                     ->trueColor('danger')
                     ->falseColor('success'),
 
-                Tables\Columns\TextColumn::make('created_at')
+                TextColumn::make('created_at')
                     ->label('Bergabung')
                     ->date('d M Y')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('roles')
+                SelectFilter::make('roles')
                     ->label('Role')
                     ->relationship('roles', 'name')
                     ->preload(),
 
-                Tables\Filters\TernaryFilter::make('is_active')
+                TernaryFilter::make('is_active')
                     ->label('Status Aktif')
                     ->trueLabel('Aktif')
                     ->falseLabel('Nonaktif'),
 
-                Tables\Filters\TernaryFilter::make('is_suspended')
+                TernaryFilter::make('is_suspended')
                     ->label('Ditangguhkan')
                     ->trueLabel('Ditangguhkan')
                     ->falseLabel('Normal'),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                EditAction::make(),
+                DeleteAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ])
             ->defaultSort('created_at', 'desc');
@@ -227,9 +248,9 @@ class UserResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index'  => Pages\ListUsers::route('/'),
-            'create' => Pages\CreateUser::route('/create'),
-            'edit'   => Pages\EditUser::route('/{record}/edit'),
+            'index'  => ListUsers::route('/'),
+            'create' => CreateUser::route('/create'),
+            'edit'   => EditUser::route('/{record}/edit'),
         ];
     }
 }

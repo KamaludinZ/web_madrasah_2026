@@ -2,11 +2,28 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Section;
+use Filament\Forms\Components\TextInput;
+use Filament\Actions\Action;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\DateTimePicker;
+use Filament\Schemas\Components\Utilities\Set;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\BadgeColumn;
+use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\BulkAction;
+use Filament\Actions\DeleteBulkAction;
+use App\Filament\Resources\SaranResource\Pages\ListSarans;
+use App\Filament\Resources\SaranResource\Pages\EditSaran;
+use Throwable;
 use App\Filament\Resources\Concerns\HasRoleAccess;
 use App\Filament\Resources\SaranResource\Pages;
 use App\Models\Saran;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -19,9 +36,9 @@ class SaranResource extends Resource
     use HasRoleAccess;
 
     protected static ?string $model           = Saran::class;
-    protected static ?string $navigationIcon  = 'heroicon-o-light-bulb';
+    protected static string|\BackedEnum|null $navigationIcon  = 'heroicon-o-light-bulb';
     protected static ?string $navigationLabel = 'Saran';
-    protected static ?string $navigationGroup = 'Pengaduan & Survei';
+    protected static string|\UnitEnum|null $navigationGroup = 'Pengaduan & Survei';
     protected static ?int    $navigationSort  = 3;
     protected static ?string $modelLabel      = 'Saran';
     protected static ?string $pluralModelLabel = 'Saran';
@@ -38,46 +55,46 @@ class SaranResource extends Resource
         return parent::getEloquentQuery()->where('type', 'saran');
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([
-            Forms\Components\Section::make('Informasi Saran')
+        return $schema->components([
+            Section::make('Informasi Saran')
                 ->schema([
-                    Forms\Components\TextInput::make('ticket_number')
+                    TextInput::make('ticket_number')
                         ->label('No. Tiket')
                         ->disabled(),
-                    Forms\Components\TextInput::make('name')
+                    TextInput::make('name')
                         ->label('Nama Pengirim')
                         ->disabled(),
-                    Forms\Components\TextInput::make('email')
+                    TextInput::make('email')
                         ->label('Email')
                         ->placeholder('-')
                         ->disabled(),
-                    Forms\Components\TextInput::make('phone')
+                    TextInput::make('phone')
                         ->label('No. Telepon / WhatsApp')
                         ->placeholder('-')
                         ->disabled()
                         ->suffixAction(
-                            Forms\Components\Actions\Action::make('hubungi_wa')
+                            Action::make('hubungi_wa')
                                 ->label('Chat WhatsApp')
                                 ->icon('heroicon-m-chat-bubble-left-right')
                                 ->visible(fn ($record) => filled(static::whatsappNumber($record?->phone)))
                                 ->url(fn ($record) => 'https://wa.me/' . static::whatsappNumber($record?->phone), shouldOpenInNewTab: true)
                         ),
-                    Forms\Components\TextInput::make('subject')
+                    TextInput::make('subject')
                         ->label('Subjek')
                         ->disabled()
                         ->columnSpanFull(),
-                    Forms\Components\Textarea::make('content')
+                    Textarea::make('content')
                         ->label('Isi Saran')
                         ->disabled()
                         ->rows(6)
                         ->columnSpanFull(),
                 ])->columns(3),
 
-            Forms\Components\Section::make('Tindak Lanjut')
+            Section::make('Tindak Lanjut')
                 ->schema([
-                    Forms\Components\Select::make('status')
+                    Select::make('status')
                         ->label('Status')
                         ->options([
                             'pending'  => 'Belum Ditinjau',
@@ -86,26 +103,26 @@ class SaranResource extends Resource
                             'rejected' => 'Tidak Relevan',
                         ])
                         ->required(),
-                    Forms\Components\DateTimePicker::make('responded_at')
+                    DateTimePicker::make('responded_at')
                         ->label('Tanggal Tindak Lanjut')
                         ->native(false)
                         ->seconds(false)
                         ->displayFormat('d/m/Y H:i')
                         ->format('Y-m-d H:i:s')
                         ->suffixAction(
-                            Forms\Components\Actions\Action::make('set_now')
+                            Action::make('set_now')
                                 ->label('Sekarang')
                                 ->icon('heroicon-m-clock')
-                                ->action(fn (Forms\Set $set) => $set('responded_at', Carbon::now()))
+                                ->action(fn (Set $set) => $set('responded_at', Carbon::now()))
                         ),
-                    Forms\Components\Textarea::make('public_response')
+                    Textarea::make('public_response')
                         ->label('Tanggapan untuk Pengirim')
                         ->rows(4)
                         ->maxLength(5000)
                         ->placeholder('Tuliskan tanggapan yang akan dibaca pengirim saran...')
                         ->helperText('Ditampilkan kepada pengirim saat melacak nomor tiket di halaman Saran.')
                         ->columnSpanFull(),
-                    Forms\Components\Textarea::make('response')
+                    Textarea::make('response')
                         ->label('Catatan Internal')
                         ->rows(4)
                         ->placeholder('Catatan tindak lanjut internal...')
@@ -120,32 +137,32 @@ class SaranResource extends Resource
         return $table
             ->defaultSort('created_at', 'desc')
             ->columns([
-                Tables\Columns\TextColumn::make('ticket_number')
+                TextColumn::make('ticket_number')
                     ->label('No. Tiket')
                     ->searchable()
                     ->copyable()
                     ->fontFamily('mono')
                     ->size('sm'),
 
-                Tables\Columns\TextColumn::make('name')
+                TextColumn::make('name')
                     ->label('Pengirim')
                     ->getStateUsing(fn ($record) => $record->name ?: 'Anonim')
                     ->searchable()
                     ->description(fn ($record) => collect([$record->email, $record->phone])->filter()->implode(' · ')),
 
-                Tables\Columns\TextColumn::make('subject')
+                TextColumn::make('subject')
                     ->label('Subjek')
                     ->searchable()
                     ->limit(50)
                     ->tooltip(fn ($record) => $record->subject),
 
-                Tables\Columns\TextColumn::make('content')
+                TextColumn::make('content')
                     ->label('Isi Saran')
                     ->limit(60)
                     ->tooltip(fn ($record) => $record->content)
                     ->wrap(),
 
-                Tables\Columns\BadgeColumn::make('status')
+                BadgeColumn::make('status')
                     ->label('Status')
                     ->colors([
                         'warning' => 'pending',
@@ -161,7 +178,7 @@ class SaranResource extends Resource
                         default    => $state,
                     }),
 
-                Tables\Columns\TextColumn::make('created_at')
+                TextColumn::make('created_at')
                     ->label('Diterima')
                     ->dateTime('d M Y, H:i')
                     ->sortable()
@@ -169,7 +186,7 @@ class SaranResource extends Resource
                     ->tooltip(fn ($record) => $record->created_at?->format('d M Y H:i')),
             ])
             ->actions([
-                Tables\Actions\Action::make('proses')
+                Action::make('proses')
                     ->label('Tinjau')
                     ->icon('heroicon-o-eye')
                     ->color('info')
@@ -178,12 +195,12 @@ class SaranResource extends Resource
                         $record->update(['status' => 'process', 'responded_at' => Carbon::now()]);
                         Notification::make()->title('Status diubah: Sedang Ditinjau')->info()->send();
                     }),
-                Tables\Actions\EditAction::make()->label('Detail / Tindak Lanjut'),
-                Tables\Actions\DeleteAction::make()->label('Hapus'),
+                EditAction::make()->label('Detail / Tindak Lanjut'),
+                DeleteAction::make()->label('Hapus'),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\BulkAction::make('tandai_selesai')
+                BulkActionGroup::make([
+                    BulkAction::make('tandai_selesai')
                         ->label('Tandai Ditindaklanjuti')
                         ->icon('heroicon-o-check-circle')
                         ->color('success')
@@ -192,7 +209,7 @@ class SaranResource extends Resource
                             $records->each->update(['status' => 'resolved', 'responded_at' => Carbon::now()]);
                             Notification::make()->title($records->count() . ' saran ditandai selesai')->success()->send();
                         }),
-                    Tables\Actions\DeleteBulkAction::make()->label('Hapus Terpilih'),
+                    DeleteBulkAction::make()->label('Hapus Terpilih'),
                 ]),
             ])
             ->emptyStateHeading('Belum ada saran')
@@ -215,8 +232,8 @@ class SaranResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListSarans::route('/'),
-            'edit'  => Pages\EditSaran::route('/{record}/edit'),
+            'index' => ListSarans::route('/'),
+            'edit'  => EditSaran::route('/{record}/edit'),
         ];
     }
 
@@ -225,7 +242,7 @@ class SaranResource extends Resource
         try {
             $count = static::getEloquentQuery()->where('status', 'pending')->count();
             return $count > 0 ? (string) $count : null;
-        } catch (\Throwable) {
+        } catch (Throwable) {
             return null;
         }
     }

@@ -2,10 +2,24 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Section;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\Toggle;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Filters\TernaryFilter;
+use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use App\Filament\Resources\SurveyLinkResource\Pages\ListSurveyLinks;
+use App\Filament\Resources\SurveyLinkResource\Pages\CreateSurveyLink;
+use App\Filament\Resources\SurveyLinkResource\Pages\EditSurveyLink;
 use App\Filament\Resources\SurveyLinkResource\Pages;
 use App\Models\SurveyLink;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -22,36 +36,36 @@ class SurveyLinkResource extends Resource
 
     protected static ?string $model = SurveyLink::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-link';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-link';
     protected static ?string $navigationLabel = 'Link Survei';
-    protected static ?string $navigationGroup = 'Pengaduan & Survei';
+    protected static string|\UnitEnum|null $navigationGroup = 'Pengaduan & Survei';
     protected static ?int $navigationSort = 2;
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
-                Forms\Components\Section::make('Data Survei Eksternal')->schema([
-                    Forms\Components\TextInput::make('title')
+        return $schema
+            ->components([
+                Section::make('Data Survei Eksternal')->schema([
+                    TextInput::make('title')
                         ->label('Judul Survei')
                         ->required()
                         ->maxLength(255),
-                    Forms\Components\TextInput::make('url')
+                    TextInput::make('url')
                         ->label('Link Survei')
                         ->required()
                         ->url()
                         ->maxLength(255)
                         ->placeholder('https://...'),
-                    Forms\Components\Textarea::make('description')
+                    Textarea::make('description')
                         ->label('Deskripsi (Opsional)')
                         ->rows(3)
                         ->maxLength(1000),
-                    Forms\Components\TextInput::make('order')
+                    TextInput::make('order')
                         ->label('Urutan')
                         ->numeric()
                         ->default(0)
                         ->required(),
-                    Forms\Components\Toggle::make('is_active')
+                    Toggle::make('is_active')
                         ->label('Aktif')
                         ->default(true),
                 ])->columns(1),
@@ -62,37 +76,37 @@ class SurveyLinkResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('title')
+                TextColumn::make('title')
                     ->label('Judul Survei')
                     ->searchable()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('url')
+                TextColumn::make('url')
                     ->label('Link')
                     ->limit(50)
                     ->copyable(),
-                Tables\Columns\IconColumn::make('is_active')
+                IconColumn::make('is_active')
                     ->label('Aktif')
                     ->boolean(),
-                Tables\Columns\TextColumn::make('order')
+                TextColumn::make('order')
                     ->label('Urutan')
                     ->sortable(),
-                Tables\Columns\TextColumn::make('updated_at')
+                TextColumn::make('updated_at')
                     ->label('Diperbarui')
                     ->dateTime('d M Y H:i')
                     ->sortable(),
             ])
             ->defaultSort('order')
             ->filters([
-                Tables\Filters\TernaryFilter::make('is_active')
+                TernaryFilter::make('is_active')
                     ->label('Status Aktif'),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                EditAction::make(),
+                DeleteAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ]);
     }
@@ -100,9 +114,9 @@ class SurveyLinkResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListSurveyLinks::route('/'),
-            'create' => Pages\CreateSurveyLink::route('/create'),
-            'edit' => Pages\EditSurveyLink::route('/{record}/edit'),
+            'index' => ListSurveyLinks::route('/'),
+            'create' => CreateSurveyLink::route('/create'),
+            'edit' => EditSurveyLink::route('/{record}/edit'),
         ];
     }
 }

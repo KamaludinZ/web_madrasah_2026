@@ -204,18 +204,34 @@ class SecurityHardeningTest extends TestCase
         $this->actingAs($contributor);
         $title = 'Kiriman ' . Str::random(6);
 
+        // Memaksa status "published" (tidak ada di pilihan kontributor) ditolak
+        // validasi Filament — berita tidak tersimpan sama sekali.
         Livewire::test(CreateNews::class)
             ->set('data.title', $title)
             ->set('data.slug', Str::slug($title))
             ->set('data.content', '<p>x</p>')
             ->set('data.status', 'published')
+            ->set('data.category_id', $this->category()->id)
+            ->call('create')
+            ->assertHasFormErrors(['status']);
+
+        $this->assertFalse(News::where('title', $title)->exists());
+
+        // Kiriman normal tersimpan sebagai milik kontributor & belum terbit,
+        // walau penulis lain dipaksa lewat request.
+        Livewire::test(CreateNews::class)
+            ->set('data.title', $title)
+            ->set('data.slug', Str::slug($title))
+            ->set('data.content', '<p>x</p>')
+            ->set('data.status', 'review')
             ->set('data.user_id', $this->superAdmin()->id)
             ->set('data.category_id', $this->category()->id)
             ->set('data.tags', ['Uji'])
-            ->call('create');
+            ->call('create')
+            ->assertHasNoFormErrors();
 
         $news = News::where('title', $title)->firstOrFail();
-        $this->assertSame('review', $news->status);
+        $this->assertNotSame('published', $news->status);
         $this->assertSame($contributor->id, (int) $news->user_id, 'Kontributor tidak boleh mengganti penulis.');
     }
 

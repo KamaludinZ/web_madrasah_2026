@@ -1,5 +1,5 @@
 /**
- * TinyMCE version 7.9.3 (2026-05-19)
+ * TinyMCE version 8.11.0 (2026-11-25)
  */
 
 (function () {
@@ -7,13 +7,12 @@
 
     /* eslint-disable @typescript-eslint/no-wrapper-object-types */
     const hasProto = (v, constructor, predicate) => {
-        var _a;
         if (predicate(v, constructor.prototype)) {
             return true;
         }
         else {
             // String-based fallback time
-            return ((_a = v.constructor) === null || _a === void 0 ? void 0 : _a.name) === constructor.name;
+            return v.constructor?.name === constructor.name;
         }
     };
     const typeOf = (x) => {
@@ -40,7 +39,6 @@
     const isBoolean = isSimpleType('boolean');
     const isNullable = (a) => a === null || a === undefined;
     const isNonNullable = (a) => !isNullable(a);
-    const isFunction = isSimpleType('function');
     const isNumber = isSimpleType('number');
 
     /**
@@ -59,6 +57,11 @@
      * strict-null-checks
      */
     class Optional {
+        tag;
+        value;
+        // Sneaky optimisation: every instance of Optional.none is identical, so just
+        // reuse the same object
+        static singletonNone = new Optional(false);
         // The internal representation has a `tag` and a `value`, but both are
         // private: able to be console.logged, but not able to be accessed by code
         constructor(tag, value) {
@@ -226,7 +229,7 @@
          */
         getOrDie(message) {
             if (!this.tag) {
-                throw new Error(message !== null && message !== void 0 ? message : 'Called getOrDie on None');
+                throw new Error(message ?? 'Called getOrDie on None');
             }
             else {
                 return this.value;
@@ -290,12 +293,7 @@
             return this.tag ? `some(${this.value})` : 'none()';
         }
     }
-    // Sneaky optimisation: every instance of Optional.none is identical, so just
-    // reuse the same object
-    Optional.singletonNone = new Optional(false);
 
-    /* eslint-disable @typescript-eslint/unbound-method */
-    const nativeSlice = Array.prototype.slice;
     const map = (xs, f) => {
         // pre-allocating array size when it's guaranteed to be known
         // http://jsperf.com/push-allocated-vs-dynamic/22
@@ -326,7 +324,6 @@
         }
         return r;
     };
-    isFunction(Array.from) ? Array.from : (x) => nativeSlice.call(x);
 
     // There are many variations of Object iteration that are faster than the 'for-in' style:
     // http://jsperf.com/object-keys-iteration/107
@@ -662,13 +659,12 @@
         const dom = editor.dom;
         const nodeList = filterEditableDescendants(SugarElement.fromDom(rootElm), isMatch, editor.dom.isEditable(rootElm));
         each$1(nodeList, (n) => {
-            var _a;
             const parent = n.dom.parentNode;
             if (isWrappedNbsp(parent)) {
                 add(SugarElement.fromDom(parent), nbspClass);
             }
             else {
-                const withSpans = replaceWithSpans(dom.encode((_a = value(n)) !== null && _a !== void 0 ? _a : ''));
+                const withSpans = replaceWithSpans(dom.encode(value(n) ?? ''));
                 const div = dom.create('div', {}, withSpans);
                 let node;
                 while ((node = div.lastChild)) {
@@ -787,15 +783,19 @@
         });
     };
 
+    const PLUGIN_CODE = 'visualchars';
     var Plugin = () => {
-        global.add('visualchars', (editor) => {
+        global.add(PLUGIN_CODE, (editor) => {
             register$1(editor);
             const toggleState = Cell(isEnabledByDefault(editor));
             register$2(editor, toggleState);
             register(editor, toggleState);
             setup(editor, toggleState);
             setup$1(editor, toggleState);
-            return get$2(toggleState);
+            return {
+                ...get$2(toggleState),
+                getMetadata: () => ({ name: 'Visual Characters', type: 'opensource', slug: PLUGIN_CODE })
+            };
         });
     };
 

@@ -1,5 +1,5 @@
 /**
- * TinyMCE version 7.9.3 (2026-05-19)
+ * TinyMCE version 8.11.0 (2026-11-25)
  */
 
 (function () {
@@ -34,6 +34,11 @@
      * strict-null-checks
      */
     class Optional {
+        tag;
+        value;
+        // Sneaky optimisation: every instance of Optional.none is identical, so just
+        // reuse the same object
+        static singletonNone = new Optional(false);
         // The internal representation has a `tag` and a `value`, but both are
         // private: able to be console.logged, but not able to be accessed by code
         constructor(tag, value) {
@@ -201,7 +206,7 @@
          */
         getOrDie(message) {
             if (!this.tag) {
-                throw new Error(message !== null && message !== void 0 ? message : 'Called getOrDie on None');
+                throw new Error(message ?? 'Called getOrDie on None');
             }
             else {
                 return this.value;
@@ -265,9 +270,6 @@
             return this.tag ? `some(${this.value})` : 'none()';
         }
     }
-    // Sneaky optimisation: every instance of Optional.none is identical, so just
-    // reuse the same object
-    Optional.singletonNone = new Optional(false);
 
     const get$1 = (xs, i) => i >= 0 && i < xs.length ? Optional.some(xs[i]) : Optional.none();
     const head = (xs) => get$1(xs, 0);
@@ -510,7 +512,7 @@
     				if (typeof document === 'undefined') {
     					return null;
     				}
-    				if ('currentScript' in document && 1 < 2 /* hack to trip TS' flow analysis */) {
+    				if (document.currentScript && document.currentScript.tagName === 'SCRIPT' && 1 < 2 /* hack to trip TS' flow analysis */) {
     					return /** @type {any} */ (document.currentScript);
     				}
 
@@ -1492,15 +1494,6 @@
 
     }(_self));
 
-    if (typeof module !== 'undefined' && module.exports) {
-    	module.exports = Prism;
-    }
-
-    // hack for components to work correctly in node.js
-    if (typeof global !== 'undefined') {
-    	global.Prism = Prism;
-    }
-
     // some additional documentation/types
 
     /**
@@ -1912,7 +1905,7 @@
     	 * @returns {RegExp}
     	 */
     	function re(pattern, replacements, flags) {
-    		return RegExp(replace(pattern, replacements), flags || '');
+    		return RegExp(replace(pattern, replacements), '');
     	}
 
     	/**
@@ -3407,7 +3400,7 @@
     // restore the original Prism reference
     window.Prism = oldprism;
     return Prism;
-    }(undefined, undefined);
+    }();
 
     const option = (name) => (editor) => editor.options.get(name);
     const register$2 = (editor) => {
@@ -3500,7 +3493,8 @@
                     {
                         type: 'textarea',
                         name: 'code',
-                        label: 'Code view'
+                        label: 'Code view',
+                        spellcheck: false,
                     }
                 ]
             },
@@ -3570,11 +3564,10 @@
             if (unprocessedCodeSamples.length) {
                 editor.undoManager.transact(() => {
                     global.each(unprocessedCodeSamples, (elm) => {
-                        var _a;
                         global.each(dom.select('br', elm), (elm) => {
                             dom.replace(editor.getDoc().createTextNode('\n'), elm);
                         });
-                        elm.innerHTML = dom.encode((_a = elm.textContent) !== null && _a !== void 0 ? _a : '');
+                        elm.innerHTML = dom.encode(elm.textContent ?? '');
                         get(editor).highlightElement(elm);
                         dom.setAttrib(elm, 'data-mce-highlighted', true);
                         elm.className = trim(elm.className);
@@ -3584,10 +3577,9 @@
         });
         editor.on('PreInit', () => {
             editor.parser.addNodeFilter('pre', (nodes) => {
-                var _a;
                 for (let i = 0, l = nodes.length; i < l; i++) {
                     const node = nodes[i];
-                    const isCodeSample = ((_a = node.attr('class')) !== null && _a !== void 0 ? _a : '').indexOf('language-') !== -1;
+                    const isCodeSample = (node.attr('class') ?? '').indexOf('language-') !== -1;
                     if (isCodeSample) {
                         node.attr('contenteditable', 'false');
                         node.attr('data-mce-highlighted', 'false');
@@ -3630,8 +3622,9 @@
         });
     };
 
+    const PLUGIN_CODE = 'codesample';
     var Plugin = () => {
-        global$2.add('codesample', (editor) => {
+        global$2.add(PLUGIN_CODE, (editor) => {
             register$2(editor);
             setup(editor);
             register(editor);
@@ -3641,6 +3634,9 @@
                     open(editor);
                 }
             });
+            return {
+                getMetadata: () => ({ name: 'Code Sample', type: 'opensource', slug: PLUGIN_CODE })
+            };
         });
     };
 

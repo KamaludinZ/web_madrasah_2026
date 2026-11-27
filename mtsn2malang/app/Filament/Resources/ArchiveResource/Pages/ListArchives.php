@@ -1,9 +1,10 @@
 <?php
 namespace App\Filament\Resources\ArchiveResource\Pages;
+use Filament\Actions\CreateAction;
 use App\Filament\Resources\ArchiveResource;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 class ListArchives extends ListRecords {
     protected static string $resource = ArchiveResource::class;
-    protected function getHeaderActions(): array { return [Actions\CreateAction::make()->label('Tambah Arsip')]; }
+    protected function getHeaderActions(): array { return [CreateAction::make()->label('Tambah Arsip')]; }
 }

@@ -2,10 +2,23 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Section;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Filters\TernaryFilter;
+use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use App\Filament\Resources\SubscriberResource\Pages\ListSubscribers;
+use App\Filament\Resources\SubscriberResource\Pages\CreateSubscriber;
+use App\Filament\Resources\SubscriberResource\Pages\EditSubscriber;
 use App\Filament\Resources\SubscriberResource\Pages;
 use App\Models\Subscriber;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -21,19 +34,19 @@ class SubscriberResource extends Resource
     }
 
     protected static ?string $model           = Subscriber::class;
-    protected static ?string $navigationIcon  = 'heroicon-o-envelope';
+    protected static string|\BackedEnum|null $navigationIcon  = 'heroicon-o-envelope';
     protected static ?string $navigationLabel = 'Subscriber';
-    protected static ?string $navigationGroup = 'Konten';
+    protected static string|\UnitEnum|null $navigationGroup = 'Konten';
     protected static ?int    $navigationSort  = 99;
     protected static ?string $modelLabel      = 'Subscriber';
     protected static ?string $pluralModelLabel = 'Subscriber Email';
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([
-            Forms\Components\Section::make('Data Subscriber')
+        return $schema->components([
+            Section::make('Data Subscriber')
                 ->schema([
-                    Forms\Components\TextInput::make('email')
+                    TextInput::make('email')
                         ->label('Alamat Email')
                         ->email()
                         ->required()
@@ -41,12 +54,12 @@ class SubscriberResource extends Resource
                         ->maxLength(255)
                         ->placeholder('email@domain.com'),
 
-                    Forms\Components\TextInput::make('name')
+                    TextInput::make('name')
                         ->label('Nama (Opsional)')
                         ->maxLength(100)
                         ->placeholder('Nama subscriber'),
 
-                    Forms\Components\Toggle::make('is_active')
+                    Toggle::make('is_active')
                         ->label('Subscriber Aktif')
                         ->default(true)
                         ->onColor('success')
@@ -61,25 +74,25 @@ class SubscriberResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('email')->label('Email')->searchable()->copyable()->copyMessage('Email disalin'),
-                Tables\Columns\TextColumn::make('name')->label('Nama')->default('-')->searchable(),
-                Tables\Columns\IconColumn::make('is_active')->label('Aktif')->boolean(),
-                Tables\Columns\TextColumn::make('created_at')->label('Bergabung')->date('d M Y')->sortable(),
+                TextColumn::make('email')->label('Email')->searchable()->copyable()->copyMessage('Email disalin'),
+                TextColumn::make('name')->label('Nama')->default('-')->searchable(),
+                IconColumn::make('is_active')->label('Aktif')->boolean(),
+                TextColumn::make('created_at')->label('Bergabung')->date('d M Y')->sortable(),
             ])
             ->filters([
-                Tables\Filters\TernaryFilter::make('is_active')->label('Status')->trueLabel('Aktif')->falseLabel('Nonaktif'),
+                TernaryFilter::make('is_active')->label('Status')->trueLabel('Aktif')->falseLabel('Nonaktif'),
             ])
-            ->actions([Tables\Actions\EditAction::make(), Tables\Actions\DeleteAction::make()])
-            ->bulkActions([Tables\Actions\BulkActionGroup::make([Tables\Actions\DeleteBulkAction::make()])])
+            ->actions([EditAction::make(), DeleteAction::make()])
+            ->bulkActions([BulkActionGroup::make([DeleteBulkAction::make()])])
             ->defaultSort('created_at', 'desc');
     }
 
     public static function getPages(): array
     {
         return [
-            'index'  => Pages\ListSubscribers::route('/'),
-            'create' => Pages\CreateSubscriber::route('/create'),
-            'edit'   => Pages\EditSubscriber::route('/{record}/edit'),
+            'index'  => ListSubscribers::route('/'),
+            'create' => CreateSubscriber::route('/create'),
+            'edit'   => EditSubscriber::route('/{record}/edit'),
         ];
     }
 }

@@ -2,11 +2,26 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Group;
+use Filament\Schemas\Components\Section;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\Textarea;
+use Filament\Tables\Columns\ImageColumn;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use App\Filament\Resources\AlumniCoordinatorResource\Pages\ListAlumniCoordinators;
+use App\Filament\Resources\AlumniCoordinatorResource\Pages\CreateAlumniCoordinator;
+use App\Filament\Resources\AlumniCoordinatorResource\Pages\EditAlumniCoordinator;
 use App\Filament\Resources\AlumniCoordinatorResource\Pages;
 use App\Models\AlumniCoordinator;
 use App\Support\UploadImageHelper;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -22,19 +37,19 @@ class AlumniCoordinatorResource extends Resource
     }
 
     protected static ?string $model           = AlumniCoordinator::class;
-    protected static ?string $navigationIcon  = 'heroicon-o-user-group';
+    protected static string|\BackedEnum|null $navigationIcon  = 'heroicon-o-user-group';
     protected static ?string $navigationLabel = 'Koordinator Alumni';
-    protected static ?string $navigationGroup = 'Layanan & PPID';
+    protected static string|\UnitEnum|null $navigationGroup = 'Layanan & PPID';
     protected static ?int    $navigationSort  = 6;
     protected static ?string $modelLabel      = 'Koordinator Alumni';
     protected static ?string $pluralModelLabel = 'Koordinator Alumni';
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([
-            Forms\Components\Group::make()->schema([
+        return $schema->components([
+            Group::make()->schema([
 
-                Forms\Components\Section::make('Foto')
+                Section::make('Foto')
                     ->schema([
                         UploadImageHelper::webpFileUpload('foto', 'Upload Foto', 'alumni-coordinators')
                             ->imageEditor()
@@ -42,14 +57,14 @@ class AlumniCoordinatorResource extends Resource
                             ->helperText('Foto profil · Rasio 1:1 · Maks 5MB'),
                     ]),
 
-                Forms\Components\Section::make('Pengaturan')
+                Section::make('Pengaturan')
                     ->schema([
-                        Forms\Components\TextInput::make('order')
+                        TextInput::make('order')
                             ->label('Urutan Tampil')
                             ->numeric()
                             ->default(0),
 
-                        Forms\Components\Toggle::make('is_active')
+                        Toggle::make('is_active')
                             ->label('Aktif')
                             ->default(true)
                             ->onColor('success')
@@ -59,27 +74,27 @@ class AlumniCoordinatorResource extends Resource
 
             ])->columnSpan(1),
 
-            Forms\Components\Group::make()->schema([
+            Group::make()->schema([
 
-                Forms\Components\Section::make('Data Koordinator')
+                Section::make('Data Koordinator')
                     ->schema([
-                        Forms\Components\TextInput::make('nama_koordinator')
+                        TextInput::make('nama_koordinator')
                             ->label('Nama Lengkap')
                             ->required()
                             ->maxLength(150)
                             ->placeholder('Nama lengkap koordinator alumni'),
 
-                        Forms\Components\TextInput::make('angkatan')
+                        TextInput::make('angkatan')
                             ->label('Angkatan / Tahun Lulus')
                             ->maxLength(10)
                             ->placeholder('Contoh: 2015'),
 
-                        Forms\Components\TextInput::make('kontak')
+                        TextInput::make('kontak')
                             ->label('Kontak (WhatsApp / Telepon)')
                             ->maxLength(50)
                             ->placeholder('08xxxxxxxxxx'),
 
-                        Forms\Components\Textarea::make('deskripsi')
+                        Textarea::make('deskripsi')
                             ->label('Deskripsi / Keterangan')
                             ->rows(3)
                             ->maxLength(500)
@@ -96,26 +111,26 @@ class AlumniCoordinatorResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\ImageColumn::make('foto')->label('Foto')->circular()
+                ImageColumn::make('foto')->label('Foto')->circular()
                     ->defaultImageUrl(fn ($record) => 'https://ui-avatars.com/api/?name=' . urlencode($record->nama_koordinator ?? 'A') . '&background=1a7a3c&color=fff'),
-                Tables\Columns\TextColumn::make('nama_koordinator')->label('Nama')->searchable()->sortable()->weight('semibold'),
-                Tables\Columns\TextColumn::make('angkatan')->label('Angkatan')->badge()->color('info')->default('-'),
-                Tables\Columns\TextColumn::make('kontak')->label('Kontak')->default('-')->copyable(),
-                Tables\Columns\TextColumn::make('deskripsi')->label('Keterangan')->limit(40)->default('-'),
-                Tables\Columns\IconColumn::make('is_active')->label('Aktif')->boolean(),
-                Tables\Columns\TextColumn::make('order')->label('Urutan')->sortable(),
+                TextColumn::make('nama_koordinator')->label('Nama')->searchable()->sortable()->weight('semibold'),
+                TextColumn::make('angkatan')->label('Angkatan')->badge()->color('info')->default('-'),
+                TextColumn::make('kontak')->label('Kontak')->default('-')->copyable(),
+                TextColumn::make('deskripsi')->label('Keterangan')->limit(40)->default('-'),
+                IconColumn::make('is_active')->label('Aktif')->boolean(),
+                TextColumn::make('order')->label('Urutan')->sortable(),
             ])
             ->reorderable('order')
-            ->actions([Tables\Actions\EditAction::make(), Tables\Actions\DeleteAction::make()])
-            ->bulkActions([Tables\Actions\BulkActionGroup::make([Tables\Actions\DeleteBulkAction::make()])]);
+            ->actions([EditAction::make(), DeleteAction::make()])
+            ->bulkActions([BulkActionGroup::make([DeleteBulkAction::make()])]);
     }
 
     public static function getPages(): array
     {
         return [
-            'index'  => Pages\ListAlumniCoordinators::route('/'),
-            'create' => Pages\CreateAlumniCoordinator::route('/create'),
-            'edit'   => Pages\EditAlumniCoordinator::route('/{record}/edit'),
+            'index'  => ListAlumniCoordinators::route('/'),
+            'create' => CreateAlumniCoordinator::route('/create'),
+            'edit'   => EditAlumniCoordinator::route('/{record}/edit'),
         ];
     }
 }

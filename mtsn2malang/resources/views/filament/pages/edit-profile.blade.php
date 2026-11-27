@@ -87,7 +87,7 @@
 </style>
 
 {{-- ── Form Filament Native ── --}}
-<x-filament-panels::form id="form" wire:submit="save">
+<form id="form" wire:submit="save" class="fi-form grid gap-y-6">
     {{ $this->form }}
 
     {{-- Actions: Kembali + Simpan dalam satu baris --}}
@@ -105,11 +105,10 @@
             Kembali
         </a>
 
-        <x-filament-panels::form.actions
-            :actions="$this->getCachedFormActions()"
+        <x-filament::actions :actions="$this->getFormActions()"
             :full-width="false"
         />
     </div>
-</x-filament-panels::form>
+</form>
 
 </x-filament-panels::page>

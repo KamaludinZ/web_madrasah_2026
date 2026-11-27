@@ -2,11 +2,27 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Group;
+use Filament\Schemas\Components\Section;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\Select;
+use Filament\Tables\Columns\ImageColumn;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use App\Filament\Resources\GtkResource\Pages\ListGtk;
+use App\Filament\Resources\GtkResource\Pages\CreateGtk;
+use App\Filament\Resources\GtkResource\Pages\EditGtk;
 use App\Filament\Resources\GtkResource\Pages;
 use App\Models\Gtk;
 use App\Support\UploadImageHelper;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -22,19 +38,19 @@ class GtkResource extends Resource
     }
 
     protected static ?string $model           = Gtk::class;
-    protected static ?string $navigationIcon  = 'heroicon-o-users';
+    protected static string|\BackedEnum|null $navigationIcon  = 'heroicon-o-users';
     protected static ?string $navigationLabel = 'Daftar GTK';
-    protected static ?string $navigationGroup = 'Profil Sekolah';
+    protected static string|\UnitEnum|null $navigationGroup = 'Profil Sekolah';
     protected static ?int    $navigationSort  = 1;
     protected static ?string $modelLabel      = 'GTK';
     protected static ?string $pluralModelLabel = 'Guru & Tenaga Kependidikan';
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([
-            Forms\Components\Group::make()->schema([
+        return $schema->components([
+            Group::make()->schema([
 
-                Forms\Components\Section::make('Foto')
+                Section::make('Foto')
                     ->description('Foto resmi dengan latar belakang polos. Rasio 2:3 (portrait).')
                     ->schema([
                         UploadImageHelper::webpFileUpload('photo', 'Upload Foto', 'gtk')
@@ -42,15 +58,15 @@ class GtkResource extends Resource
                             ->helperText('JPG, PNG · Maks 5MB · Rasio 2:3 (portrait 4×6)'),
                     ]),
 
-                Forms\Components\Section::make('Pengaturan')
+                Section::make('Pengaturan')
                     ->schema([
-                        Forms\Components\TextInput::make('order')
+                        TextInput::make('order')
                             ->label('Urutan Tampil')
                             ->numeric()
                             ->default(0)
                             ->helperText('Angka lebih kecil tampil lebih awal.'),
 
-                        Forms\Components\Toggle::make('is_active')
+                        Toggle::make('is_active')
                             ->label('Tampilkan')
                             ->default(true)
                             ->onColor('success')
@@ -60,30 +76,30 @@ class GtkResource extends Resource
 
             ])->columnSpan(1),
 
-            Forms\Components\Group::make()->schema([
+            Group::make()->schema([
 
-                Forms\Components\Section::make('Data Pribadi')
+                Section::make('Data Pribadi')
                     ->schema([
-                        Forms\Components\TextInput::make('name')
+                        TextInput::make('name')
                             ->label('Nama Lengkap')
                             ->required()
                             ->maxLength(255)
                             ->placeholder('Nama lengkap beserta gelar'),
 
-                        Forms\Components\TextInput::make('nip')
+                        TextInput::make('nip')
                             ->label('NIP')
                             ->maxLength(30)
                             ->placeholder('Nomor Induk Pegawai'),
 
-                        Forms\Components\TextInput::make('education')
+                        TextInput::make('education')
                             ->label('Pendidikan Terakhir')
                             ->maxLength(100)
                             ->placeholder('Contoh: S1 Pendidikan Matematika'),
                     ]),
 
-                Forms\Components\Section::make('Jabatan & Tugas')
+                Section::make('Jabatan & Tugas')
                     ->schema([
-                        Forms\Components\Select::make('type')
+                        Select::make('type')
                             ->label('Jenis')
                             ->options([
                                 'guru'   => 'Guru',
@@ -92,13 +108,13 @@ class GtkResource extends Resource
                             ->required()
                             ->native(false),
 
-                        Forms\Components\TextInput::make('position')
+                        TextInput::make('position')
                             ->label('Jabatan')
                             ->required()
                             ->maxLength(150)
                             ->placeholder('Contoh: Guru Matematika, Kepala TU'),
 
-                        Forms\Components\TextInput::make('subject')
+                        TextInput::make('subject')
                             ->label('Mata Pelajaran')
                             ->maxLength(150)
                             ->placeholder('Kosongkan jika bukan guru mapel')
@@ -114,29 +130,29 @@ class GtkResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\ImageColumn::make('photo')->label('Foto')->width(48)->height(64),
-                Tables\Columns\TextColumn::make('name')->label('Nama')->searchable()->sortable()->weight('semibold'),
-                Tables\Columns\TextColumn::make('position')->label('Jabatan')->searchable(),
-                Tables\Columns\TextColumn::make('type')->label('Jenis')->badge()
+                ImageColumn::make('photo')->label('Foto')->width(48)->height(64),
+                TextColumn::make('name')->label('Nama')->searchable()->sortable()->weight('semibold'),
+                TextColumn::make('position')->label('Jabatan')->searchable(),
+                TextColumn::make('type')->label('Jenis')->badge()
                     ->formatStateUsing(fn ($state) => $state === 'guru' ? 'Guru' : 'Tendik'),
-                Tables\Columns\TextColumn::make('subject')->label('Mapel')->default('-'),
-                Tables\Columns\IconColumn::make('is_active')->label('Tampil')->boolean(),
-                Tables\Columns\TextColumn::make('order')->label('Urutan')->sortable(),
+                TextColumn::make('subject')->label('Mapel')->default('-'),
+                IconColumn::make('is_active')->label('Tampil')->boolean(),
+                TextColumn::make('order')->label('Urutan')->sortable(),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('type')->options(['guru' => 'Guru', 'tendik' => 'Tenaga Kependidikan']),
+                SelectFilter::make('type')->options(['guru' => 'Guru', 'tendik' => 'Tenaga Kependidikan']),
             ])
             ->reorderable('order')
-            ->actions([Tables\Actions\EditAction::make(), Tables\Actions\DeleteAction::make()])
-            ->bulkActions([Tables\Actions\BulkActionGroup::make([Tables\Actions\DeleteBulkAction::make()])]);
+            ->actions([EditAction::make(), DeleteAction::make()])
+            ->bulkActions([BulkActionGroup::make([DeleteBulkAction::make()])]);
     }
 
     public static function getPages(): array
     {
         return [
-            'index'  => Pages\ListGtk::route('/'),
-            'create' => Pages\CreateGtk::route('/create'),
-            'edit'   => Pages\EditGtk::route('/{record}/edit'),
+            'index'  => ListGtk::route('/'),
+            'create' => CreateGtk::route('/create'),
+            'edit'   => EditGtk::route('/{record}/edit'),
         ];
     }
 }

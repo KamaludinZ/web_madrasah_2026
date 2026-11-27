@@ -2,6 +2,13 @@
 
 namespace App\Providers\Filament;
 
+use Filament\View\PanelsRenderHook;
+use Illuminate\Support\Facades\Vite;
+use Illuminate\Support\HtmlString;
+
+use App\Models\Setting;
+use Filament\Navigation\MenuItem;
+use App\Support\RoleDisplay;
 use App\Filament\Pages\Auth\Login;
 use App\Filament\Pages\Dashboard;
 use App\Filament\Pages\EditProfile;
@@ -65,7 +72,7 @@ class AdminPanelProvider extends PanelProvider
 {
     private static function setting(string $key): ?string
     {
-        return rescue(fn () => \App\Models\Setting::get($key), null, report: false) ?: null;
+        return rescue(fn () => Setting::get($key), null, report: false) ?: null;
     }
 
     public function panel(Panel $panel): Panel
@@ -76,8 +83,8 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->login(Login::class)
             ->colors([
-                'primary' => Color::hex('#1a7a3c'),
-                'secondary' => Color::hex('#f97316'),
+                'primary' => Color::generateV3Palette('#1a7a3c'),
+                'secondary' => Color::generateV3Palette('#f97316'),
                 'danger' => Color::Red,
                 'gray' => Color::Slate,
                 'info' => Color::Blue,
@@ -98,8 +105,8 @@ class AdminPanelProvider extends PanelProvider
             ->sidebarCollapsibleOnDesktop()
             ->profile(EditProfile::class, isSimple: false)
             ->userMenuItems([
-                \Filament\Navigation\MenuItem::make()
-                    ->label(fn () => \App\Support\RoleDisplay::labelWithEmoji(auth()->user()?->getRoleNames()->first()))
+                MenuItem::make()
+                    ->label(fn () => RoleDisplay::labelWithEmoji(auth()->user()?->getRoleNames()->first()))
                     ->url('#')
                     ->icon('heroicon-o-shield-check'),
             ])
@@ -152,6 +159,12 @@ class AdminPanelProvider extends PanelProvider
                 ManageWelcome::class,
                 ManagePortal::class,
             ])
+            // Kelas utilitas Tailwind untuk tampilan kustom (lihat
+            // tailwind.admin.config.js) — CSS bawaan Filament 5 tidak memuatnya.
+            ->renderHook(
+                PanelsRenderHook::HEAD_END,
+                fn (): HtmlString => new HtmlString(Vite::withEntryPoints(['resources/css/filament/admin-utilities.css'])->toHtml()),
+            )
             ->widgets([
                 PhpSecurityWidget::class,
                 NewsStatsWidget::class,

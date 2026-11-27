@@ -2,13 +2,36 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Group;
+use Filament\Schemas\Components\Section;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Select;
+use Filament\Schemas\Components\Grid;
+use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\DatePicker;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\RichEditor;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\BadgeColumn;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Columns\ToggleColumn;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TernaryFilter;
+use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use App\Filament\Resources\PopupResource\Pages\ListPopups;
+use App\Filament\Resources\PopupResource\Pages\CreatePopup;
+use App\Filament\Resources\PopupResource\Pages\EditPopup;
 use App\Filament\Resources\Concerns\HasRoleAccess;
 use App\Filament\Resources\PopupResource\Pages;
 use App\Models\Popup;
 use App\Support\UploadImageHelper;
 use Filament\Forms;
-use Filament\Forms\Form;
-use Filament\Forms\Get;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -18,9 +41,9 @@ class PopupResource extends Resource
     use HasRoleAccess;
 
     protected static ?string $model           = Popup::class;
-    protected static ?string $navigationIcon  = 'heroicon-o-megaphone';
+    protected static string|\BackedEnum|null $navigationIcon  = 'heroicon-o-megaphone';
     protected static ?string $navigationLabel = 'Popup & Pengumuman';
-    protected static ?string $navigationGroup = 'Konten';
+    protected static string|\UnitEnum|null $navigationGroup = 'Konten';
     protected static ?int    $navigationSort  = 4;
     protected static ?string $modelLabel      = 'Popup';
     protected static ?string $pluralModelLabel = 'Popup & Pengumuman';
@@ -30,23 +53,23 @@ class PopupResource extends Resource
         return static::currentUserHasRole(['editor_in_chief', 'editor', 'moderator']);
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([
+        return $schema->components([
 
-            Forms\Components\Group::make()->schema([
+            Group::make()->schema([
 
                 // ── Section: Pengaturan Umum ──────────────────────────────
-                Forms\Components\Section::make('Pengaturan Popup')
+                Section::make('Pengaturan Popup')
                     ->schema([
-                        Forms\Components\TextInput::make('title')
+                        TextInput::make('title')
                             ->label('Judul Popup')
                             ->required()
                             ->maxLength(255)
                             ->placeholder('Contoh: Pengumuman PPDB 2025/2026')
                             ->columnSpanFull(),
 
-                        Forms\Components\Select::make('type')
+                        Select::make('type')
                             ->label('Tipe Popup')
                             ->options([
                                 'text'   => '📝 Teks / Pengumuman (Rich Editor)',
@@ -58,15 +81,15 @@ class PopupResource extends Resource
                             ->helperText('Tipe "Teks" untuk pengumuman/informasi. Tipe "Slider" untuk galeri gambar promosi.')
                             ->columnSpanFull(),
 
-                        Forms\Components\Grid::make(2)->schema([
-                            Forms\Components\Toggle::make('is_active')
+                        Grid::make(2)->schema([
+                            Toggle::make('is_active')
                                 ->label('Aktifkan Popup')
                                 ->default(true)
                                 ->onColor('success')
                                 ->offColor('danger')
                                 ->inline(false),
 
-                            Forms\Components\Toggle::make('show_once')
+                            Toggle::make('show_once')
                                 ->label('Tampil Sekali per Sesi')
                                 ->default(true)
                                 ->onColor('info')
@@ -75,18 +98,18 @@ class PopupResource extends Resource
                                 ->inline(false),
                         ]),
 
-                        Forms\Components\Grid::make(3)->schema([
-                            Forms\Components\DatePicker::make('start_date')
+                        Grid::make(3)->schema([
+                            DatePicker::make('start_date')
                                 ->label('Mulai Tampil')
                                 ->nullable()
                                 ->helperText('Kosongkan = langsung aktif'),
 
-                            Forms\Components\DatePicker::make('end_date')
+                            DatePicker::make('end_date')
                                 ->label('Berhenti Tampil')
                                 ->nullable()
                                 ->helperText('Kosongkan = tidak ada batas'),
 
-                            Forms\Components\TextInput::make('order')
+                            TextInput::make('order')
                                 ->label('Urutan')
                                 ->numeric()
                                 ->default(0)
@@ -95,21 +118,21 @@ class PopupResource extends Resource
                     ]),
 
                 // ── Section: Item Popup ───────────────────────────────────
-                Forms\Components\Section::make('Konten Popup')
+                Section::make('Konten Popup')
                     ->description(fn (Get $get) => match ($get('type')) {
                         'slider' => 'Tambahkan satu atau lebih gambar untuk ditampilkan sebagai slider.',
                         'text'   => 'Tulis konten pengumuman menggunakan rich editor.',
                         default  => 'Pilih tipe popup terlebih dahulu.',
                     })
                     ->schema([
-                        Forms\Components\Repeater::make('items')
+                        Repeater::make('items')
                             ->label('')
                             ->relationship('items')
                             ->orderColumn('order')
                             ->schema([
 
                                 // ── Tipe item (hidden, auto-set berdasarkan tipe popup) ──
-                                Forms\Components\Hidden::make('item_type')
+                                Hidden::make('item_type')
                                     ->default(fn (Get $get) => $get('../../type') === 'slider' ? 'image' : 'text'),
 
                                 // ── Gambar (hanya untuk slider) ──────────────────────────
@@ -117,21 +140,21 @@ class PopupResource extends Resource
                                     ->helperText('Rekomendasi: 1200×675 px (rasio 16:9). Otomatis dikonversi ke WebP.')
                                     ->visible(fn (Get $get) => $get('../../type') === 'slider'),
 
-                                Forms\Components\TextInput::make('image_link')
+                                TextInput::make('image_link')
                                     ->label('Link Klik Gambar (opsional)')
                                     ->url()
                                     ->placeholder('https://...')
                                     ->helperText('URL tujuan saat gambar diklik. Kosongkan jika tidak ada.')
                                     ->visible(fn (Get $get) => $get('../../type') === 'slider'),
 
-                                Forms\Components\TextInput::make('caption')
+                                TextInput::make('caption')
                                     ->label('Keterangan Gambar (opsional)')
                                     ->maxLength(255)
                                     ->placeholder('Keterangan singkat gambar...')
                                     ->visible(fn (Get $get) => $get('../../type') === 'slider'),
 
                                 // ── Konten teks (hanya untuk text) ───────────────────────
-                                Forms\Components\RichEditor::make('content')
+                                RichEditor::make('content')
                                     ->label('Isi Pengumuman')
                                     ->toolbarButtons([
                                         'bold', 'italic', 'underline', 'strike',
@@ -163,7 +186,7 @@ class PopupResource extends Resource
         return $table
             ->defaultSort('order')
             ->columns([
-                Tables\Columns\TextColumn::make('title')
+                TextColumn::make('title')
                     ->label('Judul')
                     ->searchable()
                     ->weight('semibold')
@@ -172,7 +195,7 @@ class PopupResource extends Resource
                         : 'Berlaku: Selalu'
                     ),
 
-                Tables\Columns\BadgeColumn::make('type')
+                BadgeColumn::make('type')
                     ->label('Tipe')
                     ->colors([
                         'info'    => 'text',
@@ -184,13 +207,13 @@ class PopupResource extends Resource
                         default  => $state,
                     }),
 
-                Tables\Columns\TextColumn::make('items_count')
+                TextColumn::make('items_count')
                     ->label('Item')
                     ->counts('items')
                     ->badge()
                     ->color('gray'),
 
-                Tables\Columns\IconColumn::make('show_once')
+                IconColumn::make('show_once')
                     ->label('Sekali/Sesi')
                     ->boolean()
                     ->trueColor('info')
@@ -198,35 +221,35 @@ class PopupResource extends Resource
                     ->trueIcon('heroicon-o-eye-slash')
                     ->falseIcon('heroicon-o-eye'),
 
-                Tables\Columns\ToggleColumn::make('is_active')
+                ToggleColumn::make('is_active')
                     ->label('Aktif')
                     ->onColor('success')
                     ->offColor('danger'),
 
-                Tables\Columns\TextColumn::make('order')
+                TextColumn::make('order')
                     ->label('Urutan')
                     ->sortable(),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('type')
+                SelectFilter::make('type')
                     ->label('Tipe')
                     ->options([
                         'text'   => 'Teks / Pengumuman',
                         'slider' => 'Slider Gambar',
                     ]),
 
-                Tables\Filters\TernaryFilter::make('is_active')
+                TernaryFilter::make('is_active')
                     ->label('Status')
                     ->trueLabel('Aktif')
                     ->falseLabel('Nonaktif'),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                EditAction::make(),
+                DeleteAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ])
             ->emptyStateHeading('Belum ada popup')
@@ -237,9 +260,9 @@ class PopupResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index'  => Pages\ListPopups::route('/'),
-            'create' => Pages\CreatePopup::route('/create'),
-            'edit'   => Pages\EditPopup::route('/{record}/edit'),
+            'index'  => ListPopups::route('/'),
+            'create' => CreatePopup::route('/create'),
+            'edit'   => EditPopup::route('/{record}/edit'),
         ];
     }
 }

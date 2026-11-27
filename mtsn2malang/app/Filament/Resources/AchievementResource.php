@@ -2,11 +2,26 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Group;
+use Filament\Schemas\Components\Section;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\DatePicker;
+use Filament\Tables\Columns\ImageColumn;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use App\Filament\Resources\AchievementResource\Pages\ListAchievements;
+use App\Filament\Resources\AchievementResource\Pages\CreateAchievement;
+use App\Filament\Resources\AchievementResource\Pages\EditAchievement;
 use App\Filament\Resources\AchievementResource\Pages;
 use App\Models\Achievement;
 use App\Support\UploadImageHelper;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -22,19 +37,19 @@ class AchievementResource extends Resource
     }
 
     protected static ?string $model           = Achievement::class;
-    protected static ?string $navigationIcon  = 'heroicon-o-trophy';
+    protected static string|\BackedEnum|null $navigationIcon  = 'heroicon-o-trophy';
     protected static ?string $navigationLabel = 'Prestasi';
-    protected static ?string $navigationGroup = 'Profil Sekolah';
+    protected static string|\UnitEnum|null $navigationGroup = 'Profil Sekolah';
     protected static ?int    $navigationSort  = 4;
     protected static ?string $modelLabel      = 'Prestasi';
     protected static ?string $pluralModelLabel = 'Prestasi Siswa';
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([
-            Forms\Components\Group::make()->schema([
+        return $schema->components([
+            Group::make()->schema([
 
-                Forms\Components\Section::make('Foto / Sertifikat')
+                Section::make('Foto / Sertifikat')
                     ->schema([
                         UploadImageHelper::webpFileUpload('photo', 'Upload Foto', 'achievements')
                             ->helperText('Foto piala, sertifikat, atau dokumentasi · Maks 5MB'),
@@ -42,23 +57,23 @@ class AchievementResource extends Resource
 
             ])->columnSpan(1),
 
-            Forms\Components\Group::make()->schema([
+            Group::make()->schema([
 
-                Forms\Components\Section::make('Data Prestasi')
+                Section::make('Data Prestasi')
                     ->schema([
-                        Forms\Components\TextInput::make('student_name')
+                        TextInput::make('student_name')
                             ->label('Nama Siswa')
                             ->required()
                             ->maxLength(255)
                             ->placeholder('Nama lengkap siswa'),
 
-                        Forms\Components\TextInput::make('competition_name')
+                        TextInput::make('competition_name')
                             ->label('Nama Lomba / Kompetisi')
                             ->required()
                             ->maxLength(255)
                             ->placeholder('Contoh: Olimpiade Matematika Nasional'),
 
-                        Forms\Components\Select::make('level')
+                        Select::make('level')
                             ->label('Tingkat')
                             ->options([
                                 'regional'      => 'Regional / Kota / Kabupaten',
@@ -69,24 +84,24 @@ class AchievementResource extends Resource
                             ->required()
                             ->native(false),
 
-                        Forms\Components\TextInput::make('rank')
+                        TextInput::make('rank')
                             ->label('Peringkat / Juara')
                             ->required()
                             ->maxLength(50)
                             ->placeholder('Contoh: Juara 1, Juara Harapan, Medali Emas'),
 
-                        Forms\Components\TextInput::make('organizer')
+                        TextInput::make('organizer')
                             ->label('Penyelenggara')
                             ->maxLength(255)
                             ->placeholder('Nama instansi penyelenggara'),
 
-                        Forms\Components\TextInput::make('academic_year')
+                        TextInput::make('academic_year')
                             ->label('Tahun Pelajaran')
                             ->required()
                             ->maxLength(20)
                             ->placeholder('Contoh: 2024/2025'),
 
-                        Forms\Components\DatePicker::make('achievement_date')
+                        DatePicker::make('achievement_date')
                             ->label('Tanggal Prestasi')
                             ->displayFormat('d M Y')
                             ->native(false),
@@ -101,10 +116,10 @@ class AchievementResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\ImageColumn::make('photo')->label('Foto')->width(60)->height(60),
-                Tables\Columns\TextColumn::make('student_name')->label('Siswa')->searchable()->sortable()->weight('semibold'),
-                Tables\Columns\TextColumn::make('competition_name')->label('Lomba')->searchable()->limit(40),
-                Tables\Columns\TextColumn::make('level')->label('Tingkat')->badge()->color(fn ($state): string => match($state) {
+                ImageColumn::make('photo')->label('Foto')->width(60)->height(60),
+                TextColumn::make('student_name')->label('Siswa')->searchable()->sortable()->weight('semibold'),
+                TextColumn::make('competition_name')->label('Lomba')->searchable()->limit(40),
+                TextColumn::make('level')->label('Tingkat')->badge()->color(fn ($state): string => match($state) {
                     'regional'      => 'info',
                     'provinsi'      => 'warning',
                     'nasional'      => 'success',
@@ -115,28 +130,28 @@ class AchievementResource extends Resource
                     'nasional' => 'Nasional', 'internasional' => 'Internasional',
                     default => $state,
                 }),
-                Tables\Columns\TextColumn::make('rank')->label('Juara')->badge()->color('warning'),
-                Tables\Columns\TextColumn::make('academic_year')->label('T.P.')->sortable(),
+                TextColumn::make('rank')->label('Juara')->badge()->color('warning'),
+                TextColumn::make('academic_year')->label('T.P.')->sortable(),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('level')->options([
+                SelectFilter::make('level')->options([
                     'regional' => 'Regional', 'provinsi' => 'Provinsi',
                     'nasional' => 'Nasional', 'internasional' => 'Internasional',
                 ]),
-                Tables\Filters\SelectFilter::make('academic_year')->label('Tahun Pelajaran')
+                SelectFilter::make('academic_year')->label('Tahun Pelajaran')
                     ->options(fn () => Achievement::distinct()->pluck('academic_year', 'academic_year')->toArray()),
             ])
             ->defaultSort('achievement_date', 'desc')
-            ->actions([Tables\Actions\EditAction::make(), Tables\Actions\DeleteAction::make()])
-            ->bulkActions([Tables\Actions\BulkActionGroup::make([Tables\Actions\DeleteBulkAction::make()])]);
+            ->actions([EditAction::make(), DeleteAction::make()])
+            ->bulkActions([BulkActionGroup::make([DeleteBulkAction::make()])]);
     }
 
     public static function getPages(): array
     {
         return [
-            'index'  => Pages\ListAchievements::route('/'),
-            'create' => Pages\CreateAchievement::route('/create'),
-            'edit'   => Pages\EditAchievement::route('/{record}/edit'),
+            'index'  => ListAchievements::route('/'),
+            'create' => CreateAchievement::route('/create'),
+            'edit'   => EditAchievement::route('/{record}/edit'),
         ];
     }
 }

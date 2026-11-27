@@ -2,6 +2,10 @@
 
 namespace App\Filament\Pages\Auth;
 
+use Filament\Schemas\Schema;
+use App\Support\NumericCaptcha;
+use Filament\Auth\Http\Responses\Contracts\LoginResponse;
+use Throwable;
 use App\Mail\LoginOtpMail;
 use App\Models\Setting;
 use App\Models\User;
@@ -9,11 +13,8 @@ use App\Support\MailSettings;
 use DanHarrin\LivewireRateLimiting\Exceptions\TooManyRequestsException;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Form;
-use Filament\Http\Responses\Auth\Contracts\LoginResponse;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Notifications\Notification;
-use Filament\Pages\Auth\Login as BaseLogin;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -28,12 +29,12 @@ use Livewire\Attributes\Locked;
  * Sebelumnya OTP hanya diperiksa di /login terpisah, sehingga /admin/login
  * bisa dipakai untuk melewati OTP sepenuhnya.
  */
-class Login extends BaseLogin
+class Login extends \Filament\Auth\Pages\Login
 {
     /** Maksimal salah memasukkan OTP sebelum kode dibatalkan. */
     private const MAX_OTP_ATTEMPTS = 5;
 
-    protected static string $view = 'filament.pages.auth.login';
+    protected string $view = 'filament.pages.auth.login';
 
     /** Layout penuh (tanpa kotak bawaan Filament) untuk tampilan split-panel. */
     protected static string $layout = 'filament.pages.auth.login-layout';
@@ -62,9 +63,9 @@ class Login extends BaseLogin
 
     // ─── Form ────────────────────────────────────────────────────────────────
 
-    public function form(Form $form): Form
+    public function form(Schema $schema): Schema
     {
-        return $form->schema([
+        return $schema->components([
             $this->getEmailFormComponent()->hidden(fn () => $this->otpStep),
             $this->getPasswordFormComponent()->hidden(fn () => $this->otpStep),
             $this->getRememberFormComponent()->hidden(fn () => $this->otpStep),
@@ -80,7 +81,7 @@ class Login extends BaseLogin
             ->helperText('Ketik angka yang tampil pada gambar di bawah.')
             ->placeholder('Ketik kode keamanan')
             ->required()
-            ->maxLength(\App\Support\NumericCaptcha::LENGTH)
+            ->maxLength(NumericCaptcha::LENGTH)
             ->autocomplete('off')
             ->extraInputAttributes([
                 'inputmode'    => 'numeric',
@@ -121,7 +122,7 @@ class Login extends BaseLogin
         }
 
         // Validasi kode keamanan (sekali pakai — gambar selalu diganti setelah dicek)
-        if (! \App\Support\NumericCaptcha::check('login', $this->data['captcha'] ?? null)) {
+        if (! NumericCaptcha::check('login', $this->data['captcha'] ?? null)) {
             $this->newCaptcha();
 
             throw ValidationException::withMessages([
@@ -149,7 +150,7 @@ class Login extends BaseLogin
         /** @var User $user */
         $user = $guard->getProvider()->retrieveByCredentials($credentials);
 
-        if (($user instanceof FilamentUser) && ! $user->canAccessPanel(Filament::getCurrentPanel())) {
+        if (($user instanceof FilamentUser) && ! $user->canAccessPanel(Filament::getCurrentOrDefaultPanel())) {
             $this->newCaptcha();
             $this->throwFailureValidationException();
         }
@@ -169,7 +170,7 @@ class Login extends BaseLogin
         try {
             MailSettings::apply();
             Mail::to($user->email)->send(new LoginOtpMail($otp, $expiry));
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::error('Gagal mengirim OTP login', ['user_id' => $user->id, 'error' => $e->getMessage()]);
             $user->forceFill(['otp_code' => null, 'otp_expires_at' => null])->save();
 

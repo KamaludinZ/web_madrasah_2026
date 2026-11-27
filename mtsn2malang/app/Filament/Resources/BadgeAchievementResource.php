@@ -2,11 +2,25 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Section;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Toggle;
+use Filament\Tables\Columns\ImageColumn;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use App\Filament\Resources\BadgeAchievementResource\Pages\ListBadgeAchievements;
+use App\Filament\Resources\BadgeAchievementResource\Pages\CreateBadgeAchievement;
+use App\Filament\Resources\BadgeAchievementResource\Pages\EditBadgeAchievement;
 use App\Filament\Resources\BadgeAchievementResource\Pages;
 use App\Models\BadgeAchievement;
 use App\Support\UploadImageHelper;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -14,9 +28,9 @@ use Filament\Tables\Table;
 class BadgeAchievementResource extends Resource
 {
     protected static ?string $model = BadgeAchievement::class;
-    protected static ?string $navigationIcon  = 'heroicon-o-trophy';
+    protected static string|\BackedEnum|null $navigationIcon  = 'heroicon-o-trophy';
     protected static ?string $navigationLabel = 'Badge Prestasi';
-    protected static ?string $navigationGroup = 'Profil Sekolah';
+    protected static string|\UnitEnum|null $navigationGroup = 'Profil Sekolah';
     protected static ?int    $navigationSort  = 5;
     protected static ?string $modelLabel       = 'Badge Prestasi';
     protected static ?string $pluralModelLabel = 'Badge Prestasi';
@@ -26,17 +40,17 @@ class BadgeAchievementResource extends Resource
         return auth()->user()?->hasAnyRole(['super_admin', 'editor_in_chief', 'editor']) ?? false;
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([
-            Forms\Components\Section::make('Informasi Badge')->schema([
-                Forms\Components\TextInput::make('name')
+        return $schema->components([
+            Section::make('Informasi Badge')->schema([
+                TextInput::make('name')
                     ->label('Nama Penghargaan / Badge')
                     ->required()
                     ->maxLength(255)
                     ->placeholder('Contoh: Sekolah Adiwiyata Nasional 2024'),
 
-                Forms\Components\FileUpload::make('logo')
+                FileUpload::make('logo')
                     ->label('Logo / Ikon Badge')
                     ->image()
                     ->disk('public')
@@ -46,13 +60,13 @@ class BadgeAchievementResource extends Resource
                     ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
                     ->helperText('Upload logo badge. Format: JPG/PNG/WebP/SVG. Maks 2MB. Disarankan ukuran persegi (1:1).'),
 
-                Forms\Components\TextInput::make('order')
+                TextInput::make('order')
                     ->label('Urutan Tampil')
                     ->numeric()
                     ->default(0)
                     ->helperText('Angka lebih kecil tampil lebih dulu.'),
 
-                Forms\Components\Toggle::make('is_active')
+                Toggle::make('is_active')
                     ->label('Aktif / Tampilkan di Footer')
                     ->default(true),
             ]),
@@ -63,24 +77,24 @@ class BadgeAchievementResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\ImageColumn::make('logo')
+                ImageColumn::make('logo')
                     ->label('Logo')
                     ->width(60)->height(60)
                     ->defaultImageUrl(asset('images/logo.png')),
 
-                Tables\Columns\TextColumn::make('name')
+                TextColumn::make('name')
                     ->label('Nama Badge')
                     ->searchable()->sortable()->wrap(),
 
-                Tables\Columns\TextColumn::make('order')
+                TextColumn::make('order')
                     ->label('Urutan')
                     ->sortable(),
 
-                Tables\Columns\IconColumn::make('is_active')
+                IconColumn::make('is_active')
                     ->label('Aktif')
                     ->boolean(),
 
-                Tables\Columns\TextColumn::make('created_at')
+                TextColumn::make('created_at')
                     ->label('Ditambahkan')
                     ->dateTime('d M Y')
                     ->sortable(),
@@ -88,12 +102,12 @@ class BadgeAchievementResource extends Resource
             ->defaultSort('order')
             ->reorderable('order')
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                EditAction::make(),
+                DeleteAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ]);
     }
@@ -101,9 +115,9 @@ class BadgeAchievementResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index'  => Pages\ListBadgeAchievements::route('/'),
-            'create' => Pages\CreateBadgeAchievement::route('/create'),
-            'edit'   => Pages\EditBadgeAchievement::route('/{record}/edit'),
+            'index'  => ListBadgeAchievements::route('/'),
+            'create' => CreateBadgeAchievement::route('/create'),
+            'edit'   => EditBadgeAchievement::route('/{record}/edit'),
         ];
     }
 }

@@ -2,6 +2,9 @@
 
 namespace App\Filament\Resources\NewsResource\Pages;
 
+use Filament\Actions\CreateAction;
+use Filament\Actions\Action;
+use Filament\Schemas\Components\Tabs\Tab;
 use App\Filament\Resources\NewsResource;
 use App\Models\News;
 use App\Models\Setting;
@@ -9,7 +12,6 @@ use App\Support\UploadImageHelper;
 use Filament\Actions;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ListRecords;
-use Filament\Resources\Components\Tab;
 use Illuminate\Database\Eloquent\Builder;
 
 class ListNews extends ListRecords
@@ -24,8 +26,8 @@ class ListNews extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make()->label('Tulis Berita Baru'),
-            Actions\Action::make('defaultThumbnailNews')
+            CreateAction::make()->label('Tulis Berita Baru'),
+            Action::make('defaultThumbnailNews')
                 ->label('Thumbnail Default Berita')
                 ->icon('heroicon-o-photo')
                 ->color('warning')

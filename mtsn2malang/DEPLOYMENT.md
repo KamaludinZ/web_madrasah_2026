@@ -6,6 +6,26 @@
 
 ---
 
+## ⬆️ UPGRADE PANEL ADMIN KE FILAMENT 5 (Nov 2026)
+
+Panel admin kini memakai **Filament 5 + Livewire 4** dan editor berita
+**TinyMCE 8** (dimuat dari server sendiri, bukan CDN). Butuh **PHP 8.4**.
+Di hosting cPanel, setelah upload kode terbaru:
+
+```bash
+composer install --no-dev --optimize-autoloader
+php artisan migrate --force
+php artisan filament:assets
+php artisan optimize:clear
+```
+
+Pastikan folder berikut ikut ter-upload: `public/build`, `public/js`,
+`public/css`, `public/fonts` dan `public/vendor/tinymce`.
+Opsional: `TINYMCE_PROVIDER=cloud` + `TINY_LICENSE_KEY` di `.env` bila ingin
+memakai Tiny Cloud alih-alih file lokal.
+
+---
+
 ## 🚨 KEAMANAN DARURAT — PHP2Shell (CVE-2026-109618 & CVE-2026-109619, Okt 2026)
 
 Celah di **PHP itu sendiri** (bukan di kode aplikasi): server bisa diretas

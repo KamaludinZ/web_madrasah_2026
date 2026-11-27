@@ -2,10 +2,23 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Section;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\RichEditor;
+use Filament\Forms\Components\FileUpload;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Actions\EditAction;
+use App\Filament\Resources\RegistrationResource\Pages\ListRegistrations;
+use App\Filament\Resources\RegistrationResource\Pages\CreateRegistration;
+use App\Filament\Resources\RegistrationResource\Pages\EditRegistration;
 use App\Filament\Resources\RegistrationResource\Pages;
 use App\Models\Registration;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -21,19 +34,19 @@ class RegistrationResource extends Resource
     }
 
     protected static ?string $model           = Registration::class;
-    protected static ?string $navigationIcon  = 'heroicon-o-clipboard-document-list';
+    protected static string|\BackedEnum|null $navigationIcon  = 'heroicon-o-clipboard-document-list';
     protected static ?string $navigationLabel = 'PPDB & PSB';
-    protected static ?string $navigationGroup = 'Program';
+    protected static string|\UnitEnum|null $navigationGroup = 'Program';
     protected static ?int    $navigationSort  = 2;
     protected static ?string $modelLabel      = 'Pendaftaran';
     protected static ?string $pluralModelLabel = 'PPDB & PSB';
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([
-            Forms\Components\Section::make('Jenis & Status')
+        return $schema->components([
+            Section::make('Jenis & Status')
                 ->schema([
-                    Forms\Components\Select::make('type')
+                    Select::make('type')
                         ->label('Jenis Pendaftaran')
                         ->options([
                             'ppdb' => 'PPDB — Penerimaan Peserta Didik Baru',
@@ -42,7 +55,7 @@ class RegistrationResource extends Resource
                         ->required()
                         ->native(false),
 
-                    Forms\Components\Toggle::make('is_active')
+                    Toggle::make('is_active')
                         ->label('Pendaftaran Aktif')
                         ->default(true)
                         ->onColor('success')
@@ -51,23 +64,23 @@ class RegistrationResource extends Resource
                         ->inline(false),
                 ])->columns(2),
 
-            Forms\Components\Section::make('Jadwal Pendaftaran')
+            Section::make('Jadwal Pendaftaran')
                 ->description('Tambahkan tahapan jadwal pendaftaran secara berurutan.')
                 ->schema([
-                    Forms\Components\Repeater::make('schedule')
+                    Repeater::make('schedule')
                         ->label('')
                         ->schema([
-                            Forms\Components\TextInput::make('kegiatan')
+                            TextInput::make('kegiatan')
                                 ->label('Kegiatan')
                                 ->required()
                                 ->placeholder('Contoh: Pendaftaran Online'),
 
-                            Forms\Components\TextInput::make('tanggal')
+                            TextInput::make('tanggal')
                                 ->label('Tanggal / Periode')
                                 ->required()
                                 ->placeholder('Contoh: 1 - 15 Juli 2025'),
 
-                            Forms\Components\TextInput::make('keterangan')
+                            TextInput::make('keterangan')
                                 ->label('Keterangan')
                                 ->placeholder('Keterangan tambahan (opsional)'),
                         ])
@@ -77,20 +90,20 @@ class RegistrationResource extends Resource
                         ->collapsible(),
                 ]),
 
-            Forms\Components\Section::make('Persyaratan')
+            Section::make('Persyaratan')
                 ->schema([
-                    Forms\Components\RichEditor::make('general_requirements')
+                    RichEditor::make('general_requirements')
                         ->label('Persyaratan Umum')
                         ->toolbarButtons(['bold', 'bulletList', 'orderedList', 'italic', 'link']),
 
-                    Forms\Components\RichEditor::make('specific_requirements')
+                    RichEditor::make('specific_requirements')
                         ->label('Persyaratan Khusus')
                         ->toolbarButtons(['bold', 'bulletList', 'orderedList', 'italic', 'link']),
                 ])->columns(2),
 
-            Forms\Components\Section::make('Brosur & Link Pendaftaran')
+            Section::make('Brosur & Link Pendaftaran')
                 ->schema([
-                    Forms\Components\FileUpload::make('brochure_file')
+                    FileUpload::make('brochure_file')
                         ->label('Upload Brosur (PDF / Gambar)')
                         ->directory('registrations')
                         ->acceptedFileTypes(['application/pdf', 'image/*'])
@@ -98,13 +111,13 @@ class RegistrationResource extends Resource
                         ->downloadable()
                         ->helperText('PDF atau gambar · Maks 10MB'),
 
-                    Forms\Components\TextInput::make('brochure_link')
+                    TextInput::make('brochure_link')
                         ->label('Link Brosur (Alternatif)')
                         ->url()
                         ->placeholder('https://drive.google.com/...')
                         ->helperText('Jika brosur tersedia di Google Drive atau link lain.'),
 
-                    Forms\Components\TextInput::make('registration_link')
+                    TextInput::make('registration_link')
                         ->label('Link Pendaftaran Online')
                         ->url()
                         ->placeholder('https://ppdb.kemenag.go.id/...')
@@ -118,7 +131,7 @@ class RegistrationResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('type')->label('Jenis')
+                TextColumn::make('type')->label('Jenis')
                     ->badge()
                     ->color(fn ($state): string => match($state) {
                         'ppdb' => 'success',
@@ -126,19 +139,19 @@ class RegistrationResource extends Resource
                         default => 'gray',
                     })
                     ->formatStateUsing(fn ($state) => $state === 'ppdb' ? 'PPDB' : 'PSB'),
-                Tables\Columns\IconColumn::make('is_active')->label('Aktif')->boolean(),
-                Tables\Columns\TextColumn::make('updated_at')->label('Terakhir Diubah')->dateTime('d M Y H:i')->sortable(),
+                IconColumn::make('is_active')->label('Aktif')->boolean(),
+                TextColumn::make('updated_at')->label('Terakhir Diubah')->dateTime('d M Y H:i')->sortable(),
             ])
-            ->actions([Tables\Actions\EditAction::make()])
+            ->actions([EditAction::make()])
             ->bulkActions([]);
     }
 
     public static function getPages(): array
     {
         return [
-            'index'  => Pages\ListRegistrations::route('/'),
-            'create' => Pages\CreateRegistration::route('/create'),
-            'edit'   => Pages\EditRegistration::route('/{record}/edit'),
+            'index'  => ListRegistrations::route('/'),
+            'create' => CreateRegistration::route('/create'),
+            'edit'   => EditRegistration::route('/{record}/edit'),
         ];
     }
 }
